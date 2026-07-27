@@ -1257,8 +1257,11 @@
             </div>
         `;
 
+        const t1DateLabel = dsuT1Range.preset === 'custom'
+            ? `${formatHeaderDate(dsuT1Range.start)} — ${formatHeaderDate(dsuT1Range.end)}`
+            : (dsuT1Range.preset === 'today' ? `Today: ${formatHeaderDate(dsuT1Range.start)}` : formatHeaderDate(dsuT1Range.start));
         const t1Header = `
-            <tr><th colspan="4" class="dsu-mis-row">${formatHeaderDate(dsuT1Range.end)}</th></tr>
+            <tr><th colspan="4" class="dsu-mis-row">${t1DateLabel}</th></tr>
         `;
         const t1Controls = `
             <div class="report-controls-row">${dsuT1DateSelector()}</div>
