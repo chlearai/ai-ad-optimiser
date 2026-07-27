@@ -239,8 +239,8 @@ def overall_summary(
         rows.append({
             "project_name": project.name,
             "platform": platform.title(),
-            "amount_spent": spend,
-            "leads": leads,
+            "amount_spent": round(spend),
+            "leads": round(leads),
             "cpl": cpl,
         })
 
@@ -263,8 +263,8 @@ def overall_summary(
         "total": {
             "project_name": "TOTAL",
             "platform": "",
-            "amount_spent": total_spend,
-            "leads": total_leads,
+            "amount_spent": round(total_spend),
+            "leads": round(total_leads),
             "cpl": total_cpl,
         },
     }
@@ -320,15 +320,15 @@ def daily_report(
             rows.append({
                 "date": current.isoformat(),
                 "display_date": _ordinal_date(current),
-                "meta_leads": meta["leads"],
+                "meta_leads": round(meta["leads"]),
                 "meta_cpl": round(meta["amount_spent"] / meta["leads"]) if meta["leads"] else 0,
-                "meta_amount_spent": meta["amount_spent"],
-                "google_leads": google["leads"],
+                "meta_amount_spent": round(meta["amount_spent"]),
+                "google_leads": round(google["leads"]),
                 "google_cpl": round(google["amount_spent"] / google["leads"]) if google["leads"] else 0,
-                "google_amount_spent": google["amount_spent"],
-                "leads": total_leads,
+                "google_amount_spent": round(google["amount_spent"]),
+                "leads": round(total_leads),
                 "cpl": round(total_spend / total_leads) if total_leads else 0,
-                "amount_spent": total_spend,
+                "amount_spent": round(total_spend),
             })
         else:
             agg = by_date.get(current, {}).get(platform, {"leads": 0.0, "amount_spent": 0.0})
@@ -337,15 +337,17 @@ def daily_report(
             rows.append({
                 "date": current.isoformat(),
                 "display_date": _ordinal_date(current),
-                "leads": leads,
+                "leads": round(leads),
                 "cpl": round(spend / leads) if leads else 0,
-                "amount_spent": spend,
+                "amount_spent": round(spend),
             })
         current += timedelta(days=1)
 
     total_leads = sum(r["leads"] for r in rows)
     total_spend = sum(r["amount_spent"] for r in rows)
     total_cpl = round(total_spend / total_leads) if total_leads else 0
+    total_spend = round(total_spend)
+    total_leads = round(total_leads)
 
     title_prefix = platform.upper() if platform != "combined" else "META ADS + GOOGLE COMBINED"
     if platform == "combined":

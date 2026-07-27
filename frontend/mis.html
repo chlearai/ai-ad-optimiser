@@ -2787,6 +2787,10 @@
             </div>`;
     }
 
+    function _fmtInt(n) {
+        return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
     function _mantriConnectionBadgeHtml(data) {
         if (!data) return '';
         const both = data.both_connected || (data.google_connected && data.meta_connected);
@@ -2836,17 +2840,17 @@
             tbody.innerHTML += `<tr>
                 <td><strong>${escapeHtml(r.project_name)}</strong></td>
                 <td>${escapeHtml(r.platform)}</td>
-                <td class="num">₹${Number(r.amount_spent || 0).toLocaleString('en-IN')}</td>
-                <td class="num">${Number(r.leads || 0).toLocaleString('en-IN')}</td>
-                <td class="num">₹${Number(r.cpl || 0).toLocaleString('en-IN')}</td>
+                <td class="num">₹${_fmtInt(r.amount_spent)}</td>
+                <td class="num">${_fmtInt(r.leads)}</td>
+                <td class="num">₹${_fmtInt(r.cpl)}</td>
             </tr>`;
         });
         tbody.innerHTML += `<tr style="background:#FDE2E2; font-weight:700;">
             <td><strong>TOTAL</strong></td>
             <td></td>
-            <td class="num">₹${Number(data.total.amount_spent || 0).toLocaleString('en-IN')}</td>
-            <td class="num">${Number(data.total.leads || 0).toLocaleString('en-IN')}</td>
-            <td class="num">₹${Number(data.total.cpl || 0).toLocaleString('en-IN')}</td>
+            <td class="num">₹${_fmtInt(data.total.amount_spent)}</td>
+            <td class="num">${_fmtInt(data.total.leads)}</td>
+            <td class="num">₹${_fmtInt(data.total.cpl)}</td>
         </tr>`;
     }
 
@@ -2887,16 +2891,16 @@
             visibleRows.forEach(r => {
                 tbody.innerHTML += `<tr>
                     <td>${escapeHtml(r.display_date)}</td>
-                    <td class="num">${Number(r.leads || 0).toLocaleString('en-IN')}</td>
-                    <td class="num">₹${Number(r.cpl || 0).toLocaleString('en-IN')}</td>
-                    <td class="num">₹${Number(r.amount_spent || 0).toLocaleString('en-IN')}</td>
+                    <td class="num">${_fmtInt(r.leads)}</td>
+                    <td class="num">₹${_fmtInt(r.cpl)}</td>
+                    <td class="num">₹${_fmtInt(r.amount_spent)}</td>
                 </tr>`;
             });
             tbody.innerHTML += `<tr style="background:#FDE2E2; font-weight:700;">
                 <td><strong>TOTAL</strong></td>
-                <td class="num">${Number(data.total.leads || 0).toLocaleString('en-IN')}</td>
-                <td class="num">₹${Number(data.total.cpl || 0).toLocaleString('en-IN')}</td>
-                <td class="num">₹${Number(data.total.amount_spent || 0).toLocaleString('en-IN')}</td>
+                <td class="num">${_fmtInt(data.total.leads)}</td>
+                <td class="num">₹${_fmtInt(data.total.cpl)}</td>
+                <td class="num">₹${_fmtInt(data.total.amount_spent)}</td>
             </tr>`;
             // Add expand/collapse toggle below table for client screenshots
             const toggleBtn = document.createElement('button');
@@ -2923,16 +2927,16 @@
             visibleRows.forEach(r => {
                 cTbody.innerHTML += `<tr>
                     <td>${escapeHtml(r.display_date)}</td>
-                    <td class="num">${Number(r.leads || 0).toLocaleString('en-IN')}</td>
-                    <td class="num">₹${Number(r.cpl || 0).toLocaleString('en-IN')}</td>
-                    <td class="num">₹${Number(r.amount_spent || 0).toLocaleString('en-IN')}</td>
+                    <td class="num">${_fmtInt(r.leads)}</td>
+                    <td class="num">₹${_fmtInt(r.cpl)}</td>
+                    <td class="num">₹${_fmtInt(r.amount_spent)}</td>
                 </tr>`;
             });
             cTbody.innerHTML += `<tr style="background:#FDE2E2; font-weight:700;">
                 <td><strong>TOTAL</strong></td>
-                <td class="num">${Number(data.total.leads || 0).toLocaleString('en-IN')}</td>
-                <td class="num">₹${Number(data.total.cpl || 0).toLocaleString('en-IN')}</td>
-                <td class="num">₹${Number(data.total.amount_spent || 0).toLocaleString('en-IN')}</td>
+                <td class="num">${_fmtInt(data.total.leads)}</td>
+                <td class="num">₹${_fmtInt(data.total.cpl)}</td>
+                <td class="num">₹${_fmtInt(data.total.amount_spent)}</td>
             </tr>`;
             // Add expand/collapse toggle below table for client screenshots
             const toggleBtn = document.createElement('button');
@@ -2979,23 +2983,23 @@
         data.rows.forEach(r => {
             tbody.innerHTML += `<tr>
                 <td>${escapeHtml(r.lead_status)}</td>
-                <td class="num">${Number(r.meta_count || 0).toLocaleString('en-IN')}</td>
-                <td class="num">${Number(r.meta_pct || 0).toFixed(1)}%</td>
-                <td class="num">${Number(r.google_count || 0).toLocaleString('en-IN')}</td>
-                <td class="num">${Number(r.google_pct || 0).toFixed(1)}%</td>
-                <td class="num">${Number(r.overall_count || 0).toLocaleString('en-IN')}</td>
-                <td class="num">${Number(r.overall_pct || 0).toFixed(1)}%</td>
+                <td class="num">${_fmtInt(r.meta_count)}</td>
+                <td class="num">${_fmtInt(r.meta_pct)}%</td>
+                <td class="num">${_fmtInt(r.google_count)}</td>
+                <td class="num">${_fmtInt(r.google_pct)}%</td>
+                <td class="num">${_fmtInt(r.overall_count)}</td>
+                <td class="num">${_fmtInt(r.overall_pct)}%</td>
             </tr>`;
         });
         const t = data.totals;
         tbody.innerHTML += `<tr style="background:#FDE2E2; font-weight:700;">
             <td><strong>Grand Total - Leads</strong></td>
-            <td class="num">${Number(t.meta_count || 0).toLocaleString('en-IN')}</td>
-            <td class="num">100.0%</td>
-            <td class="num">${Number(t.google_count || 0).toLocaleString('en-IN')}</td>
-            <td class="num">100.0%</td>
-            <td class="num">${Number(t.overall_count || 0).toLocaleString('en-IN')}</td>
-            <td class="num">100.0%</td>
+            <td class="num">${_fmtInt(t.meta_count)}</td>
+            <td class="num">100%</td>
+            <td class="num">${_fmtInt(t.google_count)}</td>
+            <td class="num">100%</td>
+            <td class="num">${_fmtInt(t.overall_count)}</td>
+            <td class="num">100%</td>
         </tr>`;
     }
 
