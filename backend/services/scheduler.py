@@ -33,8 +33,10 @@ def start_scheduler():
     # Daily smart keyword + search term audit at 8:00 AM IST = 2:30 AM UTC
     # DISABLED: campaign-level manual audits are now used instead. Re-enable after AI is retrained.
     # _scheduler.add_job(_run_daily_smart_audit, 'cron', hour=2, minute=30, id='daily_smart_audit', replace_existing=True)
+    # Daily Mantri MIS snapshot refresh at 6:30 AM IST = 1:00 AM UTC
+    _scheduler.add_job(_run_daily_mantri_mis_refresh, 'cron', hour=1, minute=0, id='daily_mantri_mis_refresh', replace_existing=True)
     _scheduler.start()
-    logger.info("Background scheduler started (daily smart audit disabled)")
+    logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 
 
 def _run_daily_smart_audit():
@@ -507,3 +509,39 @@ def remove_account_schedule(account_id: int):
                 _scheduler.remove_job(job_id)
             except Exception:
                 pass
+
+
+def _run_daily_mantri_mis_refresh():
+    """Refresh Mantri MIS daily snapshots for both platforms at 6:30 AM IST."""
+    from datetime import date, timedelta
+    from backend.routes.mis_mantri import _refresh_platform
+    from backend.db.models import MisProject, User
+
+    logger.info("Daily Mantri MIS snapshot refresh started")
+    db = SessionLocal()
+    try:
+        project = db.query(MisProject).filter(MisProject.name == "Serenity", MisProject.is_active == True).first()
+        if not project:
+            logger.warning("Mantri MIS Serenity project not found; skipping daily refresh")
+            return
+        user = db.query(User).filter(User.role == "admin").first() or db.query(User).first()
+        if not user:
+            logger.warning("No admin user found; skipping daily Mantri MIS refresh")
+            return
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        for platform, platform_start in [("meta", "2026-04-17"), ("google", "2026-05-25")]:
+            try:
+                result = _refresh_platform(db, project, platform, platform_start, yesterday, user)
+                logger.info(f"Daily Mantri MIS refresh {platform}: {result}")
+            except Exception as e:
+                logger.error(f"Daily Mantri MIS refresh failed for {platform}: {e}", exc_info=True)
+        db.commit()
+        logger.info("Daily Mantri MIS snapshot refresh complete")
+    except Exception as e:
+        logger.error(f"Daily Mantri MIS refresh orchestration failed: {e}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    finally:
+        db.close()

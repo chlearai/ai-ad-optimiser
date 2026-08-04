@@ -780,7 +780,7 @@ class MisProject(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     client = relationship("Account")
-    snapshots = relationship("MisDailySnapshot", back_populates="project", cascade="all, delete-orphan")
+    snapshots = relationship("MisDailySnapshot", back_populates="project")
 
     def to_dict(self):
         return {
