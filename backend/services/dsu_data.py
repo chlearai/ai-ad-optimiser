@@ -149,6 +149,56 @@ def _get_dsu_account_creds() -> Dict[str, Any]:
     return creds
 
 
+def _fetch_google_ads_campaign_status() -> Dict[str, bool]:
+    """Return {course: is_live} based on actual Google Ads campaign statuses.
+
+    A course is considered live if it has at least one ENABLED campaign.
+    Mapping uses the same keyword-based rules as spend reporting.
+    """
+    try:
+        creds = _get_dsu_account_creds()
+        from google.ads.googleads.client import GoogleAdsClient
+
+        client_dict = {
+            "developer_token": creds["developer_token"],
+            "client_id": creds["client_id"],
+            "client_secret": creds["client_secret"],
+            "refresh_token": creds["refresh_token"],
+            "use_proto_plus": True,
+        }
+        login_cid = creds.get("login_customer_id")
+        if login_cid:
+            client_dict["login_customer_id"] = str(login_cid).replace("-", "").strip()
+
+        gclient = GoogleAdsClient.load_from_dict(client_dict)
+        service = gclient.get_service("GoogleAdsService")
+        customer_id = "2909919094"  # DSU customer ID
+
+        query = """
+            SELECT
+              campaign.id,
+              campaign.name,
+              campaign.status
+            FROM campaign
+        """
+        response = service.search(customer_id=customer_id, query=query)
+        live_courses = set()
+        all_courses = set()
+        for row in response:
+            course = _map_campaign_to_course(row.campaign.name)
+            if not course:
+                continue
+            all_courses.add(course)
+            status_str = str(row.campaign.status).upper() if row.campaign.status else ""
+            # GoogleAdsStatus enum: ENABLED, PAUSED, REMOVED, UNKNOWN
+            if status_str in ("ENABLED", "CAMPAIGNSTATUS.ENABLED", "2"):
+                live_courses.add(course)
+        return {course: course in live_courses for course in all_courses}
+    except Exception as e:
+        logger.warning(f"DSU Google Ads campaign status fetch skipped or failed: {e}")
+        return {}
+
+
 def _fetch_google_ads_spend(start_date: str, end_date: str, live_only: bool = False) -> Dict[str, float]:
     """Fetch campaign-level spend from Google Ads, mapped to courses.
     GST (18%) is applied per-day on spend from 19-Jun-2026 onwards.
@@ -743,10 +793,14 @@ def fetch_dsu_application_mis(start_date: str, end_date: str) -> Dict[str, Any]:
 
 def fetch_dsu_budget_mis(start_date: str, end_date: str, db_session=None) -> Dict[str, Any]:
     """Fetch Budget MIS by Campus/Program (Table 5).
-    Uses cumulative spend (legacy + live API) + dsu_budget_entries for campus budgets."""
+    Uses cumulative spend (legacy + live API) + dsu_budget_entries for campus budgets.
+    Program status is based on actual Google Ads campaign status."""
     # Use cumulative spend for consistency with Table 2 and Table 4
     cumulative_rows = fetch_dsu_cumulative_range(start_date, end_date)
     spend_data = {r["course"]: r["spend"] for r in cumulative_rows}
+
+    # Fetch live campaign status from Google Ads for each course
+    live_status_by_course = _fetch_google_ads_campaign_status()
 
     # Fetch campus budgets from DB
     campus4_budget = 0.0
@@ -770,7 +824,11 @@ def fetch_dsu_budget_mis(start_date: str, end_date: str, db_session=None) -> Dic
         rows = []
         for c in course_list:
             spend = get_spend(c["key"])
-            status = "Live" if spend > 0 else "Paused"
+            # Prefer live Google Ads status; fall back to spend-based heuristic if API fails
+            is_live = live_status_by_course.get(c["key"])
+            if is_live is None:
+                is_live = spend > 0
+            status = "Live" if is_live else "Paused"
             rows.append({
                 "course": c["display"],
                 "status": status,

@@ -967,7 +967,7 @@
         await renderReport(a);
     }
 
-    let dsuT1Range = { preset: 'yesterday', start: '', end: '' };
+    let dsuT1Range = { preset: 'today', start: '', end: '' };
     let dsuT2Range = { preset: 'inception', start: '', end: '' };
 
     function computeDSUDateRange(preset, rangeObj) {
@@ -977,7 +977,10 @@
         let start = new Date(end);
         switch (preset) {
             case 'yesterday': break;
-            case 'today': start = today(); break;
+            case 'today':
+                start = today();
+                end.setDate(end.getDate() + 1); // today
+                break;
             case 'last7': start.setDate(end.getDate() - 6); break;
             case 'last15': start.setDate(end.getDate() - 14); break;
             case 'last30': start.setDate(end.getDate() - 29); break;
@@ -1702,7 +1705,7 @@
     // DSI REPORT RENDERING
     // ========================================================================
 
-    let dsiT1Range = { preset: 'yesterday', start: '', end: '' };
+    let dsiT1Range = { preset: 'today', start: '', end: '' };
     let dsiT2Range = { preset: 'inception', start: '', end: '' };
     let dsiActiveTab = 't1t2';
 
@@ -1712,7 +1715,10 @@
         let start = new Date(end);
         switch (preset) {
             case 'yesterday': break;
-            case 'today': start = today(); break;
+            case 'today':
+                start = today();
+                end.setDate(end.getDate() + 1); // today
+                break;
             case 'last7': start.setDate(end.getDate() - 6); break;
             case 'last15': start.setDate(end.getDate() - 14); break;
             case 'last30': start.setDate(end.getDate() - 29); break;

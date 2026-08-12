@@ -680,19 +680,35 @@ class GoogleAdsConnector(AdsConnector):
 
 
 def get_meta_access_token(account: Optional[Account] = None) -> Optional[str]:
-    """Resolve Meta access token: system user token first, then per-account fallback."""
+    """Resolve Meta access token.
+    Priority order:
+    1. DB per-account credentials (if stored for account)
+    2. Account-specific META_ACCESS_TOKEN if account matches META_AD_ACCOUNT_ID
+    3. Global META_SYSTEM_USER_TOKEN
+    4. Fallback META_ACCESS_TOKEN
+    """
+    if account and account.meta_credentials:
+        try:
+            tok = json.loads(decrypt(account.meta_credentials)).get("access_token")
+            if tok:
+                return tok
+        except Exception as e:
+            logger.error(f"Failed to parse Meta credentials: {e}")
+
+    env_ad_account = os.environ.get("META_AD_ACCOUNT_ID", "").replace("act_", "").strip()
+    user_token = os.environ.get("META_ACCESS_TOKEN")
     system_token = os.environ.get("META_SYSTEM_USER_TOKEN")
+
+    if account:
+        ext_id = (account.meta_external_id or account.external_id or "").replace("act_", "").strip()
+        if env_ad_account and ext_id and ext_id == env_ad_account and user_token:
+            return user_token
+
     if system_token:
         return system_token
-    # Per-account fallback
-    raw = account.meta_credentials if account else None
-    if not raw:
-        return None
-    try:
-        return json.loads(decrypt(raw)).get("access_token")
-    except Exception as e:
-        logger.error(f"Failed to parse Meta credentials: {e}")
-        return None
+
+    return user_token
+
 
 
 class MetaAdsConnector(AdsConnector):
@@ -964,8 +980,8 @@ class MetaAdsConnector(AdsConnector):
 
 
 def meta_system_token_configured() -> bool:
-    """Return True when a global system user token is configured."""
-    return bool(os.environ.get("META_SYSTEM_USER_TOKEN"))
+    """Return True when a global system user token or env access token is configured."""
+    return bool(os.environ.get("META_SYSTEM_USER_TOKEN") or os.environ.get("META_ACCESS_TOKEN"))
 
 
 def get_connector(account: Account, platform: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Optional[AdsConnector]:

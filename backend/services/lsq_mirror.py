@@ -156,16 +156,30 @@ def _parse_lsq_record(rec: Dict[str, Any], include_dsi_course_columns: bool = Fa
     modified = _parse_lsq_date(modified_raw) if modified_raw else ""
     source = props.get("Source", "")
 
-    # Resolve course. For DSI use SourceCampaign, then Application Course / Program.
+    # Resolve course. For DSU, if Source itself is a tag like GGL-DSI that
+    # does not map to a course, fall back to SourceCampaign (campaign name) and
+    # then Application Course / Program.
+    source_campaign = (props.get("SourceCampaign") or "").strip()
+    app_course = (props.get("mx_Application_Course") or "").strip()
+    app_program = (props.get("mx_Application_Program") or "").strip()
     course = _resolve_course(source)
-    if include_dsi_course_columns:
-        source_campaign = (props.get("SourceCampaign") or "").strip()
-        app_course = (props.get("mx_Application_Course") or "").strip()
-        app_program = (props.get("mx_Application_Program") or "").strip()
+    if not course and source_campaign:
+        course = _map_campaign_to_course(source_campaign)
+    if not course and app_course and app_course != "--":
+        course = _resolve_course(app_course)
+    if not course and app_program and app_program != "--":
+        course = _resolve_course(app_program)
 
+    if include_dsi_course_columns:
+        # DSI path reuses the same source_campaign/app_course/app_program already read above.
         raw_course = ""
-        # Generic DSCASC sitelink campaigns don't encode the course; use Application Course first
-        if source_campaign in ("chlear_dns_dscasc_search_ds_sitelink_1", "chlear_dns_dscasc_search_ds_sitelink_4"):
+        # Generic DSCASC / CHLEAR_DSCASC campaigns don't encode the specific course;
+        # use Application Course / Program first when available.
+        is_generic_dscasc = (
+            source_campaign in ("chlear_dns_dscasc_search_ds_sitelink_1", "chlear_dns_dscasc_search_ds_sitelink_4")
+            or source_campaign.upper().startswith("CHLEAR_DSCASC")
+        )
+        if is_generic_dscasc:
             if app_course and app_course != "--":
                 raw_course = app_course
 
@@ -234,14 +248,19 @@ def _is_dsi_included_lead(props_or_record: Dict[str, Any]) -> bool:
       - GGL-DSI leads from all campaigns
       - CHL_DISPLAY leads from all campaigns
       - Programmatic leads ONLY from approved campaigns in the whitelist
+      - Google leads with DSCASC source campaigns (e.g. DSCASC-2026, CHLEAR_DSCASC_*)
     """
     source = (props_or_record.get("source") or "").strip()
     source_campaign = (props_or_record.get("source_campaign") or "").strip()
+    campaign_upper = source_campaign.upper()
 
     if source in ("GGL-DSI", "CHL_DISPLAY"):
         return True
     if source == "Programmatic":
         return source_campaign in DSI_PROGRAMMATIC_CAMPAIGN_WHITELIST
+    # Include Google CHLEAR_DSCASC campaigns where Application Course/Program carries the course
+    if source == "Google" and campaign_upper.startswith("CHLEAR_DSCASC"):
+        return True
     return False
 
 
@@ -337,8 +356,6 @@ def _search_lsq_by_source_field(
             if created and created < since_date:
                 continue
             if include_dsi_course_columns:
-                if not _is_dsi_source(parsed):
-                    continue
                 if not _is_dsi_included_lead(parsed):
                     continue
             else:
@@ -383,6 +400,21 @@ def _full_sync_by_source(
                 if existing and existing.get("course") and not lead.get("course"):
                     continue
                 all_leads[prospect_id] = lead
+
+    # DSI-specific: CHLEAR_DSCASC source campaigns carry course info in Application Course/Program
+    if include_dsi:
+        found = _search_lsq_by_source_field(
+            base_url, access_key, secret_key,
+            "SourceCampaign", "CHLEAR_DSCASC", since_date,
+            include_dsi_course_columns=True,
+        )
+        for prospect_id, lead in found.items():
+            if not _is_dsi_included_lead(lead):
+                continue
+            existing = all_leads.get(prospect_id)
+            if existing and existing.get("course") and not lead.get("course"):
+                continue
+            all_leads[prospect_id] = lead
 
     # Fallback: RecentlyModified catches leads with empty Source but GGL/Programmatic in Student Source.
     # Use a 30-day window ending today to keep the API call small.
@@ -447,6 +479,21 @@ def _incremental_sync(
                 if existing and existing.get("course") and not lead.get("course"):
                     continue
                 all_leads[prospect_id] = lead
+
+    # DSI-specific: CHLEAR_DSCASC source campaigns carry course info in Application Course/Program
+    if include_dsi:
+        found = _search_lsq_by_source_field(
+            base_url, access_key, secret_key,
+            "SourceCampaign", "CHLEAR_DSCASC", since_date,
+            include_dsi_course_columns=True,
+        )
+        for prospect_id, lead in found.items():
+            if not _is_dsi_included_lead(lead):
+                continue
+            existing = all_leads.get(prospect_id)
+            if existing and existing.get("course") and not lead.get("course"):
+                continue
+            all_leads[prospect_id] = lead
 
     # Fallback: RecentlyModified catches leads with empty Source but GGL/Programmatic in Student Source.
     try:
@@ -611,8 +658,6 @@ def _fetch_recently_modified_window(
         for rec in records:
             parsed = _parse_lsq_record(rec, include_dsi_course_columns=include_dsi_course_columns)
             if include_dsi_course_columns:
-                if not _is_dsi_source(parsed):
-                    continue
                 if not _is_dsi_included_lead(parsed):
                     continue
             else:

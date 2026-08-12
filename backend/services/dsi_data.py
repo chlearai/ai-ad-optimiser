@@ -462,6 +462,34 @@ def _fetch_dsi_google_ads_monthly_spend(start_date: str, end_date: str) -> Dict[
 # LeadSquared lead fetch with full details
 # ============================================================================
 
+def _count_dsi_override_leads(report_date: str, source_campaigns: List[str]) -> int:
+    """Count leads in the DSI mirror matching specific source campaigns on a date.
+
+    Used for temporary business overrides where campaign-level leads are not
+    captured by the standard course mapping.
+    """
+    from backend.db.database import SessionLocal
+    from backend.db.models import LeadSquaredLead
+
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(LeadSquaredLead)
+            .filter(
+                LeadSquaredLead.account_id == DSI_ACCOUNT_ID,
+                LeadSquaredLead.created_on == report_date,
+                LeadSquaredLead.source_campaign.in_(source_campaigns),
+            )
+            .all()
+        )
+        return len(rows)
+    except Exception as e:
+        logger.warning(f"DSI override lead count failed: {e}")
+        return 0
+    finally:
+        db.close()
+
+
 def _fetch_dsi_lsq_leads(start_date: str, end_date: str) -> List[Dict[str, Any]]:
     """Fetch DSI lead details from the local LeadSquared mirror.
 
@@ -669,6 +697,15 @@ def fetch_dsi_daily_range(start_date: str, end_date: str) -> List[Dict[str, Any]
     for lead in leads:
         normalized = _rollup_to_dept(lead["course"])
         leads_by_course[normalized] += 1
+
+    # Temporary business override (07-Aug-2026): add 2 leads to MBA sourced from
+    # campaigns CHLEAR_DSCASC_PG_MCA_Search_Brand_Generic_20260805 and
+    # CHLEAR_DSCASC_PG_MBA_Search_Brand_Generic_20260805.
+    # TODO: Remove once LeadSquared source-campaign mapping is aligned.
+    if start_date <= "2026-08-07" <= end_date:
+        override_count = 2
+        mba_label = "MBA"
+        leads_by_course[mba_label] = leads_by_course.get(mba_label, 0) + override_count
 
     normalized_spend = {}
     for course, spend in spend_data.items():

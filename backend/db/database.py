@@ -150,6 +150,12 @@ def init_db():
             run_mis_migration()
         except Exception as me:
             logger.warning(f"Additive MIS Mantri migration skipped/failed: {me}")
+        # Run safe additive migration for rev_clients.account_id column
+        try:
+            from backend.migrations.add_rev_clients_account_id import run_migration as run_rev_clients_account_id_migration
+            run_rev_clients_account_id_migration()
+        except Exception as me:
+            logger.warning(f"Additive rev_clients.account_id migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
