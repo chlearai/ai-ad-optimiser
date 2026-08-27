@@ -274,7 +274,7 @@ def _fetch_lsq_leads(start_date: str, end_date: str, account_id: int = None) -> 
 
     from backend.db.database import SessionLocal
     from backend.db.models import LeadSquaredLead
-    from backend.services.lsq_mirror import count_leads_by_course
+    from backend.services.lsq_mirror import count_leads_by_course, sync_account_leads
 
     db = SessionLocal()
     try:
@@ -283,6 +283,11 @@ def _fetch_lsq_leads(start_date: str, end_date: str, account_id: int = None) -> 
         if not existing:
             logger.warning(f"LSQ mirror empty for account {account_id}, falling back to direct API")
             return _fetch_lsq_leads_direct(start_date, end_date, account_id)
+
+        # Auto-sync if the requested range includes recent dates and the mirror
+        # has not been synced in the last few hours. This prevents users from
+        # seeing stale "yesterday" lead counts before the scheduled sync runs.
+        _ensure_mirror_fresh(db, account_id, end_date)
 
         # Use the local mirror for fast filtering by CreatedOn date
         counts = count_leads_by_course(db, account_id, start_date, end_date)
@@ -293,6 +298,51 @@ def _fetch_lsq_leads(start_date: str, end_date: str, account_id: int = None) -> 
         return _fetch_lsq_leads_direct(start_date, end_date, account_id)
     finally:
         db.close()
+
+
+def _ensure_mirror_fresh(db, account_id: int, end_date: str) -> None:
+    """Trigger an incremental sync if the mirror may be stale for the report date.
+
+    A mirror is considered stale for a report when:
+      - the report end date is today or yesterday, AND
+      - the latest synced_at in the mirror is more than 90 minutes old.
+
+    This is a no-op if the mirror is already fresh, so report loading stays fast.
+    """
+    from datetime import datetime, timedelta, date
+    from backend.db.models import LeadSquaredLead
+    from backend.services.lsq_mirror import sync_account_leads
+
+    try:
+        report_end = date.fromisoformat(end_date)
+    except Exception:
+        return
+
+    today = date.today()
+    if report_end not in (today, today - timedelta(days=1), today - timedelta(days=2)):
+        return
+
+    latest = (
+        db.query(LeadSquaredLead)
+        .filter(LeadSquaredLead.account_id == account_id)
+        .order_by(LeadSquaredLead.synced_at.desc())
+        .first()
+    )
+    if not latest or not latest.synced_at:
+        return
+
+    age_minutes = (datetime.utcnow() - latest.synced_at).total_seconds() / 60.0
+    if age_minutes <= 90:
+        return
+
+    logger.info(
+        f"LSQ mirror for account {account_id} is {age_minutes:.0f} minutes old; "
+        f"triggering incremental sync before report view"
+    )
+    try:
+        sync_account_leads(account_id, db=db)
+    except Exception as e:
+        logger.warning(f"Pre-report LSQ sync failed for account {account_id}: {e}")
 
 
 def _fetch_lsq_leads_direct(start_date: str, end_date: str, account_id: int = None) -> Dict[str, int]:
@@ -504,6 +554,8 @@ def _fetch_lsq_lead_details(start_date: str, end_date: str, account_id: int = 1)
         if not existing:
             logger.warning(f"LSQ mirror empty for account {account_id}, falling back to direct API for lead details")
             return _fetch_lsq_lead_details_direct(start_date, end_date, account_id)
+
+        _ensure_mirror_fresh(db, account_id, end_date)
 
         leads = get_lead_details(db, account_id, start_date, end_date)
         logger.info(f"LSQ mirror detail query for account {account_id} {start_date}-{end_date}: {len(leads)} leads")

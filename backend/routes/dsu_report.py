@@ -18,6 +18,7 @@ from backend.services.dsu_data import (
 )
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -124,6 +125,16 @@ def dsu_performance(
     }
     cum_total["cpl"] = round(cum_total["spend"] / cum_total["leads"]) if cum_total["leads"] else 0
 
+    # Data freshness for the lead mirror so users can see when counts were last synced.
+    from backend.db.models import LeadSquaredLead
+    freshness = (
+        db.query(LeadSquaredLead.synced_at)
+        .filter(LeadSquaredLead.account_id == account.id)
+        .order_by(LeadSquaredLead.synced_at.desc())
+        .first()
+    )
+    freshness_iso = freshness[0].isoformat() + "Z" if freshness and freshness[0] else None
+
     return {
         "account": account.to_dict() if account else None,
         "t1_start": t1_start_date,
@@ -133,6 +144,10 @@ def dsu_performance(
         "inception_date": DSU_INCEPTION,
         "gst_transition_date": DSU_GST_TRANSITION,
         "gst_note": "Spend values before 19-Jun-2026 are without GST. From 19-Jun-2026 onwards, platform cost is multiplied by 1.18.",
+        "data_freshness": {
+            "leads_last_synced_at": freshness_iso,
+            "report_generated_at": datetime.utcnow().isoformat() + "Z",
+        },
         "daily": {
             "title": f"TABLE 1: {t1_start_date}" + (f" to {t1_end_date}" if t1_start_date != t1_end_date else ""),
             "subtitle": "WITHOUT GST (BASE CAMPAIGN METRICS)" if t1_end_date < DSU_GST_TRANSITION else "WITH GST (18% APPLIED)",

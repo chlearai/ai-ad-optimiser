@@ -285,6 +285,56 @@ def _apply_gst(raw_cost: float, date_str: str) -> float:
 # Google Ads spend fetch
 # ============================================================================
 
+def _fetch_dsi_google_ads_campaign_status() -> Dict[str, bool]:
+    """Return {course: is_live} based on actual Google Ads campaign statuses for DSI.
+
+    A course is considered live if it has at least one ENABLED campaign.
+    Mapping uses the same keyword-based rules as spend reporting.
+    """
+    try:
+        creds = _get_dsi_account_creds()
+        from google.ads.googleads.client import GoogleAdsClient
+
+        client_dict = {
+            "developer_token": creds["developer_token"],
+            "client_id": creds["client_id"],
+            "client_secret": creds["client_secret"],
+            "refresh_token": creds["refresh_token"],
+            "use_proto_plus": True,
+        }
+        if creds.get("login_customer_id"):
+            client_dict["login_customer_id"] = str(creds["login_customer_id"]).replace("-", "")
+
+        gclient = GoogleAdsClient.load_from_dict(client_dict)
+        service = gclient.get_service("GoogleAdsService")
+        customer_id = DSI_CUSTOMER_ID
+
+        query = """
+            SELECT
+              campaign.id,
+              campaign.name,
+              campaign.status
+            FROM campaign
+        """
+        response = service.search(customer_id=customer_id, query=query)
+        live_courses = set()
+        all_courses = set()
+        for row in response:
+            course = _map_dsi_campaign_to_course(row.campaign.name)
+            if not course:
+                continue
+            rolled_up = _rollup_to_dept(course)
+            all_courses.add(rolled_up)
+            status_str = str(row.campaign.status).upper() if row.campaign.status else ""
+            # GoogleAdsStatus enum: ENABLED, PAUSED, REMOVED, UNKNOWN
+            if status_str in ("ENABLED", "CAMPAIGNSTATUS.ENABLED", "2"):
+                live_courses.add(rolled_up)
+        return {course: course in live_courses for course in all_courses}
+    except Exception as e:
+        logger.warning(f"DSI Google Ads campaign status fetch skipped or failed: {e}")
+        return {}
+
+
 def _fetch_dsi_google_ads_spend(start_date: str, end_date: str, live_only: bool = False) -> Dict[str, float]:
     """Fetch campaign-level spend from Google Ads for DSI, mapped to courses with dept rollup.
 
@@ -984,6 +1034,9 @@ def fetch_dsi_budget_mis(start_date: str, end_date: str, db_session=None) -> Dic
     cumulative_rows = fetch_dsi_cumulative_range(start_date, end_date)
     spend_data = {r["course"]: r["spend"] for r in cumulative_rows}
 
+    # Fetch live campaign status from Google Ads for each course
+    live_status_by_course = _fetch_dsi_google_ads_campaign_status()
+
     # Fetch budgets from DB (stored per department/section)
     section_budgets = defaultdict(float)
     if db_session:
@@ -993,7 +1046,7 @@ def fetch_dsi_budget_mis(start_date: str, end_date: str, db_session=None) -> Dic
             if entry.section:
                 section_budgets[entry.section] += entry.amount
 
-    all_courses = set(spend_data.keys())
+    all_courses = set(spend_data.keys()) | set(live_status_by_course.keys())
     rows = []
     grand_budget = 0.0
     grand_spend = 0.0
@@ -1003,7 +1056,11 @@ def fetch_dsi_budget_mis(start_date: str, end_date: str, db_session=None) -> Dic
     for course in all_courses:
         spend = round(spend_data.get(course, 0))
         dept = _get_dsi_dept(course)
-        status = "Live" if spend > 0 else "Paused"
+        # Prefer live Google Ads status; fall back to spend-based heuristic if API fails
+        is_live = live_status_by_course.get(course)
+        if is_live is None:
+            is_live = spend > 0
+        status = "Live" if is_live else "Paused"
         rows.append({
             "department": dept,
             "course": course,

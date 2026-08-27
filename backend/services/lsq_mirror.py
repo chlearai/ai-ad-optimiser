@@ -496,12 +496,13 @@ def _incremental_sync(
             all_leads[prospect_id] = lead
 
     # Fallback: RecentlyModified catches leads with empty Source but GGL/Programmatic in Student Source.
+    # Use since_date as the window start so ALL leads in the sync window are covered,
+    # not just the last 7 days. This permanently prevents under-counting at the boundary.
     try:
-        to_dt = date.today()
-        from_dt = to_dt - timedelta(days=7)
+        to_dt = date.today() + timedelta(days=1)
         recent = _fetch_recently_modified_window(
             base_url, access_key, secret_key,
-            from_dt.isoformat(), to_dt.isoformat(),
+            since_date, to_dt.isoformat(),
             include_dsi_course_columns=include_dsi,
         )
         for prospect_id, lead in recent.items():
@@ -572,7 +573,10 @@ def sync_account_leads(account_id: int, db: Session = None, full_window_from: st
         if full_window_from:
             return _full_sync_by_source(account, access_key, secret_key, base_url, full_window_from, db)
 
-        # Incremental: fetch from most recent modified_on minus 7 days
+        # Incremental: fetch from most recent modified_on minus 14 days.
+        # A 14-day buffer ensures leads near the sync-window boundary (e.g.
+        # yesterday's leads that arrive close to midnight IST) are never
+        # dropped by the delete-then-reinsert cycle.
         latest = (
             db.query(LeadSquaredLead)
             .filter(LeadSquaredLead.account_id == account_id)
@@ -581,7 +585,7 @@ def sync_account_leads(account_id: int, db: Session = None, full_window_from: st
         )
         if latest and latest.modified_on:
             latest_dt = date.fromisoformat(latest.modified_on)
-            from_dt = latest_dt - timedelta(days=7)
+            from_dt = latest_dt - timedelta(days=14)
             since_date = from_dt.isoformat()
         else:
             since_date = default_since
@@ -592,8 +596,21 @@ def sync_account_leads(account_id: int, db: Session = None, full_window_from: st
         logger.exception(f"LSQ mirror sync failed for account {account_id}: {e}")
         return {"error": str(e)}
     finally:
+        # Clear direct-API fallback cache for this account so stale values are
+        # never used while the mirror is rebuilt.
+        _clear_lsq_cache(account_id)
         if close_db:
             db.close()
+
+
+def _clear_lsq_cache(account_id: int) -> None:
+    """Remove all in-memory LSQ cache entries for a given account."""
+    from backend.services.dsu_data import _LSQ_CACHE, _LSQ_CACHE_TIME
+    keys_to_remove = [k for k in _LSQ_CACHE if k.startswith(f"{account_id}_")]
+    for k in keys_to_remove:
+        _LSQ_CACHE.pop(k, None)
+        _LSQ_CACHE_TIME.pop(k, None)
+    logger.info(f"Cleared LSQ direct-API cache for account {account_id} ({len(keys_to_remove)} entries)")
 
 
 from datetime import datetime
