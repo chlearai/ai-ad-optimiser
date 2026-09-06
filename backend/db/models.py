@@ -1,8 +1,9 @@
 """
 Database models for AdOptima AI.
 """
+import json
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.db.database import Base
 import enum
@@ -437,6 +438,7 @@ class User(Base):
     access_insightdesk = Column(Boolean, default=False)
     access_revenueops = Column(Boolean, default=False)
     access_audit_review = Column(Boolean, default=False)
+    access_adguard = Column(Boolean, default=False)
     onboarding_token = Column(String, nullable=True, unique=True, index=True)
     onboarding_token_expires_at = Column(DateTime, nullable=True)
     onboarding_completed = Column(Boolean, default=False)
@@ -461,6 +463,7 @@ class User(Base):
             "access_insightdesk": self.access_insightdesk,
             "access_revenueops": self.access_revenueops,
             "access_audit_review": self.access_audit_review,
+            "access_adguard": self.access_adguard,
             "onboarding_completed": self.onboarding_completed,
             "assigned_account_ids": self.assigned_account_ids(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -623,6 +626,8 @@ class LeadSquaredLead(Base):
     secondary_source = Column(String, nullable=True, default="")
     student_stage = Column(String, nullable=True, default="")
     application_status = Column(String, nullable=True, default="")
+    city = Column(String, nullable=True, default="")
+    state = Column(String, nullable=True, default="")
     created_on = Column(String, nullable=True, index=True)  # ISO date YYYY-MM-DD
     modified_on = Column(String, nullable=True)              # ISO date YYYY-MM-DD
     course = Column(String, nullable=True, default="")     # resolved course mapping
@@ -643,6 +648,8 @@ class LeadSquaredLead(Base):
             "secondary_source": self.secondary_source,
             "student_stage": self.student_stage,
             "application_status": self.application_status,
+            "city": self.city,
+            "state": self.state,
             "created_on": self.created_on,
             "modified_on": self.modified_on,
             "course": self.course,
@@ -824,6 +831,54 @@ class MisDailySnapshot(Base):
         }
 
 
+class CallFeedbackActivity(Base):
+    """Local mirror of LeadSquared "Call Feedback" custom activities (EventCode 210).
+
+    Used by InsightDesk Table 8 (Call Quality) to audit the outbound team's
+    call remarks. One row per Call Feedback activity posted on a lead.
+
+    Field mapping discovered from the LSQ tenant:
+      mx_Custom_1 = next follow-up date
+      mx_Custom_2 = call status when not connected (Ringing No Answer / Number Busy / ...)
+      mx_Custom_3 = connected outcome (Interested / Not Interested / Not Eligible / Not Yet Decided)
+      mx_Custom_6 = not-interested reason (Fees is Too High / ...)
+      mx_Custom_7 = not-eligible reason (Wrong Number / By Mistake Enquired / ...)
+    """
+    __tablename__ = "lsq_call_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
+    activity_id = Column(String, nullable=False, index=True)      # LSQ ProspectActivityId
+    prospect_id = Column(String, nullable=False, index=True)      # LSQ RelatedProspectId
+    call_status = Column(String, nullable=True, default="")       # mx_Custom_2 (empty = connected)
+    outcome = Column(String, nullable=True, default="")           # mx_Custom_3
+    reason = Column(String, nullable=True, default="")            # mx_Custom_6 or mx_Custom_7
+    next_followup = Column(String, nullable=True, default="")     # mx_Custom_1
+    created_by_name = Column(String, nullable=True, default="")   # agent who logged the call
+    created_on = Column(DateTime, nullable=False, index=True)     # UTC activity time
+    synced_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    account = relationship("Account")
+
+    __table_args__ = (
+        UniqueConstraint("activity_id", name="uq_lsq_call_feedback_activity"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "activity_id": self.activity_id,
+            "prospect_id": self.prospect_id,
+            "call_status": self.call_status,
+            "outcome": self.outcome,
+            "reason": self.reason,
+            "next_followup": self.next_followup,
+            "created_by_name": self.created_by_name,
+            "created_on": self.created_on.isoformat() if self.created_on else None,
+        }
+
+
 class CampaignLandingPage(Base):
     """Landing page URL + crawled content per campaign, used for smarter search term audits."""
     __tablename__ = "campaign_landing_pages"
@@ -851,4 +906,85 @@ class CampaignLandingPage(Base):
             "last_crawled_at": self.last_crawled_at.isoformat() if self.last_crawled_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class AdGuardLead(Base):
+    """AdGuard — Google Ads lead form intake with integrity scoring.
+
+    Every incoming lead is scored by the Lead Integrity Gatekeeper
+    (disposable email, phone format, geo-mismatch, Gemini legitimacy).
+    - Verified leads  -> pushed to LeadSquared and stored here for audit trail.
+    - Flagged leads   -> stored here ONLY (never pushed to LSQ), with reasons.
+    """
+    __tablename__ = "adguard_leads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    gclid = Column(String, nullable=True, index=True)
+    form_id = Column(String, nullable=True)
+    campaign_name = Column(String, nullable=True, default="")
+    lead_type = Column(String, nullable=True, default="")  # e.g. google_lead_form
+
+    full_name = Column(String, nullable=True, default="")
+    email = Column(String, nullable=True, default="")
+    phone = Column(String, nullable=True, default="")
+    city = Column(String, nullable=True, default="")
+    state = Column(String, nullable=True, default="")
+    country = Column(String, nullable=True, default="")
+    postal_code = Column(String, nullable=True, default="")
+
+    raw_payload = Column(Text, nullable=True)  # full webhook JSON for traceability
+
+    # Gatekeeper output
+    integrity_score = Column(Integer, nullable=False, default=0)  # 0-100
+    verdict = Column(String, nullable=False, default="pending")  # verified | flagged
+    email_valid = Column(Boolean, default=True)
+    disposable_email = Column(Boolean, default=False)
+    phone_valid = Column(Boolean, default=False)
+    geo_match = Column(Boolean, default=True)
+    ai_legitimacy_score = Column(Integer, nullable=True)  # 0-100 from Gemini
+    ai_reason = Column(Text, nullable=True)
+    flags = Column(Text, nullable=True)  # JSON list of flag strings
+
+    # LSQ outcome
+    lsq_status = Column(String, nullable=True, default="not_pushed")  # not_pushed | pushed | failed | skipped_flagged
+    lsq_prospect_id = Column(String, nullable=True)
+    lsq_error = Column(Text, nullable=True)
+
+    received_at = Column(DateTime, default=datetime.utcnow, index=True)
+    processed_at = Column(DateTime, nullable=True)
+
+    account = relationship("Account")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "account_id": self.account_id,
+            "account_name": self.account.name if self.account else None,
+            "gclid": self.gclid,
+            "form_id": self.form_id,
+            "campaign_name": self.campaign_name,
+            "lead_type": self.lead_type,
+            "full_name": self.full_name,
+            "email": self.email,
+            "phone": self.phone,
+            "city": self.city,
+            "state": self.state,
+            "country": self.country,
+            "postal_code": self.postal_code,
+            "integrity_score": self.integrity_score,
+            "verdict": self.verdict,
+            "email_valid": self.email_valid,
+            "disposable_email": self.disposable_email,
+            "phone_valid": self.phone_valid,
+            "geo_match": self.geo_match,
+            "ai_legitimacy_score": self.ai_legitimacy_score,
+            "ai_reason": self.ai_reason,
+            "flags": json.loads(self.flags) if self.flags else [],
+            "lsq_status": self.lsq_status,
+            "lsq_prospect_id": self.lsq_prospect_id,
+            "lsq_error": self.lsq_error,
+            "received_at": self.received_at.isoformat() if self.received_at else None,
+            "processed_at": self.processed_at.isoformat() if self.processed_at else None,
         }

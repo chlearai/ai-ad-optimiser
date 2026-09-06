@@ -648,6 +648,15 @@
                 <div class="module-desc">Invoice tracker, payment records, and commercials management for every client.</div>
             </div>
         </div>
+
+        <div class="module-card adguard" id="cardAdGuard" onclick="openModule('/adguard')">
+            <span class="module-status status-active" id="statusAdGuard">Active</span>
+            <div class="module-icon">🛡️</div>
+            <div class="module-body">
+                <div class="module-title">AdGuard</div>
+                <div class="module-desc">Lead Integrity Gatekeeper for Google Ads lead forms — scores, filters junk, and pushes verified leads to LeadSquared.</div>
+            </div>
+        </div>
     </div>
 
     <div id="authOverlay" class="overlay hidden" onclick="hideAuth(event)" style="z-index:100;">
@@ -694,6 +703,7 @@
                     <label class="um-check"><input type="checkbox" id="umAccessAdPulse" onchange="toggleAuditReviewCheckbox()"> AdPulse Access</label>
                     <label class="um-check"><input type="checkbox" id="umAccessInsightDesk"> InsightDesk Access</label>
                     <label class="um-check"><input type="checkbox" id="umAccessRevenueOps"> RevenueOps Access</label>
+                    <label class="um-check"><input type="checkbox" id="umAccessAdGuard"> AdGuard Access</label>
                     <label class="um-check" id="umAccessAuditReviewLabel" style="opacity:0.5;" title="Requires AdPulse Access"><input type="checkbox" id="umAccessAuditReview" disabled> AI Audit Review Access</label>
                 </div>
                 <div class="um-section" id="umAssignSection">
@@ -1096,21 +1106,23 @@
 
         function updateUI(user) {
             if (user) {
-                $('userInfo').textContent = 'Logged in Profile';
-                $('loginBtn').classList.add('hidden');
-                $('logoutBtn').classList.remove('hidden');
-                $('userBadge').textContent = (user.role === 'user' ? 'BM' : (user.role === 'newuser' ? 'User' : user.role)).toUpperCase();
-                $('userBadge').classList.remove('hidden');
+                if ($('userInfo')) $('userInfo').textContent = user.email || 'Logged in Profile';
+                if ($('loginBtn')) $('loginBtn').classList.add('hidden');
+                if ($('logoutBtn')) $('logoutBtn').classList.remove('hidden');
+                if ($('userBadge')) {
+                    $('userBadge').textContent = (user.role === 'user' ? 'BM' : (user.role === 'newuser' ? 'User' : user.role)).toUpperCase();
+                    $('userBadge').classList.remove('hidden');
+                }
                 const isAdmin = user.role === 'admin' || user.role === 'superadmin';
                 if (isAdmin) {
-                    $('umBtn').classList.remove('hidden');
-                    $('maBtn').classList.remove('hidden');
-                    $('integrationsBtn').style.display = 'inline-flex';
+                    if ($('umBtn')) $('umBtn').classList.remove('hidden');
+                    if ($('maBtn')) $('maBtn').classList.remove('hidden');
+                    if ($('integrationsBtn')) $('integrationsBtn').style.display = 'inline-flex';
                     const ahBtn = $('activityHistoryBtn'); if (ahBtn) ahBtn.classList.remove('hidden');
                 } else {
-                    $('umBtn').classList.add('hidden');
-                    $('maBtn').classList.add('hidden');
-                    $('integrationsBtn').style.display = 'none';
+                    if ($('umBtn')) $('umBtn').classList.add('hidden');
+                    if ($('maBtn')) $('maBtn').classList.add('hidden');
+                    if ($('integrationsBtn')) $('integrationsBtn').style.display = 'none';
                     const ahBtn = $('activityHistoryBtn'); if (ahBtn) ahBtn.classList.add('hidden');
                 }
                 // Only Super Admin can create another superadmin
@@ -1120,18 +1132,20 @@
                 setCardAccess('AdPulse', isAdmin || user.access_adpulse);
                 setCardAccess('InsightDesk', isAdmin || user.access_insightdesk);
                 setCardAccess('RevenueOps', isAdmin || user.access_revenueops);
+                setCardAccess('AdGuard', isAdmin || user.access_adguard);
             } else {
-                $('userInfo').textContent = 'Not logged in';
-                $('loginBtn').classList.remove('hidden');
-                $('logoutBtn').classList.add('hidden');
-                $('userBadge').classList.add('hidden');
-                $('umBtn').classList.add('hidden');
-                $('integrationsBtn').style.display = 'none';
+                if ($('userInfo')) $('userInfo').textContent = 'Not logged in';
+                if ($('loginBtn')) $('loginBtn').classList.remove('hidden');
+                if ($('logoutBtn')) $('logoutBtn').classList.add('hidden');
+                if ($('userBadge')) $('userBadge').classList.add('hidden');
+                if ($('umBtn')) $('umBtn').classList.add('hidden');
+                if ($('integrationsBtn')) $('integrationsBtn').style.display = 'none';
                 const ahBtn2 = $('activityHistoryBtn'); if (ahBtn2) ahBtn2.classList.add('hidden');
-                $('addAccountBtn').style.display = 'none';
+                const addBtn = $('addAccountBtn'); if (addBtn) addBtn.style.display = 'none';
                 setCardAccess('AdPulse', false);
                 setCardAccess('InsightDesk', false);
                 setCardAccess('RevenueOps', false);
+                setCardAccess('AdGuard', false);
             }
         }
 
@@ -1237,6 +1251,7 @@
             if (u.access_adpulse) access.push('AdPulse');
             if (u.access_insightdesk) access.push('InsightDesk');
             if (u.access_revenueops) access.push('RevenueOps');
+            if (u.access_adguard) access.push('AdGuard');
             if (u.access_audit_review) access.push('AI Audit Review');
             const status = u.onboarding_completed !== false ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">Pending setup</span>';
             return `<tr>
@@ -1275,6 +1290,7 @@
         $('umAccessAdPulse').checked = true;
         $('umAccessInsightDesk').checked = false;
         $('umAccessRevenueOps').checked = false;
+        $('umAccessAdGuard').checked = false;
         $('umAccessAuditReview').checked = false;
         $('umLinkBox').classList.add('hidden');
         $('umSetupLink').textContent = '';
@@ -1293,6 +1309,7 @@
             $('umAccessAdPulse').checked = u.access_adpulse;
             $('umAccessInsightDesk').checked = u.access_insightdesk;
             $('umAccessRevenueOps').checked = u.access_revenueops;
+            $('umAccessAdGuard').checked = u.access_adguard || false;
             $('umAccessAuditReview').checked = u.access_audit_review || false;
             toggleAuditReviewCheckbox();
             $('umLinkBox').classList.add('hidden');
@@ -1320,6 +1337,7 @@
                 access_adpulse: $('umAccessAdPulse').checked,
                 access_insightdesk: $('umAccessInsightDesk').checked,
                 access_revenueops: $('umAccessRevenueOps').checked,
+                access_adguard: $('umAccessAdGuard').checked,
                 access_audit_review: $('umAccessAuditReview').checked,
                 assigned_account_ids: Array.from($('umAssignAccounts').querySelectorAll('input:checked')).map(cb => parseInt(cb.value))
             };

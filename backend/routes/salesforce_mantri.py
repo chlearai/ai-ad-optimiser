@@ -22,8 +22,12 @@ logger = logging.getLogger("AdOptima")
 
 router = APIRouter(prefix="/api/mis/mantri/salesforce", tags=["salesforce_mantri"])
 
-# Path to the exported Salesforce file
-SALESFORCE_FILE_PATH = r"C:\Users\Inno\Downloads\Clients\Shekhar_AI_Agents\AI_The_Optimiser\Data\mantri_salesforce.xlsx"
+# Path to the exported Salesforce file (relative to repo root, overridable via env var)
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SALESFORCE_FILE_PATH = os.environ.get(
+    "MANTRI_SALESFORCE_FILE_PATH",
+    os.path.join(_PROJECT_ROOT, "Data", "mantri_salesforce.xlsx"),
+)
 
 # Sub Source -> platform mapping
 SUB_SOURCE_MAP = {

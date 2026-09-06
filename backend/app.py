@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import traceback
 
 from backend.routes import config, campaigns, search_terms, negatives, optimizations, logs, chat, auth, reports, accounts, audits, notifications, oauth, crm, revenueops, dsu_report, dsi_report, mantri, voice, categories, activity_log, mis_mantri, salesforce_mantri
+from backend.routes import crashclub
+from backend.routes import adguard
 
 from backend.db.database import init_db
 from backend.services.scheduler import start_scheduler, stop_scheduler
@@ -62,6 +64,8 @@ app.include_router(mis_mantri.router)
 app.include_router(salesforce_mantri.router)
 app.include_router(voice.router)
 app.include_router(activity_log.router)
+app.include_router(crashclub.router)
+app.include_router(adguard.router)
 
 
 # Initialize database tables only at import time; scheduler starts lazily on first request
@@ -88,6 +92,15 @@ async def lazy_start_scheduler(request, call_next):
 @app.get("/health")
 def health_check():
     return {"status": "ok", "port": os.getenv("PORT", "8000")}
+
+
+@app.get("/india_states.js")
+def get_india_states_js():
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    js_path = os.path.join(frontend_dir, "india_states.js")
+    if os.path.exists(js_path):
+        return FileResponse(js_path, media_type="application/javascript")
+    return JSONResponse(status_code=404, content={"detail": "india_states.js not found"})
 
 
 @app.get("/favicon.ico")
@@ -138,6 +151,16 @@ def get_revenueops_ui(request: Request):
         with open(html_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>RevenueOps UI not found.</h1>")
+
+
+@app.get("/adguard", response_class=HTMLResponse)
+def get_adguard_ui(request: Request):
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    html_path = os.path.join(frontend_dir, "adguard.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>AdGuard UI not found.</h1>")
 
 
 @app.get("/integrations", response_class=HTMLResponse)

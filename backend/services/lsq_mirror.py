@@ -208,6 +208,8 @@ def _parse_lsq_record(rec: Dict[str, Any], include_dsi_course_columns: bool = Fa
         "secondary_source": props.get("mx_Secondary_Source", ""),
         "student_stage": props.get("mx_Student_Stage", ""),
         "application_status": props.get("mx_Application_Status", ""),
+        "city": props.get("mx_City", "") or "",
+        "state": props.get("mx_State", "") or "",
         "created_on": created,
         "modified_on": modified,
         "course": course,
@@ -296,7 +298,7 @@ def _fetch_lsq_get_page(
             "Logic": "AND",
         },
         "Columns": {
-            "Include_CSV": "ProspectID,Source,SourceCampaign,CreatedOn,ModifiedOn,LastModifiedOn,mx_Student_Source,mx_Student_Stage,mx_Application_Status,mx_Latest_Source,mx_Secondary_Source,mx_Application_Course,mx_Application_Program"
+            "Include_CSV": "ProspectID,Source,SourceCampaign,CreatedOn,ModifiedOn,LastModifiedOn,mx_Student_Source,mx_Student_Stage,mx_Application_Status,mx_Latest_Source,mx_Secondary_Source,mx_Application_Course,mx_Application_Program,mx_City,mx_State"
         },
         "Paging": {"PageIndex": page, "PageSize": page_size},
         "Sorting": {"ColumnName": "ProspectAutoId", "Direction": "1"},
@@ -643,7 +645,8 @@ def _fetch_recently_modified_window(
                 "ToDate": f"{to_date} 23:59:59",
             },
             "Columns": {
-                "Include_CSV": "ProspectID,Source,SourceCampaign,CreatedOn,ModifiedOn,LastModifiedOn,mx_Student_Source,mx_Student_Stage,mx_Application_Status,mx_Latest_Source,mx_Secondary_Source,mx_Application_Course,mx_Application_Program"
+            "Include_CSV": "ProspectID,Source,SourceCampaign,CreatedOn,ModifiedOn,LastModifiedOn,mx_Student_Source,mx_Student_Stage,mx_Application_Status,mx_Latest_Source,mx_Secondary_Source,mx_Application_Course,mx_Application_Program,mx_City,mx_State"
+                if True else "ProspectID,Source,SourceCampaign,CreatedOn,ModifiedOn,LastModifiedOn,mx_Student_Source,mx_Student_Stage,mx_Application_Status,mx_Latest_Source,mx_Secondary_Source,mx_Application_Course,mx_Application_Program"
             },
             "Paging": {"PageIndex": page, "PageSize": 1000},
             "Sorting": {"ColumnName": "ProspectAutoId", "Direction": "1"},

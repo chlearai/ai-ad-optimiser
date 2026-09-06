@@ -3,6 +3,7 @@ Background scheduler for running automatic audits and metric refreshes.
 Reads global and per-account audit intervals.
 """
 import logging
+import os
 import time
 from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional
@@ -35,8 +36,20 @@ def start_scheduler():
     # _scheduler.add_job(_run_daily_smart_audit, 'cron', hour=2, minute=30, id='daily_smart_audit', replace_existing=True)
     # Daily Mantri MIS snapshot refresh at 6:30 AM IST = 1:00 AM UTC
     _scheduler.add_job(_run_daily_mantri_mis_refresh, 'cron', hour=1, minute=0, id='daily_mantri_mis_refresh', replace_existing=True)
+    # Crash Club Meta leads -> Google Sheets, every 5 minutes
+    if os.getenv("CRASH_CLUB_SYNC_ENABLED", "true").lower() in ("true", "1", "yes"):
+        _scheduler.add_job(_run_crashclub_sync, 'interval', minutes=5, id='crashclub_meta_leads_sync', replace_existing=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
+
+
+def _run_crashclub_sync():
+    """Crash Club: poll Meta for new leads and push to Google Sheets (dedup in ledger)."""
+    try:
+        from backend.routes.crashclub import run_scheduled_sync
+        run_scheduled_sync()
+    except Exception as e:
+        logger.warning(f"CrashClub scheduled sync failed: {e}")
 
 
 def _run_daily_smart_audit():

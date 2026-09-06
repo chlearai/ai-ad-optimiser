@@ -56,6 +56,7 @@ class UserCreateRequest(BaseModel):
     access_insightdesk: bool = False
     access_revenueops: bool = False
     access_audit_review: bool = False
+    access_adguard: bool = False
 
 
 class UserUpdateRequest(BaseModel):
@@ -70,6 +71,7 @@ class UserUpdateRequest(BaseModel):
     access_insightdesk: Optional[bool] = None
     access_revenueops: Optional[bool] = None
     access_audit_review: Optional[bool] = None
+    access_adguard: Optional[bool] = None
 
 
 class SetPasswordRequest(BaseModel):
@@ -163,6 +165,7 @@ def onboard_first_user(req: OnboardRequest, db: Session = Depends(get_db)):
         access_adpulse=True,
         access_insightdesk=True,
         access_revenueops=True,
+        access_adguard=True,
     )
     db.add(user)
     db.commit()
@@ -235,6 +238,7 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
         access_insightdesk=req.access_insightdesk,
         access_revenueops=req.access_revenueops,
         access_audit_review=req.access_audit_review,
+        access_adguard=req.access_adguard,
         onboarding_token=token,
         onboarding_token_expires_at=token_expires,
         onboarding_completed=False,
@@ -352,6 +356,8 @@ def update_user(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_
             user.access_revenueops = req.access_revenueops
         if req.access_audit_review is not None:
             user.access_audit_review = req.access_audit_review
+        if req.access_adguard is not None:
+            user.access_adguard = req.access_adguard
 
     db.refresh(user)
     log_activity(

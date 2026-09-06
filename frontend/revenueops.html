@@ -1628,7 +1628,7 @@ async function loadUserAccounts(){
 async function openUserModal(userId=null){
     editingUserId=userId;
     const isEdit=userId!==null;
-    let u={full_name:'',email:'',mobile:'',role:'user',assigned_account_ids:[],access_adpulse:true,access_insightdesk:false,access_revenueops:false};
+    let u={full_name:'',email:'',mobile:'',role:'user',assigned_account_ids:[],access_adpulse:true,access_insightdesk:false,access_revenueops:false,access_adguard:false};
     if(isEdit){
         const users=await fetch(AUTH+'/users',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json());
         u=users.find(x=>x.id===userId)||u;
@@ -1653,6 +1653,7 @@ async function openUserModal(userId=null){
             <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrAdpulse" ${u.access_adpulse?'checked':''}> AdPulse Access</label></div>
             <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrInsightdesk" ${u.access_insightdesk?'checked':''}> InsightDesk Access</label></div>
             <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrRevenueops" ${u.access_revenueops?'checked':''}> RevenueOps Access</label></div>
+            <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrAdguard" ${u.access_adguard?'checked':''}> AdGuard Access</label></div>
         </div>
         <div id="usrAccountSection" style="${u.role==='user'?'':'display:none'}">
             <label style="font-size:.76rem;font-weight:600;color:var(--text-muted);margin-bottom:.22rem;display:block">Assigned Client/Brand (BM only)</label>
@@ -1689,9 +1690,10 @@ async function saveUserModal(){
         const access_adpulse=$('usrAdpulse').checked;
         const access_insightdesk=$('usrInsightdesk').checked;
         const access_revenueops=$('usrRevenueops').checked;
+        const access_adguard=$('usrAdguard').checked;
         if(!full_name||!email){toast('Name and Email are required','error');return}
         if(!editingUserId&&!password){toast('Password is required','error');return}
-        const payload={full_name,email,mobile,role,assigned_account_ids,access_adpulse,access_insightdesk,access_revenueops};
+        const payload={full_name,email,mobile,role,assigned_account_ids,access_adpulse,access_insightdesk,access_revenueops,access_adguard};
         if(password)payload.password=password;
         if(editingUserId){
             await fetch(AUTH+`/users/${editingUserId}`,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(payload)});

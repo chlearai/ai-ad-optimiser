@@ -156,6 +156,18 @@ def init_db():
             run_rev_clients_account_id_migration()
         except Exception as me:
             logger.warning(f"Additive rev_clients.account_id migration skipped/failed: {me}")
+        # Run safe additive migration for LSQ lead mirror city/state columns
+        try:
+            from backend.migrations.add_lsq_lead_geo_columns import run_migration as run_lsq_geo_migration
+            run_lsq_geo_migration()
+        except Exception as me:
+            logger.warning(f"Additive LSQ lead geo columns migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard module access permission
+        try:
+            from backend.migrations.add_access_adguard import run_migration as run_adguard_migration
+            run_adguard_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard access migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
