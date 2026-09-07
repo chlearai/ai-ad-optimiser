@@ -909,6 +909,47 @@ class CampaignLandingPage(Base):
         }
 
 
+class AdGuardAccount(Base):
+    """AdGuard SaaS workspace — one per self-serve connected Google login.
+
+    Ryze-style: user clicks Connect -> OAuth consent -> tokens stored encrypted
+    here. Discovered Google Ads customer IDs are listed so the user picks which
+    ones to protect. Independent from the agency `accounts` table.
+    """
+    __tablename__ = "adguard_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_email = Column(String, nullable=False, index=True)  # user identity (OAuth login)
+    display_name = Column(String, nullable=True, default="")
+
+    # Encrypted OAuth credentials (same Fernet scheme as Account.google_credentials)
+    google_credentials = Column(Text, nullable=True)
+    google_is_live = Column(Boolean, default=False)
+
+    # Google Ads customer IDs discovered via listAccessibleCustomers after connect
+    # JSON list: [{"id": "1234567890", "name": "DSU", "selected": true}, ...]
+    discovered_accounts = Column(Text, nullable=True)
+
+    # Gatekeeper settings
+    verification_threshold = Column(Integer, default=70)
+    auto_push_enabled = Column(Boolean, default=False)  # Module 3 CAPI later; LSQ edge toggled off by default
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "owner_email": self.owner_email,
+            "display_name": self.display_name,
+            "google_is_live": self.google_is_live,
+            "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
+            "verification_threshold": self.verification_threshold,
+            "auto_push_enabled": self.auto_push_enabled,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class AdGuardLead(Base):
     """AdGuard — Google Ads lead form intake with integrity scoring.
 
@@ -921,6 +962,7 @@ class AdGuardLead(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
     gclid = Column(String, nullable=True, index=True)
     form_id = Column(String, nullable=True)
     campaign_name = Column(String, nullable=True, default="")
@@ -956,12 +998,14 @@ class AdGuardLead(Base):
     processed_at = Column(DateTime, nullable=True)
 
     account = relationship("Account")
+    adguard_account = relationship("AdGuardAccount")
 
     def to_dict(self):
         return {
             "id": self.id,
             "account_id": self.account_id,
             "account_name": self.account.name if self.account else None,
+            "adguard_account_id": self.adguard_account_id,
             "gclid": self.gclid,
             "form_id": self.form_id,
             "campaign_name": self.campaign_name,

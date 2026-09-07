@@ -6,6 +6,11 @@ Endpoints:
   GET  /api/adguard/leads          -> list scored leads (verified + flagged)
   GET  /api/adguard/stats          -> dashboard KPIs
   POST /api/adguard/leads/{id}/retry-lsq  -> re-push a verified lead that failed
+  GET  /api/adguard/oauth/connect          -> create/reuse workspace, get Google OAuth URL
+  GET  /api/adguard/oauth/callback         -> Google OAuth callback (stores tokens, discovers accounts)
+  GET  /api/adguard/oauth/accounts         -> list my workspaces + discovered ad accounts
+  POST /api/adguard/oauth/select           -> pick which discovered ad accounts to protect
+  POST /api/adguard/oauth/disconnect       -> remove a workspace
 """
 import json
 import logging
@@ -13,11 +18,13 @@ import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
-from backend.db.models import Account, AdGuardLead, User
+from backend.db.models import Account, AdGuardAccount, AdGuardLead, User
 from backend.routes.auth import get_current_user_required
 from backend.services.activity_log import log_activity
 
@@ -194,3 +201,149 @@ def retry_lsq(lead_id: int, db: Session = Depends(get_db), user: User = Depends(
         db=db,
     )
     return {"status": push["status"], "prospect_id": push["prospect_id"], "error": push["error"]}
+
+
+# ---------------------------------------------------------------------------
+# Self-serve OAuth (Ryze-style Connect flow)
+# ---------------------------------------------------------------------------
+
+
+def _get_or_create_workspace(db: Session, user: User) -> AdGuardAccount:
+    """One AdGuard workspace per user email (extend to many later if needed)."""
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
+    if not ws:
+        ws = AdGuardAccount(
+            owner_email=user.email,
+            display_name=user.full_name or user.email,
+        )
+        db.add(ws)
+        db.commit()
+        db.refresh(ws)
+    return ws
+
+
+@router.get("/oauth/connect")
+def oauth_connect(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Create/reuse the user's AdGuard workspace and return the Google OAuth URL."""
+    _require_adguard_access(user)
+    ws = _get_or_create_workspace(db, user)
+    try:
+        from backend.services.oauth import get_adguard_auth_url
+
+        url = get_adguard_auth_url(ws.id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"authorization_url": url, "workspace_id": ws.id}
+
+
+@router.get("/oauth/callback")
+def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Session = Depends(get_db)):
+    """Google redirects here after consent. Stores tokens, discovers accounts."""
+    if error:
+        return RedirectResponse(url=f"/adguard?oauth_error={error}")
+    try:
+        from backend.services.oauth import parse_state
+
+        payload = parse_state(state)
+    except Exception:
+        payload = None
+    if not payload or payload.get("platform") != "adguard_google":
+        return RedirectResponse(url="/adguard?oauth_error=invalid_state")
+    ws_id = payload.get("adguard_account_id")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == ws_id).first()
+    if not ws:
+        return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
+
+    from backend.services.config import load_config
+    from backend.services import oauth as oauth_service
+
+    cfg = load_config()
+    cfg_redirect_base = (cfg.get("redirect_base_url") or "http://127.0.0.1:8000").rstrip("/")
+    redirect_uri = f"{cfg_redirect_base}/api/adguard/oauth/callback"
+
+    token_data = oauth_service.exchange_google_code(code, redirect_uri, None)
+    if not token_data:
+        return RedirectResponse(url="/adguard?oauth_error=google_token_exchange_failed")
+
+    # Reuse build_google_credentials pattern but bypass the Account lookup (AdGuard workspace).
+    refresh_token = token_data.get("refresh_token") or token_data.get("access_token")
+    if not refresh_token:
+        return RedirectResponse(url="/adguard?oauth_error=missing_refresh_token")
+    creds = {
+        "developer_token": cfg.get("google_developer_token", ""),
+        "client_id": cfg.get("google_client_id", ""),
+        "client_secret": cfg.get("google_client_secret", ""),
+        "refresh_token": refresh_token,
+        "login_customer_id": "",
+    }
+    from backend.services.crypto import encrypt as fernet_encrypt
+
+    ws.google_credentials = fernet_encrypt(json.dumps(creds))
+    ws.google_is_live = True
+    db.commit()
+
+    # Auto-discover accessible Google Ads accounts (never blocks connect).
+    try:
+        discovered = oauth_service.discover_google_ads_customers(ws.google_credentials)
+        ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
+        db.commit()
+    except Exception as e:
+        logger.warning(f"[AdGuard] post-connect discovery failed: {e}")
+
+    return RedirectResponse(url="/adguard?oauth_success=google")
+
+
+class SelectAccountsRequest(BaseModel):
+    workspace_id: int
+    selected_ids: list
+
+
+@router.post("/oauth/select")
+def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Mark which discovered Google Ads accounts this user wants protected."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    accounts = json.loads(ws.discovered_accounts) if ws.discovered_accounts else []
+    selected = set(str(s) for s in req.selected_ids)
+    for a in accounts:
+        a["selected"] = str(a["id"]) in selected
+    ws.discovered_accounts = json.dumps(accounts)
+    db.commit()
+    return {"status": "ok", "selected": list(selected)}
+
+
+@router.get("/oauth/accounts")
+def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """List my workspaces with connection + discovered account status."""
+    _require_adguard_access(user)
+    q = db.query(AdGuardAccount)
+    if user.role not in ("admin", "superadmin"):
+        q = q.filter(AdGuardAccount.owner_email == user.email)
+    workspaces = q.all()
+    return [
+        {
+            **ws.to_dict(),
+            "credentials_set": bool(ws.google_credentials),
+        }
+        for ws in workspaces
+    ]
+
+
+@router.post("/oauth/disconnect")
+def oauth_disconnect(req: SelectAccountsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Remove OAuth tokens from a workspace (keeps lead history)."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    ws.google_credentials = None
+    ws.google_is_live = False
+    ws.discovered_accounts = "[]"
+    db.commit()
+    return {"status": "disconnected", "workspace_id": req.workspace_id}

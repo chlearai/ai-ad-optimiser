@@ -20,6 +20,7 @@
             --color-bg-card-hover: #f5f5f4;
             --color-bg-input: #ffffff;
             --color-bg-modal: #ffffff;
+            --color-bg-tooltip: #1c1917;
             --color-border: #e7e5e4;
             --color-border-strong: #d6d3d1;
             --color-border-input: #d6d3d1;
@@ -28,6 +29,7 @@
             --color-text-secondary: #57534e;
             --color-text-muted: #a8a29e;
             --color-text-on-accent: #ffffff;
+            --color-text-on-tooltip: #fafaf9;
             --color-accent: #d97706;
             --color-accent-hover: #b45309;
             --color-accent-light: #fef3c7;
@@ -62,6 +64,7 @@
             --color-bg-card-hover: #33302e;
             --color-bg-input: #292524;
             --color-bg-modal: #292524;
+            --color-bg-tooltip: #fafaf9;
             --color-border: #3d3937;
             --color-border-strong: #57534e;
             --color-border-input: #57534e;
@@ -70,6 +73,7 @@
             --color-text-secondary: #d6d3d1;
             --color-text-muted: #78716c;
             --color-text-on-accent: #ffffff;
+            --color-text-on-tooltip: #1c1917;
             --color-accent: #f59e0b;
             --color-accent-hover: #d97706;
             --color-accent-light: rgba(245,158,11,0.12);
@@ -108,8 +112,21 @@
         .nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;margin:1px 8px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:400;color:var(--color-text-secondary);transition:all .1s ease;border-left:3px solid transparent;padding-left:13px;text-decoration:none}
         .nav-item:hover{background:var(--color-bg-card-hover)}
         .nav-item.active{background:var(--color-bg-card-hover);color:var(--color-text-primary);font-weight:500;border-left:3px solid var(--color-accent)}
+        .account-dot{width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);flex-shrink:0}
+        .nav-item.active .account-dot{background:var(--color-accent)}
         .nav-back{display:flex;align-items:center;gap:8px;padding:8px 16px;margin:0 8px;border-radius:6px;font-size:13px;color:var(--color-text-secondary);text-decoration:none;cursor:pointer;border-top:1px solid var(--color-border);margin-top:auto;border-radius:0}
         .nav-back:hover{background:var(--color-bg-card-hover)}
+
+        /* ACCORDION */
+        .nav-section{margin-top:.25rem}
+        .nav-section-header{display:flex;align-items:center;gap:6px;padding:16px 16px 6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:.06em;color:var(--color-text-muted);user-select:none;transition:.15s}
+        .nav-section-header:hover{color:var(--color-text-secondary)}
+        .nav-section-arrow{display:inline-block;width:12px;height:12px;font-size:10px;color:var(--color-text-muted);transition:transform .2s ease;line-height:1}
+        .nav-section.open .nav-section-arrow{transform:rotate(90deg)}
+        .nav-section-items{max-height:0;overflow:hidden;transition:max-height .25s ease}
+        .nav-section.open .nav-section-items{max-height:600px}
+        .add-account-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 8px;padding:7px 10px;border-radius:6px;border:1px dashed var(--color-border-strong);background:transparent;color:var(--color-text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s ease,border-color .15s ease,color .15s ease}
+        .add-account-btn:hover{background:var(--color-bg-card-hover);border-color:var(--color-accent);color:var(--color-accent)}
 
         /* MAIN */
         .main{flex-grow:1;display:flex;flex-direction:column;min-width:0}
@@ -122,16 +139,12 @@
 
         /* BUTTONS */
         .btn{padding:6px 14px;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:background .15s ease,border-color .15s ease,color .15s ease;text-decoration:none;font-family:'Inter',sans-serif}
-        .btn-primary{background:var(--color-accent);color:var(--color-text-on-accent);border:none}
-        .btn-primary:hover{background:var(--color-accent-hover)}
         .btn-secondary{background:transparent;border:1px solid var(--color-border);color:var(--color-text-secondary)}
         .btn-secondary:hover{background:var(--color-bg-card-hover)}
         .btn-sm{padding:4px 10px;font-size:12px}
 
         /* CONTENT */
         .content{flex-grow:1;overflow-y:auto;padding:20px 24px}
-        .panel{display:none;animation:fadeIn .25s ease}.panel.active{display:block}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
         /* KPI CARDS */
         .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
@@ -145,7 +158,6 @@
         .kpi-card.c-green .kpi-icon-wrap{background:var(--color-success-light);color:var(--color-success)}
         .kpi-card.c-amber .kpi-icon-wrap{background:var(--color-warning-light);color:var(--color-warning)}
         .kpi-card.c-red .kpi-icon-wrap{background:var(--color-danger-light);color:var(--color-danger)}
-        .kpi-card.c-purple .kpi-icon-wrap{background:var(--color-purple-light);color:var(--color-purple)}
 
         /* CARDS */
         .card{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
@@ -174,21 +186,15 @@
         .badge-orange{background:var(--color-warning-light);color:var(--color-warning-text)}
         .badge-blue{background:var(--color-info-light);color:var(--color-info-text)}
         .badge-gray{background:var(--color-bg-card-hover);color:var(--color-text-muted)}
-        .badge-purple{background:var(--color-purple-light);color:var(--color-purple-text)}
-
-        /* MISC */
-        .empty-state{text-align:center;padding:3rem 1rem;color:var(--color-text-muted)}
-        .empty-state h3{font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:8px;color:var(--color-text-primary)}
-        .empty-state p{font-size:13px}
         .score-pill{display:inline-block;min-width:38px;text-align:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
         .score-high{background:var(--color-success-light);color:var(--color-success-text)}
         .score-mid{background:var(--color-warning-light);color:var(--color-warning-text)}
         .score-low{background:var(--color-danger-light);color:var(--color-danger-text)}
-        .flags-cell{max-width:260px;font-size:11px;color:var(--color-text-secondary)}
         .flag-chip{display:inline-block;background:var(--color-danger-light);color:var(--color-danger-text);border-radius:10px;padding:1px 8px;margin:1px 2px;font-size:10px}
         .flag-chip.ok{background:var(--color-success-light);color:var(--color-success-text)}
-        .hidden{display:none!important}
-        code{background:var(--color-bg-card-hover);border:1px solid var(--color-border);border-radius:4px;padding:1px 6px;font-size:12px}
+        .empty-state{text-align:center;padding:3rem 1rem;color:var(--color-text-muted)}
+        .empty-state h3{font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:8px;color:var(--color-text-primary)}
+        .empty-state p{font-size:13px}
 
         /* TOAST */
         .toast{position:fixed;top:20px;right:20px;padding:12px 16px;border-radius:var(--radius-md);font-size:13px;font-weight:500;z-index:200;animation:slideIn .3s ease;box-shadow:var(--shadow-md)}
@@ -211,199 +217,269 @@
         <div class="nav">
             <a class="nav-item" href="/" style="margin-bottom:4px;">🏠 ChlearSakhaaOps Home</a>
             <div style="border-bottom:1px solid var(--color-border);margin:4px 8px;"></div>
-            <div class="nav-item active" onclick="showPanel('dashboard')">🛡️ Gatekeeper</div>
-            <div class="nav-item" onclick="showPanel('leads')">📥 Lead Inbox</div>
-            <div class="nav-item" onclick="showPanel('setup')">⚙️ Webhook Setup</div>
+
+            <!-- ACCOUNTS (open by default) -->
+            <div class="nav-section open" data-section="accounts">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Accounts</span>
+                </div>
+                <div class="nav-section-items" id="accountList">
+                    <div class="nav-item active" data-account="" onclick="selectAccount(this)"><span class="account-dot"></span>All Accounts</div>
+                    <!-- connected ad accounts injected here by loadWorkspaces() -->
+                </div>
+            </div>
+
+            <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">
+                🔗 Connect Google Ads
+            </button>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
 
     <div class="main">
         <div class="topbar">
-            <h1 id="pageTitle">Gatekeeper</h1>
+            <h1 id="pageTitle">All Accounts</h1>
             <div class="topbar-right">
+                <span class="badge badge-green" id="pillGoogle">Google Ads: connected</span>
+                <span class="badge badge-blue" id="pillLsq">LeadSquared: syncing</span>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode"></button>
                 <span class="user-badge" id="userBadge">Loading...</span>
             </div>
         </div>
         <div class="content" id="content">
 
-            <!-- DASHBOARD -->
-            <div class="panel active" id="panel-dashboard">
-                <div class="kpi-grid" id="kpiGrid"></div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">How the Integrity Gatekeeper works</span>
-                    </div>
-                    <p style="font-size:13px;color:var(--color-text-secondary);">
-                        Every Google Ads lead form submission is scored out of 100:
-                        <b>email valid +25</b> (disposable domains blocked) ·
-                        <b>phone valid +30</b> ·
-                        <b>geo match +15</b> ·
-                        <b>Gemini legitimacy up to +30</b>.
-                        Leads scoring ≥ <code>70</code> with no hard flags are <b>verified</b> and pushed to LeadSquared.
-                        Everything else is <b>flagged</b> and kept here only — never pushed to the CRM.
-                    </p>
+            <div class="card hidden" id="connectBanner" style="border-color:var(--color-border-focus);">
+                <div class="card-header">
+                    <span class="card-title">🔗 Connect your Google Ads account</span>
+                    <button class="btn btn-primary btn-sm" onclick="startConnect()">Connect Google Ads</button>
                 </div>
+                <p style="font-size:13px;color:var(--color-text-secondary);">
+                    One click. Sign in with Google, approve access, and your ad accounts appear here automatically — no API keys, no admin setup.
+                </p>
             </div>
 
-            <!-- LEADS -->
-            <div class="panel" id="panel-leads">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Lead Inbox</span>
-                        <div class="filters">
-                            <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
-                            <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
-                                <option value="">All Leads</option>
-                                <option value="verified">Verified only</option>
-                                <option value="flagged">Flagged only</option>
-                            </select>
-                            <button class="btn btn-secondary btn-sm" onclick="loadLeads()">Refresh</button>
-                        </div>
-                    </div>
-                    <div class="table-wrap">
-                        <table id="leadsTable">
-                            <thead><tr>
-                                <th>Received</th><th>Name</th><th>Email</th><th>Phone</th><th>Campaign</th>
-                                <th>Score</th><th>Verdict</th><th>Checks</th><th>LSQ</th><th>Actions</th>
-                            </tr></thead>
-                            <tbody id="leadsBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <div class="kpi-grid" id="kpiGrid"></div>
 
-            <!-- SETUP -->
-            <div class="panel" id="panel-setup">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Google Ads Lead Form Webhook</span></div>
-                    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px;">
-                        Point your Google Ads lead form webhook (via Apps Script / Zapier / Make) at:
-                    </p>
-                    <p style="margin-bottom:12px;"><code id="webhookUrl">—</code></p>
-                    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px;">
-                        Send a POST with JSON body. Include the shared token in the
-                        <code>X-AdGuard-Token</code> header or <code>?token=</code> query param.
-                        The token is configured via the <code>ADGUARD_WEBHOOK_VERIFY_TOKEN</code> env var
-                        (default for local dev: <code>adguard_verify</code>).
-                    </p>
-                    <p style="font-size:13px;color:var(--color-text-secondary);">
-                        Recognised fields (flexible key names): <code>name</code>, <code>email</code>,
-                        <code>phone</code>, <code>city</code>, <code>state</code>, <code>country</code>,
-                        <code>postal_code</code>, <code>campaign_name</code>, <code>gclid</code>,
-                        <code>form_id</code>, <code>message</code>. Add <code>account_id</code> or
-                        <code>account_name</code> to route the lead to a specific client for LSQ credentials and geo checks.
-                    </p>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Live Lead Feed</span>
+                    <div class="filters">
+                        <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
+                        <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
+                            <option value="">All Leads</option>
+                            <option value="verified">Verified only</option>
+                            <option value="flagged">Flagged only</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadLeads()">Refresh</button>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Test Payload</span></div>
-                    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px;">
-                        Send this from your webhook source (replace token):
-                    </p>
-                    <pre style="background:var(--color-bg-card-hover);border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:12px;overflow-x:auto;" id="samplePayload">—</pre>
+                <div class="table-wrap">
+                    <table id="feedTable">
+                        <thead><tr>
+                            <th>Time</th><th>Campaign</th><th>Score</th><th>Reason</th><th>Status</th>
+                        </tr></thead>
+                        <tbody id="feedBody"></tbody>
+                    </table>
                 </div>
             </div>
 
         </div>
     </div>
 
+    <!-- ACCOUNT PICKER MODAL -->
+    <div id="pickerOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:100;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('pickerOverlay').style.display='none'">
+        <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;">Pick Google Ads accounts to protect</h2>
+            <input type="hidden" id="pickerWsId">
+            <div id="pickerList" style="margin-bottom:16px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('pickerOverlay').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAccountPicker()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
     <script>
         const API = '/api/adguard';
+        const AUTH = '/api/auth';
         let token = localStorage.getItem('adoptima_token') || '';
         let currentUser = null;
+        let allLeads = [];
+        let selectedAccount = '';
 
-        function $(id) { return document.getElementById(id); }
+        function $(id) { return document.getElementById(id) }
 
-        async function api(method, path) {
-            const res = await fetch(API + path, {
-                method,
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
+        async function api(method, path, body) {
+            const opts = { method, headers: { 'Authorization': 'Bearer ' + token } };
+            if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+            const res = await fetch(API + path, opts);
             if (res.status === 401) {
                 token = '';
                 localStorage.removeItem('adoptima_token');
                 window.location.href = '/';
                 throw new Error('Session expired');
             }
-            if (!res.ok) throw new Error((await res.json()).detail || 'Request failed');
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.detail || 'Request failed');
+            }
             return res.json();
         }
 
         async function checkAuth() {
             if (!token) { window.location.href = '/'; return; }
             try {
-                currentUser = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+                currentUser = await fetch(AUTH + '/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
             } catch (e) { window.location.href = '/'; return; }
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
             if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/'; return; }
             $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
-            const webhookBase = window.location.origin + API + '/webhook';
-            $('webhookUrl').textContent = webhookBase;
-            $('samplePayload').textContent = JSON.stringify({
-                account_name: 'Example Client',
-                campaign_name: 'Search - Brand',
-                full_name: 'Rahul Sharma',
-                email: 'rahul@example.com',
-                phone: '+91 9876543210',
-                city: 'Bangalore',
-                state: 'Karnataka',
-                country: 'India',
-                message: 'Interested in MBA admission'
-            }, null, 2);
-            loadStats();
+            handleOAuthResult();
+            await loadWorkspaces();
+            maybeShowPickerAfterConnect();
+            loadLeads();
+        }
+
+        // ---------- OAuth connect flow (Ryze-style) ----------
+
+        function handleOAuthResult() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('oauth_success') === 'google') {
+                toast('Google Ads connected. Your ad accounts are listed below.', 'success');
+            } else if (params.get('oauth_error')) {
+                const err = params.get('oauth_error');
+                const msgs = {
+                    google_token_exchange_failed: 'Google token exchange failed — try again.',
+                    missing_refresh_token: 'Google did not grant offline access — re-approve with consent.',
+                    invalid_state: 'Connection session expired — click Connect again.',
+                    workspace_not_found: 'Workspace missing — click Connect again.',
+                    access_denied: 'You cancelled the Google permission screen.',
+                };
+                toast(msgs[err] || ('Connection failed: ' + err), 'error');
+            }
+            if (params.has('oauth_success') || params.has('oauth_error')) {
+                window.history.replaceState({}, '', '/adguard');
+            }
+        }
+
+        let workspaces = [];
+        let selectedWorkspace = null;
+
+        async function loadWorkspaces() {
+            try {
+                workspaces = await api('GET', '/oauth/accounts');
+                selectedWorkspace = workspaces.find(w => w.google_is_live) || workspaces[0] || null;
+                renderWorkspaceSidebar();
+                if (!selectedWorkspace || !selectedWorkspace.google_is_live) {
+                    $('connectBanner').classList.remove('hidden');
+                } else {
+                    $('connectBanner').classList.add('hidden');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function maybeShowPickerAfterConnect() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('oauth_success') !== 'google') return;
+            const ws = workspaces.find(w => w.google_is_live);
+            if (ws && (ws.discovered_accounts || []).length) openAccountPicker();
+        }
+
+        function renderWorkspaceSidebar() {
+            const list = $('accountList');
+            const staticItems = list.querySelectorAll('.nav-item[data-static="1"]');
+            list.innerHTML = '';
+            list.appendChild(makeAccountItem('', 'All Accounts', true));
+            const seen = new Set();
+            workspaces.forEach(w => {
+                (w.discovered_accounts || []).filter(a => a.selected).forEach(a => {
+                    if (seen.has(a.id)) return;
+                    seen.add(a.id);
+                    list.appendChild(makeAccountItem(a.id, a.name || a.formatted || a.id, false));
+                });
+            });
+            staticItems.forEach(el => list.appendChild(el));
+        }
+
+        function makeAccountItem(id, label, active) {
+            const div = document.createElement('div');
+            div.className = 'nav-item' + (active ? ' active' : '');
+            div.dataset.account = id;
+            div.onclick = function() { selectAccount(div); };
+            div.innerHTML = '<span class="account-dot"></span>' + escapeHtml(label);
+            return div;
+        }
+
+        async function startConnect() {
+            try {
+                const res = await api('GET', '/oauth/connect');
+                window.location.href = res.authorization_url;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function addAccount() { startConnect(); }
+
+        // Account picker shown when a workspace has unselected discovered accounts
+        function openAccountPicker() {
+            const ws = workspaces.find(w => w.google_is_live);
+            if (!ws) return;
+            const unselected = (ws.discovered_accounts || []).filter(a => !a.selected);
+            const all = ws.discovered_accounts || [];
+            const rows = all.map(a => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;">
+                    <input type="checkbox" value="${a.id}" ${a.selected ? 'checked' : ''}>
+                    <span>${escapeHtml(a.name)} <span style="color:var(--color-text-muted)">(${a.formatted})</span></span>
+                    ${a.manager ? '<span class="badge badge-gray">MCC</span>' : ''}
+                </label>`).join('');
+            $('pickerList').innerHTML = rows || '<p style="font-size:13px;color:var(--color-text-muted)">No ad accounts discovered.</p>';
+            $('pickerWsId').value = ws.id;
+            $('pickerOverlay').style.display = 'flex';
+        }
+
+        async function saveAccountPicker() {
+            const ids = Array.from($('pickerList').querySelectorAll('input:checked')).map(cb => cb.value);
+            try {
+                await api('POST', '/oauth/select', { workspace_id: parseInt($('pickerWsId').value), selected_ids: ids });
+                toast('Ad accounts saved');
+                $('pickerOverlay').style.display = 'none';
+                await loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         function toggleTheme() {
             const dark = document.documentElement.classList.toggle('dark-mode');
-            localStorage.setItem('adoptima_theme', dark ? 'dark' : 'light');
+            try { localStorage.setItem('adoptima_theme', dark ? 'dark' : 'light'); } catch (e) {}
             renderThemeIcon();
         }
         function renderThemeIcon() {
-            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙';
+            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀' : '☾';
         }
 
-        function showPanel(name) {
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            $('panel-' + name).classList.add('active');
-            document.querySelectorAll('.nav .nav-item').forEach(n => n.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            $('pageTitle').textContent = name === 'dashboard' ? 'Gatekeeper' : name === 'leads' ? 'Lead Inbox' : 'Webhook Setup';
-            if (name === 'dashboard') loadStats();
-            if (name === 'leads') loadLeads();
+        function toggleSection(headerEl) {
+            headerEl.parentElement.classList.toggle('open');
         }
 
-        function toast(msg, ok) {
-            const t = document.createElement('div');
-            t.className = 'toast ' + (ok ? 'toast-success' : 'toast-error');
-            t.textContent = msg;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3500);
+        function selectAccount(el) {
+            document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            selectedAccount = el.dataset.account || '';
+            $('pageTitle').textContent = selectedAccount || 'All Accounts';
+            renderFeed();
+        }
+
+        function toast(msg, type = 'success') {
+            const d = document.createElement('div');
+            d.className = 'toast toast-' + type;
+            d.textContent = msg;
+            $('toastContainer').appendChild(d);
+            setTimeout(() => d.remove(), 3500);
         }
 
         function escapeHtml(s) {
             if (!s) return '';
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        async function loadStats() {
-            try {
-                const s = await api('GET', '/stats');
-                const cards = [
-                    { label: 'Total Leads', value: s.total, icon: '📥', cls: 'c-blue', sub: 'all time' },
-                    { label: 'Verified', value: s.verified, icon: '✅', cls: 'c-green', sub: 'passed gatekeeper' },
-                    { label: 'Flagged', value: s.flagged, icon: '🚩', cls: 'c-red', sub: 'blocked from LSQ' },
-                    { label: 'Pushed to LSQ', value: s.pushed_to_lsq, icon: '🔄', cls: 'c-purple', sub: `${s.lsq_push_failed} failed push` },
-                    { label: 'Avg Integrity Score', value: s.avg_integrity_score ?? '—', icon: '🎯', cls: 'c-amber', sub: 'out of 100' },
-                ];
-                $('kpiGrid').innerHTML = cards.map(c => `
-                    <div class="kpi-card ${c.cls}">
-                        <div class="kpi-icon-wrap">${c.icon}</div>
-                        <div class="kpi-label">${c.label}</div>
-                        <div class="kpi-value">${c.value}</div>
-                        <div class="kpi-sub">${c.sub}</div>
-                    </div>`).join('');
-            } catch (e) { toast(e.message, false); }
         }
 
         function scoreClass(score) {
@@ -412,66 +488,78 @@
             return 'score-low';
         }
 
-        async function loadLeads() {
-            try {
-                const v = $('verdictFilter').value;
-                const s = $('leadSearch').value.trim();
-                const params = new URLSearchParams();
-                if (v) params.set('verdict', v);
-                if (s) params.set('search', s);
-                const data = await api('GET', '/leads?' + params.toString());
-                const rows = data.leads || [];
-                if (!rows.length) {
-                    $('leadsBody').innerHTML = `<tr><td colspan="10"><div class="empty-state"><h3>No leads yet</h3><p>Google Ads lead form submissions will appear here once the webhook fires.</div></td></tr>`;
-                    return;
-                }
-                $('leadsBody').innerHTML = rows.map(l => {
-                    const verdictBadge = l.verdict === 'verified'
-                        ? '<span class="badge badge-green">Verified</span>'
-                        : '<span class="badge badge-red">Flagged</span>';
-                    const lsqBadge = {
-                        pushed: '<span class="badge badge-green">Pushed</span>',
-                        failed: `<span class="badge badge-red" title="${escapeHtml(l.lsq_error)}">Failed</span>`,
-                        skipped_flagged: '<span class="badge badge-gray">Not pushed</span>',
-                        not_pushed: '<span class="badge badge-gray">—</span>',
-                    }[l.lsq_status] || '<span class="badge badge-gray">—</span>';
-                    const checks = [
-                        l.email_valid ? '<span class="flag-chip ok">email</span>' : '<span class="flag-chip">email✗</span>',
-                        l.disposable_email ? '<span class="flag-chip">disposable</span>' : '',
-                        l.phone_valid ? '<span class="flag-chip ok">phone</span>' : '<span class="flag-chip">phone✗</span>',
-                        l.geo_match ? '<span class="flag-chip ok">geo</span>' : '<span class="flag-chip">geo✗</span>',
-                        l.ai_legitimacy_score != null ? `<span class="flag-chip ok">AI ${l.ai_legitimacy_score}</span>` : '',
-                    ].join('');
-                    const flagChips = (l.flags || []).map(f => `<span class="flag-chip">${escapeHtml(f)}</span>`).join(' ');
-                    const retryBtn = (l.verdict === 'verified' && l.lsq_status === 'failed')
-                        ? `<button class="btn btn-secondary btn-sm" onclick="retryLsq(${l.id})">Retry LSQ</button>` : '';
-                    return `<tr>
-                        <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
-                        <td>${escapeHtml(l.full_name) || '-'}</td>
-                        <td>${escapeHtml(l.email) || '-'}</td>
-                        <td>${escapeHtml(l.phone) || '-'}</td>
-                        <td>${escapeHtml(l.campaign_name) || '-'}</td>
-                        <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
-                        <td>${verdictBadge}</td>
-                        <td class="flags-cell">${checks}<br>${flagChips}</td>
-                        <td>${lsqBadge}</td>
-                        <td>${retryBtn}</td>
-                    </tr>`;
-                }).join('');
-            } catch (e) { toast(e.message, false); }
+        function statusBadge(l) {
+            if (l.verdict === 'flagged') return '<span class="badge badge-red">Flagged</span>';
+            if (l.lsq_status === 'pushed') return '<span class="badge badge-green">Sent to LSQ</span>';
+            if (l.lsq_status === 'failed') return '<span class="badge badge-red" title="' + escapeHtml(l.lsq_error || '') + '">Push failed</span>';
+            return '<span class="badge badge-orange">Pending</span>';
         }
 
-        async function retryLsq(id) {
+        function reasonText(l) {
+            const parts = [];
+            if (l.email_valid && !l.disposable_email) parts.push('valid email');
+            if (l.phone_valid) parts.push('valid phone');
+            if (l.geo_match) parts.push('geo match');
+            if (l.ai_legitimacy_score != null) parts.push('AI ' + l.ai_legitimacy_score);
+            const flags = (l.flags || []).map(f => '<span class="flag-chip">' + escapeHtml(f) + '</span>').join(' ');
+            if (flags) return parts.join(', ') + '<br>' + flags;
+            return parts.join(', ') || '—';
+        }
+
+        async function loadLeads() {
             try {
-                const res = await fetch(API + `/leads/${id}/retry-lsq`, {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                if (!res.ok) throw new Error((await res.json()).detail || 'Retry failed');
-                const d = await res.json();
-                toast(d.status === 'pushed' ? 'Pushed to LeadSquared' : 'Push failed: ' + (d.error || ''), d.status === 'pushed');
-                loadLeads();
-            } catch (e) { toast(e.message, false); }
+                const params = new URLSearchParams();
+                const v = $('verdictFilter').value;
+                const s = $('leadSearch').value.trim();
+                if (v) params.set('verdict', v);
+                if (s) params.set('search', s);
+                params.set('limit', '500');
+                const data = await api('GET', '/leads?' + params.toString());
+                allLeads = data.leads || [];
+                renderKpis();
+                renderFeed();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function leadsForAccount() {
+            if (!selectedAccount) return allLeads;
+            return allLeads.filter(l => (l.account_name || '') === selectedAccount);
+        }
+
+        function renderKpis() {
+            const rows = leadsForAccount();
+            const verifiedPushed = rows.filter(l => l.verdict === 'verified' && l.lsq_status === 'pushed').length;
+            const flagged = rows.filter(l => l.verdict === 'flagged').length;
+            const scored = rows.filter(l => l.integrity_score != null);
+            const avg = scored.length ? Math.round(scored.reduce((s, l) => s + l.integrity_score, 0) / scored.length) : null;
+            const cards = [
+                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: selectedAccount || 'all accounts' },
+                { label: 'Verified & Pushed to LSQ', value: verifiedPushed, icon: '✅', cls: 'c-green', sub: 'passed gatekeeper' },
+                { label: 'Flagged as Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'blocked from LSQ' },
+                { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-amber', sub: 'out of 100' },
+            ];
+            $('kpiGrid').innerHTML = cards.map(c => `
+                <div class="kpi-card ${c.cls}">
+                    <div class="kpi-icon-wrap">${c.icon}</div>
+                    <div class="kpi-label">${c.label}</div>
+                    <div class="kpi-value">${c.value}</div>
+                    <div class="kpi-sub">${c.sub}</div>
+                </div>`).join('');
+        }
+
+        function renderFeed() {
+            const rows = leadsForAccount();
+            if (!rows.length) {
+                $('feedBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><h3>No leads yet</h3><p>Google Ads lead form submissions will appear here once the webhook fires.</p></div></td></tr>';
+                return;
+            }
+            $('feedBody').innerHTML = rows.map(l => `<tr>
+                <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
+                <td>${escapeHtml(l.campaign_name) || '-'}</td>
+                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
+                <td>${reasonText(l)}</td>
+                <td>${statusBadge(l)}</td>
+            </tr>`).join('');
         }
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); checkAuth(); });

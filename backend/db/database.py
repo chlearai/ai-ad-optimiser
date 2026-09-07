@@ -168,6 +168,12 @@ def init_db():
             run_adguard_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard access migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard lead workspace linkage
+        try:
+            from backend.migrations.add_adguard_lead_workspace_column import run_migration as run_adguard_ws_migration
+            run_adguard_ws_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard lead workspace migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
