@@ -112,12 +112,17 @@ def load_config() -> Dict[str, Any]:
         ("mantri_salesforce_client_secret", "MANTRI_SALESFORCE_CLIENT_SECRET"),
         ("mantri_salesforce_refresh_token", "MANTRI_SALESFORCE_REFRESH_TOKEN"),
     ]
+    # Precedence (highest first): real process env (Railway/dashboard vars)
+    # > .env file > config.json. On Railway there is no .env file, so the
+    # dashboard variables must win.
     for cfg_key, env_key in env_mappings:
-        if env.get(env_key):
-            config[cfg_key] = env[env_key]
+        val = os.environ.get(env_key) or env.get(env_key)
+        if val:
+            config[cfg_key] = val
 
-    if "SAFE_MODE" in env:
-        config["safe_mode"] = env["SAFE_MODE"].lower() in ("true", "1", "yes")
+    safe_mode_val = os.environ.get("SAFE_MODE") or env.get("SAFE_MODE")
+    if safe_mode_val:
+        config["safe_mode"] = safe_mode_val.lower() in ("true", "1", "yes")
 
     return config
 
