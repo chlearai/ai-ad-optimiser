@@ -13,10 +13,19 @@ def run_migration():
 
     try:
         with engine.connect() as conn:
-            # Check whether the column already exists (SQLite compatible introspection)
-            result = conn.execute(
-                text("SELECT name FROM pragma_table_info('rev_clients')")
-            )
+            # Check column existence (SQLite uses pragma, PostgreSQL uses information_schema)
+            is_postgres = engine.dialect.name == "postgresql"
+            if is_postgres:
+                result = conn.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'rev_clients'"
+                    )
+                )
+            else:
+                result = conn.execute(
+                    text("SELECT name FROM pragma_table_info('rev_clients')")
+                )
             columns = {row[0] for row in result.fetchall()}
 
             if "account_id" in columns:
