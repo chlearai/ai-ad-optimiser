@@ -59,25 +59,54 @@ async def webhook(
     request: Request,
     db: Session = Depends(get_db),
     x_adguard_token: str = Header(default="", alias="X-AdGuard-Token"),
+    x_google_ledform_digest: str = Header(default="", alias="X-Google-Leadform-Digest"),
     token: Optional[str] = None,
 ):
     """Receive a Google Ads lead form submission.
 
-    Security: caller must pass the shared secret either as the
-    `X-AdGuard-Token` header or `?token=` query param (Google Apps Script
-    webhooks can use the query param).
-    """
-    raw = (await request.body()).decode("utf-8") or "{}"
-    supplied = x_adguard_token or token or ""
-    if not _verify_token(supplied):
-        raise HTTPException(status_code=403, detail="Invalid webhook token")
+    Accepts two auth schemes:
+      1. Native Google Ads lead form webhook — Google signs each POST with an
+         HMAC-SHA256 base64 digest in the `X-Google-Leadform-Digest` header,
+         computed with the secret key configured in the lead form asset.
+      2. Shared token (ours) — `X-AdGuard-Token` header or `?token=` query
+         param, for Apps Script / Zapier bridges and testing.
 
-    try:
-        payload = json.loads(raw)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-    if not isinstance(payload, dict) or not payload:
-        raise HTTPException(status_code=400, detail="Empty payload")
+    Body: Google sends urlencoded (`form_data=<json>&google_key=<key>`) or
+    XML; bridges send JSON. All are normalized downstream.
+    """
+    raw = (await request.body()).decode("utf-8") or ""
+
+    # --- Scheme 1: Google native HMAC digest ---
+    if x_google_ledform_digest:
+        secret = os.getenv("ADGUARD_GOOGLE_WEBHOOK_KEY", "")
+        if not secret:
+            raise HTTPException(status_code=500, detail="ADGUARD_GOOGLE_WEBHOOK_KEY not configured")
+        import base64
+        import hashlib
+        import hmac as hmac_mod
+
+        expected = base64.b64encode(
+            hmac_mod.new(secret.encode(), raw.encode(), hashlib.sha256).digest()
+        ).decode()
+        if not hmac_mod.compare_digest(expected, x_google_ledform_digest):
+            logger.warning("[AdGuard] Google leadform digest mismatch")
+            raise HTTPException(status_code=403, detail="Invalid Google digest")
+
+        # Google body: urlencoded form OR XML; extract lead data
+        payload = _parse_google_native_body(raw)
+        if payload is None:
+            raise HTTPException(status_code=400, detail="Unparseable Google lead payload")
+    else:
+        # --- Scheme 2: shared token ---
+        supplied = x_adguard_token or token or ""
+        if not _verify_token(supplied):
+            raise HTTPException(status_code=403, detail="Invalid webhook token")
+        try:
+            payload = json.loads(raw) if raw else {}
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON")
+        if not isinstance(payload, dict) or not payload:
+            raise HTTPException(status_code=400, detail="Empty payload")
 
     # Optional per-client routing: payload may carry account id or the
     # AdGuard account name; otherwise falls back to the first active account
@@ -110,6 +139,67 @@ async def webhook(
         "integrity_score": result["integrity_score"],
         "lsq_status": result["lsq_status"],
     }
+
+
+def _parse_google_native_body(raw: str) -> Optional[Dict[str, Any]]:
+    """Parse Google Ads native lead form webhook body.
+
+    Google posts either:
+      - urlencoded: `form_data=<urlencoded json>&google_key=<key>` (and in
+        newer versions `lead_form_type`, `campaign_id`, `gclid`, etc.)
+      - XML: <LeadFormResponses><LeadFormResponse>... (legacy)
+
+    Returns a flat dict of lead fields, or None if unparseable.
+    """
+    import urllib.parse
+    import xml.etree.ElementTree as ET
+
+    # Try urlencoded first
+    try:
+        parsed = urllib.parse.parse_qs(raw, keep_blank_values=True)
+        if "form_data" in parsed:
+            inner = parsed["form_data"][0]
+            # inner may itself be urlencoded JSON
+            try:
+                inner_decoded = urllib.parse.unquote(inner)
+            except Exception:
+                inner_decoded = inner
+            data = json.loads(inner_decoded)
+            if isinstance(data, list):
+                # list of {"column_name": ..., "string_value"/"user_input": ...}
+                flat: Dict[str, Any] = {}
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    key = item.get("column_name") or item.get("field_name") or ""
+                    val = item.get("string_value") or item.get("user_input") or item.get("value") or ""
+                    if key:
+                        flat[key] = val
+                return flat
+            if isinstance(data, dict):
+                return data
+        if parsed:
+            # some integrations post flat urlencoded fields directly
+            return {k: v[0] for k, v in parsed.items() if v}
+    except Exception as e:
+        logger.warning(f"[AdGuard] urlencoded parse failed: {e}")
+
+    # Try XML (legacy format)
+    try:
+        root = ET.fromstring(raw)
+        flat = {}
+        for field in root.iter():
+            tag = field.tag.split("}")[-1]
+            if tag in ("LeadFormField", "UserLeadFieldValue"):
+                continue
+            if field.text and field.text.strip():
+                flat[tag] = field.text.strip()
+        if flat:
+            return flat
+    except Exception as e:
+        logger.warning(f"[AdGuard] XML parse failed: {e}")
+
+    return None
 
 
 # ---------------------------------------------------------------------------
