@@ -586,7 +586,7 @@ def _fetch_dsi_lsq_leads_direct(start_date: str, end_date: str) -> List[Dict[str
 
     c = _db_connect()
     cur = c.cursor()
-    cur.execute("SELECT lsq_access_key, lsq_secret_key, lsq_base_url FROM accounts WHERE id=?", (DSI_ACCOUNT_ID,))
+    cur.execute("SELECT lsq_access_key, lsq_secret_key, lsq_base_url FROM accounts WHERE id=%s", (DSI_ACCOUNT_ID,))
     row = cur.fetchone()
     c.close()
     if row and row[0] and row[1]:
