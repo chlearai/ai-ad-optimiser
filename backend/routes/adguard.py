@@ -60,14 +60,17 @@ async def webhook(
     db: Session = Depends(get_db),
     x_adguard_token: str = Header(default="", alias="X-AdGuard-Token"),
     x_google_ledform_digest: str = Header(default="", alias="X-Google-Leadform-Digest"),
+    x_google_response_key: str = Header(default="", alias="Lead-Response-Webhook-Key"),
     token: Optional[str] = None,
 ):
     """Receive a Google Ads lead form submission.
 
-    Accepts two auth schemes:
+    Accepts three auth schemes:
       1. Native Google Ads lead form webhook — Google signs each POST with an
-         HMAC-SHA256 base64 digest in the `X-Google-Leadform-Digest` header,
-         computed with the secret key configured in the lead form asset.
+         HMAC-SHA256 digest of the body in `X-Google-Leadform-Digest`
+         (base64 or hex) computed with the secret key configured in the lead
+         form asset. Google may also send the raw key in
+         `Lead-Response-Webhook-Key`; either authenticates.
       2. Shared token (ours) — `X-AdGuard-Token` header or `?token=` query
          param, for Apps Script / Zapier bridges and testing.
 
@@ -75,27 +78,45 @@ async def webhook(
     XML; bridges send JSON. All are normalized downstream.
     """
     raw = (await request.body()).decode("utf-8") or ""
+    logger.info(
+        f"[AdGuard] webhook hit: digest_hdr={'yes' if x_google_ledform_digest else 'no'} "
+        f"key_hdr={'yes' if x_google_response_key else 'no'} tok_hdr={'yes' if x_adguard_token else 'no'} "
+        f"q_token={'yes' if token else 'no'} body_len={len(raw)} ctype={request.headers.get('content-type','')}"
+    )
 
-    # --- Scheme 1: Google native HMAC digest ---
-    if x_google_ledform_digest:
+    # --- Scheme 1: Google native (HMAC digest or echoed key header) ---
+    if x_google_ledform_digest or x_google_response_key:
         secret = os.getenv("ADGUARD_GOOGLE_WEBHOOK_KEY", "")
         if not secret:
+            logger.error("[AdGuard] ADGUARD_GOOGLE_WEBHOOK_KEY not configured on server")
             raise HTTPException(status_code=500, detail="ADGUARD_GOOGLE_WEBHOOK_KEY not configured")
-        import base64
-        import hashlib
-        import hmac as hmac_mod
 
-        expected = base64.b64encode(
-            hmac_mod.new(secret.encode(), raw.encode(), hashlib.sha256).digest()
-        ).decode()
-        if not hmac_mod.compare_digest(expected, x_google_ledform_digest):
-            logger.warning("[AdGuard] Google leadform digest mismatch")
+        authed = False
+        if x_google_response_key and hmac.compare_digest(x_google_response_key.strip(), secret):
+            authed = True
+        if not authed and x_google_ledform_digest:
+            import base64
+            import hashlib
+            import hmac as hmac_mod
+
+            mac = hmac_mod.new(secret.encode(), raw.encode(), hashlib.sha256)
+            candidates = {
+                base64.b64encode(mac.digest()).decode(),  # base64 digest
+                mac.hexdigest(),                          # hex digest
+            }
+            supplied = x_google_ledform_digest.strip()
+            if any(hmac.compare_digest(c, supplied) for c in candidates):
+                authed = True
+        if not authed:
+            logger.warning("[AdGuard] Google webhook auth FAILED (digest/key mismatch)")
             raise HTTPException(status_code=403, detail="Invalid Google digest")
 
-        # Google body: urlencoded form OR XML; extract lead data
+        # Google body: urlencoded OR XML; extract lead data
         payload = _parse_google_native_body(raw)
         if payload is None:
+            logger.error(f"[AdGuard] unparseable Google body (first 400 chars): {raw[:400]}")
             raise HTTPException(status_code=400, detail="Unparseable Google lead payload")
+        logger.info(f"[AdGuard] Google native payload keys: {list(payload.keys())[:10]}")
     else:
         # --- Scheme 2: shared token ---
         supplied = x_adguard_token or token or ""
