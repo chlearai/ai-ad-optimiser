@@ -253,8 +253,15 @@ def _auto_refresh_live_metrics():
                             try:
                                 _counts = count_leads_by_course(db, account.id, today, today)
                                 _leads_today = sum(_counts.values())
-                            except Exception:
-                                pass
+                            except Exception as _lsq_e:
+                                # On PostgreSQL, a failed statement aborts the whole
+                                # transaction until an explicit rollback -- without this,
+                                # any error here (e.g. a schema mismatch) would silently
+                                # poison `db` for the rest of this loop iteration and make
+                                # the later db.commit() below fail with
+                                # InFailedSqlTransaction, even though it's unrelated.
+                                logger.warning(f"count_leads_by_course failed for {account.name}: {_lsq_e}")
+                                db.rollback()
                             _badges = compute_health_badges(account, api_success=True, platform=platform, leads=_leads_today, active_start=0, active_end=23)
                             _api_status = _badges["api_health"]["status"]
                             _perf_status = _badges["perf_health"]["status"]

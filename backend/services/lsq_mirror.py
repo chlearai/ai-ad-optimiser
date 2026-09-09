@@ -596,6 +596,15 @@ def sync_account_leads(account_id: int, db: Session = None, full_window_from: st
 
     except Exception as e:
         logger.exception(f"LSQ mirror sync failed for account {account_id}: {e}")
+        # On PostgreSQL a failed statement aborts the transaction until an
+        # explicit rollback. When `db` was passed in by the caller (routes/
+        # dsu_report.py, scheduler.py, dsu_data.py all do this), leaving it
+        # un-rolled-back would poison that shared session for every query
+        # after this one, even unrelated ones.
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return {"error": str(e)}
     finally:
         # Clear direct-API fallback cache for this account so stale values are
