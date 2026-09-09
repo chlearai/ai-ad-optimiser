@@ -12,6 +12,9 @@ Endpoints:
   POST /api/adguard/oauth/select           -> pick which discovered ad accounts to protect
   POST /api/adguard/oauth/disconnect       -> remove a workspace
 """
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -95,11 +98,7 @@ async def webhook(
         if x_google_response_key and hmac.compare_digest(x_google_response_key.strip(), secret):
             authed = True
         if not authed and x_google_ledform_digest:
-            import base64
-            import hashlib
-            import hmac as hmac_mod
-
-            mac = hmac_mod.new(secret.encode(), raw.encode(), hashlib.sha256)
+            mac = hmac.new(secret.encode(), raw.encode(), hashlib.sha256)
             candidates = {
                 base64.b64encode(mac.digest()).decode(),  # base64 digest
                 mac.hexdigest(),                          # hex digest
