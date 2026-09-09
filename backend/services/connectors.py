@@ -102,7 +102,13 @@ class GoogleAdsConnector(AdsConnector):
                 result["login_customer_id"] = str(login_customer_id).replace("-", "")
             return result
         except Exception as e:
-            logger.error(f"Failed to parse Google credentials: {e}")
+            # Empty str(e) usually means Fernet InvalidToken: creds were
+            # encrypted with a different ADOPTIMA_SECRET_KEY/ADOPTIMA_SALT
+            # than the one this environment uses to decrypt.
+            logger.error(
+                f"Failed to parse Google credentials for account {self.account.id}: "
+                f"{type(e).__name__}: {e or '(no message — likely decrypt key mismatch)'}"
+            )
             return None
 
     def _date_clause(self) -> str:
@@ -693,7 +699,10 @@ def get_meta_access_token(account: Optional[Account] = None) -> Optional[str]:
             if tok:
                 return tok
         except Exception as e:
-            logger.error(f"Failed to parse Meta credentials: {e}")
+            logger.error(
+                f"Failed to parse Meta credentials for account {getattr(account, 'id', '?')}: "
+                f"{type(e).__name__}: {e or '(no message — likely decrypt key mismatch)'}"
+            )
 
     env_ad_account = os.environ.get("META_AD_ACCOUNT_ID", "").replace("act_", "").strip()
     user_token = os.environ.get("META_ACCESS_TOKEN")
@@ -942,6 +951,7 @@ class MetaAdsConnector(AdsConnector):
                 month_label = ""
 
             # Resolve inception date for lifetime spend query
+            # Meta caps insights time_range at 37 months back (#3018) — clamp.
             inception_date = "2026-04-01"  # Default (new accounts launch)
             if self.account.id == 1 or "dsu" in self.account.name.lower():
                 inception_date = "2025-11-28"  # DSU inception date
@@ -949,6 +959,12 @@ class MetaAdsConnector(AdsConnector):
                 inception_date = "2026-01-08"  # DSI inception date
             else:
                 inception_date = "2020-01-01"
+            try:
+                _floor = (datetime.now() - timedelta(days=37 * 30)).strftime("%Y-%m-%d")
+                if inception_date < _floor:
+                    inception_date = _floor
+            except Exception:
+                pass
 
             # Fetch lifetime spend from inception to today
             lifetime_spend = 0.0
