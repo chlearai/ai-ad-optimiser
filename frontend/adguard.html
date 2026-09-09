@@ -218,14 +218,14 @@
             <a class="nav-item" href="/" style="margin-bottom:4px;">🏠 ChlearSakhaaOps Home</a>
             <div style="border-bottom:1px solid var(--color-border);margin:4px 8px;"></div>
 
-            <!-- ACCOUNTS (open by default) -->
-            <div class="nav-section open" data-section="accounts">
+            <!-- CLIENTS (from Manage Client/Brand masterlist) -->
+            <div class="nav-section open" data-section="clients">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Accounts</span>
+                    <span class="nav-section-arrow">▶</span><span>Clients</span>
                 </div>
                 <div class="nav-section-items" id="accountList">
-                    <div class="nav-item active" data-account="" onclick="selectAccount(this)"><span class="account-dot"></span>All Accounts</div>
-                    <!-- connected ad accounts injected here by loadWorkspaces() -->
+                    <div class="nav-item active" data-account="" data-account-id="" onclick="selectClient(this)"><span class="account-dot"></span>All Clients</div>
+                    <!-- client masterlist injected here by loadClients() -->
                 </div>
             </div>
 
@@ -238,7 +238,7 @@
 
     <div class="main">
         <div class="topbar">
-            <h1 id="pageTitle">All Accounts</h1>
+            <h1 id="pageTitle">All Clients</h1>
             <div class="topbar-right">
                 <span class="badge badge-green" id="pillGoogle">Google Ads: connected</span>
                 <span class="badge badge-blue" id="pillLsq">LeadSquared: syncing</span>
@@ -276,7 +276,7 @@
                 <div class="table-wrap">
                     <table id="feedTable">
                         <thead><tr>
-                            <th>Time</th><th>Campaign</th><th>Score</th><th>Reason</th><th>Status</th>
+                            <th>Time</th><th>Lead Name</th><th>Contact</th><th>Score</th><th>Reason</th><th>Status</th>
                         </tr></thead>
                         <tbody id="feedBody"></tbody>
                     </table>
@@ -308,6 +308,7 @@
         let currentUser = null;
         let allLeads = [];
         let selectedAccount = '';
+        let selectedClientId = '';
 
         function $(id) { return document.getElementById(id) }
 
@@ -366,18 +367,50 @@
 
         let workspaces = [];
         let selectedWorkspace = null;
+        let clients = [];
 
         async function loadWorkspaces() {
             try {
                 workspaces = await api('GET', '/oauth/accounts');
                 selectedWorkspace = workspaces.find(w => w.google_is_live) || workspaces[0] || null;
-                renderWorkspaceSidebar();
                 if (!selectedWorkspace || !selectedWorkspace.google_is_live) {
                     $('connectBanner').classList.remove('hidden');
                 } else {
                     $('connectBanner').classList.add('hidden');
                 }
             } catch (e) { console.error(e); }
+            await loadClients();
+        }
+
+        // ---------- Client masterlist sidebar (Manage Client/Brand) ----------
+        async function loadClients() {
+            try {
+                const res = await fetch('/api/accounts?active_only=false', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.status === 401) { window.location.href = '/'; return; }
+                clients = await res.json();
+            } catch (e) { clients = []; console.error(e); }
+            renderClientSidebar();
+        }
+
+        function renderClientSidebar() {
+            const list = $('accountList');
+            list.innerHTML = '';
+            list.appendChild(makeClientItem('', '', 'All Clients', true));
+            const sorted = [...clients].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            sorted.forEach(c => {
+                const live = c.is_live ? ' <span class="badge badge-green" style="margin-left:4px;">live</span>' : '';
+                list.appendChild(makeClientItem(c.name || '', c.id, (c.name || ('Client #' + c.id)) + live, false));
+            });
+        }
+
+        function makeClientItem(name, id, label, active) {
+            const div = document.createElement('div');
+            div.className = 'nav-item' + (active ? ' active' : '');
+            div.dataset.account = name;
+            div.dataset.accountId = id || '';
+            div.onclick = function() { selectClient(div); };
+            div.innerHTML = '<span class="account-dot"></span>' + label;
+            return div;
         }
 
         function maybeShowPickerAfterConnect() {
@@ -385,31 +418,6 @@
             if (params.get('oauth_success') !== 'google') return;
             const ws = workspaces.find(w => w.google_is_live);
             if (ws && (ws.discovered_accounts || []).length) openAccountPicker();
-        }
-
-        function renderWorkspaceSidebar() {
-            const list = $('accountList');
-            const staticItems = list.querySelectorAll('.nav-item[data-static="1"]');
-            list.innerHTML = '';
-            list.appendChild(makeAccountItem('', 'All Accounts', true));
-            const seen = new Set();
-            workspaces.forEach(w => {
-                (w.discovered_accounts || []).filter(a => a.selected).forEach(a => {
-                    if (seen.has(a.id)) return;
-                    seen.add(a.id);
-                    list.appendChild(makeAccountItem(a.id, a.name || a.formatted || a.id, false));
-                });
-            });
-            staticItems.forEach(el => list.appendChild(el));
-        }
-
-        function makeAccountItem(id, label, active) {
-            const div = document.createElement('div');
-            div.className = 'nav-item' + (active ? ' active' : '');
-            div.dataset.account = id;
-            div.onclick = function() { selectAccount(div); };
-            div.innerHTML = '<span class="account-dot"></span>' + escapeHtml(label);
-            return div;
         }
 
         async function startConnect() {
@@ -461,11 +469,13 @@
             headerEl.parentElement.classList.toggle('open');
         }
 
-        function selectAccount(el) {
+        function selectClient(el) {
             document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
             selectedAccount = el.dataset.account || '';
-            $('pageTitle').textContent = selectedAccount || 'All Accounts';
+            selectedClientId = el.dataset.accountId || '';
+            $('pageTitle').textContent = selectedAccount || 'All Clients';
+            renderKpis();
             renderFeed();
         }
 
@@ -522,8 +532,13 @@
         }
 
         function leadsForAccount() {
-            if (!selectedAccount) return allLeads;
-            return allLeads.filter(l => (l.account_name || '') === selectedAccount);
+            if (selectedClientId) {
+                return allLeads.filter(l => String(l.account_id || '') === String(selectedClientId));
+            }
+            if (selectedAccount) {
+                return allLeads.filter(l => (l.account_name || '') === selectedAccount);
+            }
+            return allLeads;
         }
 
         function renderKpis() {
@@ -533,7 +548,7 @@
             const scored = rows.filter(l => l.integrity_score != null);
             const avg = scored.length ? Math.round(scored.reduce((s, l) => s + l.integrity_score, 0) / scored.length) : null;
             const cards = [
-                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: selectedAccount || 'all accounts' },
+                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: selectedAccount || 'all clients' },
                 { label: 'Verified & Pushed to LSQ', value: verifiedPushed, icon: '✅', cls: 'c-green', sub: 'passed gatekeeper' },
                 { label: 'Flagged as Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'blocked from LSQ' },
                 { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-amber', sub: 'out of 100' },
@@ -547,15 +562,23 @@
                 </div>`).join('');
         }
 
+        function contactText(l) {
+            const bits = [];
+            if (l.email) bits.push('<div style="font-size:12px;">' + escapeHtml(l.email) + '</div>');
+            if (l.phone) bits.push('<div style="font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(l.phone) + '</div>');
+            return bits.join('') || '<span style="color:var(--color-text-muted)">—</span>';
+        }
+
         function renderFeed() {
             const rows = leadsForAccount();
             if (!rows.length) {
-                $('feedBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><h3>No leads yet</h3><p>Google Ads lead form submissions will appear here once the webhook fires.</p></div></td></tr>';
+                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads yet</h3><p>Google Ads lead form submissions will appear here once the webhook fires.</p></div></td></tr>';
                 return;
             }
             $('feedBody').innerHTML = rows.map(l => `<tr>
                 <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
-                <td>${escapeHtml(l.campaign_name) || '-'}</td>
+                <td style="font-weight:500;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+                <td>${contactText(l)}</td>
                 <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
                 <td>${reasonText(l)}</td>
                 <td>${statusBadge(l)}</td>
