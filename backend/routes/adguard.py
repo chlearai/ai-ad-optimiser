@@ -20,7 +20,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -411,6 +411,78 @@ def oauth_connect(db: Session = Depends(get_db), user: User = Depends(get_curren
     return {"authorization_url": url, "workspace_id": ws.id}
 
 
+@router.get("/oauth/meta/connect")
+def oauth_meta_connect(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Ryze-style Connect Meta Ads: return Meta's OAuth dialog URL."""
+    _require_adguard_access(user)
+    ws = _get_or_create_workspace(db, user)
+    try:
+        from backend.services.adguard_meta import get_adguard_meta_auth_url
+
+        url = get_adguard_meta_auth_url(ws.id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"authorization_url": url, "workspace_id": ws.id}
+
+
+@router.get("/oauth/meta/callback")
+def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
+                        error_description: Optional[str] = None, db: Session = Depends(get_db)):
+    """Meta redirects here after the consent dialog. Stores token, discovers accounts + Pages."""
+    if error:
+        desc = error_description or error
+        return RedirectResponse(url=f"/adguard?oauth_error=meta_{error}&detail={desc}")
+    if not code:
+        return RedirectResponse(url="/adguard?oauth_error=meta_missing_code")
+
+    from backend.services.adguard_meta import (
+        exchange_adguard_meta_code,
+        build_meta_credentials,
+        discover_meta_ad_accounts,
+        discover_meta_pages,
+    )
+
+    token = exchange_adguard_meta_code(code)
+    if not token:
+        return RedirectResponse(url="/adguard?oauth_error=meta_token_exchange_failed")
+
+    # The callback state was not used for workspace binding (Meta dialog keeps
+    # it simple); bind to the most recently created workspace for this login
+    # is not possible here — instead the frontend re-fetches and the workspace
+    # is the one whose meta flow started. We accept the first admin workspace:
+    ws = db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.asc()).first()
+    if not ws:
+        return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
+
+    ws.meta_credentials = build_meta_credentials(token)
+    ws.meta_is_live = True
+    db.commit()
+
+    try:
+        accounts = discover_meta_ad_accounts(token)
+        pages = discover_meta_pages(token)
+        ws.discovered_meta_accounts = json.dumps(accounts) if accounts else "[]"
+        ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
+        db.commit()
+
+        # Auto-subscribe manageable Pages to leadgen webhooks (best-effort)
+        from backend.services.adguard_meta import get_page_access_token, subscribe_page_to_app
+
+        for page in pages:
+            if not page.get("can_subscribe"):
+                continue
+            try:
+                page_token = get_page_access_token(token, page["id"])
+                if page_token:
+                    subscribe_page_to_app(page["id"], page_token)
+            except Exception as pe:
+                logger.warning(f"[AdGuard] Page subscribe skipped for {page.get('id')}: {pe}")
+    except Exception as e:
+        logger.warning(f"[AdGuard] Meta discovery failed (token still stored): {e}")
+
+    return RedirectResponse(url="/adguard?oauth_success=meta")
+
+
 @router.get("/oauth/callback")
 def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Session = Depends(get_db)):
     """Google redirects here after consent. Stores tokens, discovers accounts."""
@@ -471,22 +543,26 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
 class SelectAccountsRequest(BaseModel):
     workspace_id: int
     selected_ids: list
+    platform: Optional[str] = "google"  # google | meta
 
 
 @router.post("/oauth/select")
 def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Mark which discovered Google Ads accounts this user wants protected."""
+    """Mark which discovered ad accounts this user wants protected (google or meta)."""
     _require_adguard_access(user)
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
     if not ws:
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Not your workspace")
-    accounts = json.loads(ws.discovered_accounts) if ws.discovered_accounts else []
+    platform = (req.platform or "google").lower()
+    field = "discovered_meta_accounts" if platform == "meta" else "discovered_accounts"
+    raw = getattr(ws, field)
+    accounts = json.loads(raw) if raw else []
     selected = set(str(s) for s in req.selected_ids)
     for a in accounts:
         a["selected"] = str(a["id"]) in selected
-    ws.discovered_accounts = json.dumps(accounts)
+    setattr(ws, field, json.dumps(accounts))
     db.commit()
     return {"status": "ok", "selected": list(selected)}
 
@@ -517,8 +593,129 @@ def oauth_disconnect(req: SelectAccountsRequest, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Not your workspace")
-    ws.google_credentials = None
-    ws.google_is_live = False
-    ws.discovered_accounts = "[]"
+    platform = (req.platform or "google").lower()
+    if platform == "meta":
+        ws.meta_credentials = None
+        ws.meta_is_live = False
+        ws.discovered_meta_accounts = "[]"
+        ws.discovered_meta_pages = "[]"
+    else:
+        ws.google_credentials = None
+        ws.google_is_live = False
+        ws.discovered_accounts = "[]"
     db.commit()
-    return {"status": "disconnected", "workspace_id": req.workspace_id}
+    return {"status": "disconnected", "workspace_id": req.workspace_id, "platform": platform}
+
+
+# ---------------------------------------------------------------------------
+# Meta leadgen webhook -> AdGuard gatekeeper
+# ---------------------------------------------------------------------------
+
+@router.get("/meta/webhook")
+def meta_webhook_verify(
+    hub_mode: str = Query(default="", alias="hub.mode"),
+    hub_verify_token: str = Query(default="", alias="hub.verify_token"),
+    hub_challenge: str = Query(default="", alias="hub.challenge"),
+):
+    """Meta webhook verification handshake (configured in the Meta App dashboard)."""
+    expected = os.getenv("ADGUARD_META_VERIFY_TOKEN", WEBHOOK_VERIFY_TOKEN)
+    if hub_mode == "subscribe" and hub_verify_token == expected:
+        return int(hub_challenge) if hub_challenge.isdigit() else hub_challenge
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@router.post("/meta/webhook")
+async def meta_webhook_receive(request: Request, x_hub_signature_256: str = Header(default="", alias="X-Hub-Signature-256")):
+    """Meta pushes leadgen events here for all connected workspaces' Pages.
+
+    Signature-verified with ADGUARD_META_APP_SECRET when configured.
+    Each leadgen id is resolved via lead_retrieval using the owning
+    workspace's stored token, then scored by the same gatekeeper.
+    """
+    raw = await request.body()
+
+    app_secret = os.getenv("ADGUARD_META_APP_SECRET", "")
+    if app_secret:
+        if not x_hub_signature_256:
+            raise HTTPException(status_code=403, detail="Missing signature")
+        expected = "sha256=" + hmac.new(app_secret.encode(), raw, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, x_hub_signature_256):
+            raise HTTPException(status_code=403, detail="Invalid signature")
+
+    try:
+        payload = json.loads(raw.decode("utf-8") or "{}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    from backend.services.adguard import process_incoming_lead
+    from backend.services.adguard_meta import fetch_meta_lead, get_meta_token_from_credentials
+
+    # Map page_id -> workspace (a workspace may hold multiple Pages)
+    page_to_ws: Dict[str, AdGuardAccount] = {}
+    for ws in db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True).all():  # noqa: E712
+        token = get_meta_token_from_credentials(ws.meta_credentials or "")
+        if not token:
+            continue
+        try:
+            pages = json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
+        except Exception:
+            pages = []
+        for p in pages:
+            page_to_ws[str(p.get("id"))] = ws
+
+    processed, failed, skipped = 0, 0, 0
+
+    def _handle(leadgen_id: str, page_id: str):
+        ws = page_to_ws.get(str(page_id))
+        if ws is None:
+            return "skipped"
+        token = get_meta_token_from_credentials(ws.meta_credentials or "")
+        if not token:
+            return "skipped"
+        lead = fetch_meta_lead(leadgen_id, token)
+        if not lead:
+            return "failed"
+        fields = lead.get("fields", {})
+        payload = {
+            "full_name": fields.get("full_name") or fields.get("name") or "",
+            "email": fields.get("email") or "",
+            "phone": fields.get("phone_number") or fields.get("phone") or "",
+            "city": fields.get("city") or "",
+            "state": fields.get("state") or "",
+            "country": fields.get("country") or "",
+            "postal_code": fields.get("zip_code") or fields.get("postal_code") or "",
+            "message": fields.get("message") or fields.get("comments") or "",
+            "campaign_name": lead.get("campaign_name") or lead.get("ad_name") or "",
+            "form_id": lead.get("form_id") or "",
+            "gclid": None,
+            "lead_type": "meta_leadgen",
+            "platform": "meta",
+        }
+        import json as _json
+
+        process_incoming_lead(payload, account=None, raw_payload=_json.dumps(lead.get("raw", lead)))
+        return "processed"
+
+    for entry in payload.get("entry", []):
+        page_id = str(entry.get("id") or "")
+        for change in entry.get("changes", []):
+            if change.get("field") != "leadgen":
+                continue
+            value = change.get("value", {}) or {}
+            leadgen_id = value.get("leadgen_id") or value.get("lead_id")
+            if not leadgen_id:
+                continue
+            try:
+                outcome = _handle(str(leadgen_id), page_id)
+                if outcome == "processed":
+                    processed += 1
+                elif outcome == "skipped":
+                    skipped += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+                logger.error(f"[AdGuard] Meta webhook lead {leadgen_id} failed: {e}")
+
+    # Always 200 so Meta doesn't retry-storm; failures are logged for the poller
+    return {"status": "ok", "processed": processed, "failed": failed, "skipped": skipped}

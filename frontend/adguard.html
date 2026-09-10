@@ -232,6 +232,9 @@
             <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">
                 🔗 Connect Google Ads
             </button>
+            <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="margin-top:6px;">
+                🔗 Connect Meta Ads
+            </button>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
@@ -349,6 +352,8 @@
             const params = new URLSearchParams(window.location.search);
             if (params.get('oauth_success') === 'google') {
                 toast('Google Ads connected. Your ad accounts are listed below.', 'success');
+            } else if (params.get('oauth_success') === 'meta') {
+                toast('Meta Ads connected. Your ad accounts and Pages are linked.', 'success');
             } else if (params.get('oauth_error')) {
                 const err = params.get('oauth_error');
                 const msgs = {
@@ -357,6 +362,9 @@
                     invalid_state: 'Connection session expired — click Connect again.',
                     workspace_not_found: 'Workspace missing — click Connect again.',
                     access_denied: 'You cancelled the Google permission screen.',
+                    meta_access_denied: 'You cancelled the Meta permission screen.',
+                    meta_token_exchange_failed: 'Meta token exchange failed — try again.',
+                    meta_missing_code: 'Meta did not return an auth code — try Connect again.',
                 };
                 toast(msgs[err] || ('Connection failed: ' + err), 'error');
             }
@@ -423,6 +431,13 @@
         async function startConnect() {
             try {
                 const res = await api('GET', '/oauth/connect');
+                window.location.href = res.authorization_url;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function startMetaConnect() {
+            try {
+                const res = await api('GET', '/oauth/meta/connect');
                 window.location.href = res.authorization_url;
             } catch (e) { toast(e.message, 'error'); }
         }

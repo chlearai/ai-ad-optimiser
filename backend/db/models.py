@@ -960,6 +960,14 @@ class AdGuardAccount(Base):
     google_credentials = Column(Text, nullable=True)
     google_is_live = Column(Boolean, default=False)
 
+    # Meta OAuth (Ryze-style Connect Meta Ads) — long-lived user token encrypted
+    meta_credentials = Column(Text, nullable=True)
+    meta_is_live = Column(Boolean, default=False)
+    # JSON list: [{"id": "123", "name": "...", "currency": "INR", "selected": false}, ...]
+    discovered_meta_accounts = Column(Text, nullable=True)
+    # JSON list: [{"id": "123", "name": "...", "can_subscribe": true}, ...]
+    discovered_meta_pages = Column(Text, nullable=True)
+
     # Google Ads customer IDs discovered via listAccessibleCustomers after connect
     # JSON list: [{"id": "1234567890", "name": "DSU", "selected": true}, ...]
     discovered_accounts = Column(Text, nullable=True)
@@ -978,6 +986,9 @@ class AdGuardAccount(Base):
             "display_name": self.display_name,
             "google_is_live": self.google_is_live,
             "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
+            "meta_is_live": self.meta_is_live,
+            "discovered_meta_accounts": json.loads(self.discovered_meta_accounts) if self.discovered_meta_accounts else [],
+            "discovered_meta_pages": json.loads(self.discovered_meta_pages) if self.discovered_meta_pages else [],
             "verification_threshold": self.verification_threshold,
             "auto_push_enabled": self.auto_push_enabled,
             "created_at": self.created_at.isoformat() if self.created_at else None,
