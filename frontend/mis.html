@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1312,6 +1312,7 @@
     // DSU Table 3: Lead Attribution Pivot
     // ========================================================================
     function buildDSUTable3(data) {
+        const fmtNum = (n) => Number(n || 0).toLocaleString('en-IN');
         const stages = data.stages || [];
         const rows = data.rows || [];
         const colTotals = data.column_totals || {};
@@ -1928,6 +1929,7 @@
     }
 
     function buildDSITable3(data) {
+        const fmtNum = (n) => Number(n || 0).toLocaleString('en-IN');
         const stages = data.stages || [];
         const rows = data.rows || [];
         const colTotals = data.column_totals || {};
