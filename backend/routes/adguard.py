@@ -88,7 +88,22 @@ async def webhook(
     )
 
     # --- Scheme 1: Google native (HMAC digest or echoed key header) ---
-    if x_google_ledform_digest or x_google_response_key:
+    # Google's CURRENT webhook format is JSON: {lead_id, user_column_data: [...],
+    # google_key: "<key>"} — the key arrives INSIDE the JSON body. It may also
+    # send X-Google-Leadform-Digest (HMAC) or Lead-Response-Webhook-Key headers.
+    # Legacy formats: urlencoded form_data=...&google_key=... and XML.
+    is_google_native = bool(x_google_ledform_digest or x_google_response_key)
+    body_json: Optional[Dict[str, Any]] = None
+    try:
+        parsed_body = json.loads(raw) if raw else None
+        if isinstance(parsed_body, dict):
+            body_json = parsed_body
+    except Exception:
+        body_json = None
+    if body_json and "google_key" in body_json:
+        is_google_native = True
+
+    if is_google_native:
         secret = os.getenv("ADGUARD_GOOGLE_WEBHOOK_KEY", "")
         if not secret:
             logger.error("[AdGuard] ADGUARD_GOOGLE_WEBHOOK_KEY not configured on server")
@@ -106,11 +121,16 @@ async def webhook(
             supplied = x_google_ledform_digest.strip()
             if any(hmac.compare_digest(c, supplied) for c in candidates):
                 authed = True
+        if not authed and body_json:
+            # Google's current JSON format carries the key inside the body
+            body_key = str(body_json.get("google_key") or "")
+            if body_key and hmac.compare_digest(body_key.strip(), secret):
+                authed = True
         if not authed:
             logger.warning("[AdGuard] Google webhook auth FAILED (digest/key mismatch)")
             raise HTTPException(status_code=403, detail="Invalid Google digest")
 
-        # Google body: urlencoded OR XML; extract lead data
+        # Google body: JSON (current), urlencoded, or XML (legacy)
         payload = _parse_google_native_body(raw)
         if payload is None:
             logger.error(f"[AdGuard] unparseable Google body (first 400 chars): {raw[:400]}")
@@ -178,7 +198,48 @@ def _parse_google_native_body(raw: str) -> Optional[Dict[str, Any]]:
     import urllib.parse
     import xml.etree.ElementTree as ET
 
-    # Try urlencoded first
+    # Google's CURRENT format: JSON with lead_id + user_column_data array.
+    # {"lead_id": "...", "user_column_data": [{"column_name": "Full Name",
+    #   "string_value": "First Last", "column_id": "FULL_NAME"}, ...],
+    #  "google_key": "...", "gclid": "...", "campaign_id": ...}
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict) and isinstance(data.get("user_column_data"), list):
+            flat: Dict[str, Any] = {}
+            for item in data["user_column_data"]:
+                if not isinstance(item, dict):
+                    continue
+                name = (item.get("column_name") or item.get("column_id") or "").strip()
+                val = (
+                    item.get("string_value")
+                    or item.get("user_input")
+                    or item.get("value")
+                    or ""
+                )
+                if name:
+                    flat[name] = val
+                    # also index by column_id for robustness (EMAIL, PHONE_NUMBER, FULL_NAME)
+                    cid = (item.get("column_id") or "").strip()
+                    if cid:
+                        flat[cid] = val
+            if data.get("lead_id"):
+                flat["lead_id"] = data["lead_id"]
+            if data.get("gclid"):
+                flat["gclid"] = data["gclid"]
+            if data.get("campaign_id"):
+                flat["campaign_id"] = data["campaign_id"]
+            if data.get("form_id"):
+                flat["form_id"] = data["form_id"]
+            if data.get("google_key"):  # strip secret from stored payload path
+                flat.pop("google_key", None)
+            return flat
+        if isinstance(data, dict) and data:
+            # bridges / other JSON shapes: treat top-level keys as fields
+            return data
+    except Exception as e:
+        logger.warning(f"[AdGuard] JSON parse failed: {e}")
+
+    # Try urlencoded next
     try:
         parsed = urllib.parse.parse_qs(raw, keep_blank_values=True)
         if "form_data" in parsed:

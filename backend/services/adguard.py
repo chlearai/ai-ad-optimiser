@@ -322,11 +322,11 @@ def normalize_google_ads_lead(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     lead = {
         "gclid": _pick("gclid", "Google Click ID", "gcl_id"),
-        "form_id": _pick("form_id", "Form ID", "formid"),
+        "form_id": _pick("form_id", "Form ID", "formid", "lead_id"),
         "campaign_name": _pick("campaign_name", "Campaign", "Campaign Name", "CampaignName") or "",
-        "full_name": str(_pick("full_name", "Full Name", "Your Name", "Name", "name") or ""),
-        "email": str(_pick("email", "Email", "Email Address", "email_address") or ""),
-        "phone": str(_pick("phone", "Phone", "Phone Number", "Mobile", "mobile", "Contact Number") or ""),
+        "full_name": str(_pick("full_name", "Full Name", "FULL_NAME", "Your Name", "Name", "name", "User Name") or ""),
+        "email": str(_pick("email", "Email", "User Email", "EMAIL", "Email Address", "email_address") or ""),
+        "phone": str(_pick("phone", "Phone", "Phone Number", "User Phone", "PHONE_NUMBER", "Mobile", "mobile", "Contact Number") or ""),
         "city": str(_pick("city", "City", "Town") or ""),
         "state": str(_pick("state", "State", "Region", "Province") or ""),
         "country": str(_pick("country", "Country") or ""),
