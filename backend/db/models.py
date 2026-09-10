@@ -2,8 +2,9 @@
 Database models for AdOptima AI.
 """
 import json
+import base64
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
 from backend.db.database import Base
 import enum
@@ -799,6 +800,39 @@ class MisProject(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class MisSalesforceUpload(Base):
+    """Uploaded Salesforce raw Excel export for the Mantri Salesforce report.
+
+    Stores the raw .xlsx bytes in the DB so the report works on ephemeral
+    hosting (Railway) without a local file. Only the latest upload is used;
+    older uploads are retained for audit history.
+    """
+    __tablename__ = "mis_salesforce_uploads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("mis_projects.id"), nullable=False, index=True)
+    filename = Column(String, nullable=False)
+    file_size = Column(Integer, nullable=False, default=0)
+    content = Column(LargeBinary, nullable=False)  # raw .xlsx bytes
+    uploaded_by = Column(String, nullable=True)    # user email
+    uploaded_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    project = relationship("MisProject")
+
+    def to_dict(self, include_content: bool = False):
+        d = {
+            "id": self.id,
+            "project_id": self.project_id,
+            "filename": self.filename,
+            "file_size": self.file_size,
+            "uploaded_by": self.uploaded_by,
+            "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
+        }
+        if include_content:
+            d["content_b64"] = base64.b64encode(self.content).decode("ascii")
+        return d
 
 
 class MisDailySnapshot(Base):

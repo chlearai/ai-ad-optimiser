@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -840,6 +840,10 @@
     }
     function formatNum(n) { return Number(n || 0).toLocaleString('en-IN'); }
     function formatPct(n) { return Number(n || 0).toFixed(2) + '%'; }
+    function fmtNum(n) { return Number(n || 0).toLocaleString('en-IN'); }
+    function fmtMoney(n) { return '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+    function fmtCur(n) { return (n === null || n === undefined) ? '—' : '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+    function negClass(n) { return (n || 0) < 0 ? 'negative' : ''; }
 
     function computeDateRange(preset) {
         const end = today();
@@ -2975,20 +2979,41 @@
 
     async function _renderMantriSalesforce(container) {
         container.innerHTML = `
-            <div class="report-title" id="mantriSalesforceReportTitle" style="margin-bottom:8px; text-align:left;">MANTRI - SALESFORCE LEAD STATUS</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                <div class="report-title" id="mantriSalesforceReportTitle" style="text-align:left;">MANTRI - SALESFORCE LEAD STATUS</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input type="file" id="mantriSfFile" accept=".xlsx,.xls" style="display:none" onchange="mantriSalesforceUpload(this)">
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mantriSfFile').click()">&#128206; Attach Raw File</button>
+                    <span id="mantriSfFileStatus" style="font-size:11px;color:var(--color-text-muted)"></span>
+                </div>
+            </div>
             <div style="overflow-x:auto;">
                 <div class="report-table-container">
-                    <table class="dsu-table" id="mantriSalesforceTable"><thead><tr></tr></thead><tbody></tbody></table>
+                    <table class="mantri-table" id="mantriSalesforceTable"><thead><tr></tr></thead><tbody></tbody></table>
                 </div>
             </div>
             <div id="mantriSalesforceConnBadge" style="margin-top:12px;"></div>`;
-        const data = await api('GET', '/mis/mantri/salesforce/report');
+        let data;
+        try {
+            data = await api('GET', '/mis/mantri/salesforce/report');
+        } catch (e) {
+            // No file attached yet — show attach prompt instead of an error dump
+            const table = document.getElementById('mantriSalesforceTable');
+            if (table) table.style.display = 'none';
+            const badgeEl = document.getElementById('mantriSalesforceConnBadge');
+            if (badgeEl) badgeEl.innerHTML = `
+                <div style="background:var(--color-bg-input);border:1px solid var(--color-border-input);border-radius:8px;padding:18px;text-align:center">
+                    <div style="font-size:14px;font-weight:600;margin-bottom:4px">No Salesforce file attached</div>
+                    <div style="font-size:12px;color:var(--color-text-muted)">Download the sales report from CRM, then click <b>&#128206; Attach Raw File</b> above to generate this report.</div>
+                </div>`;
+            await _mantriSalesforceFileStatus();
+            return;
+        }
         const salesforceBadgeEl = document.getElementById('mantriSalesforceConnBadge');
         if (salesforceBadgeEl) salesforceBadgeEl.innerHTML = _mantriConnectionBadgeHtml(data);
         const titleEl = document.getElementById('mantriSalesforceReportTitle');
         if (titleEl) titleEl.textContent = data.title || 'MANTRI - SALESFORCE LEAD STATUS';
         const table = document.querySelector('#mantriSalesforceTable');
-        table.className = 'mantri-table';
         const thead = table.querySelector('thead tr');
         const tbody = table.querySelector('tbody');
         thead.innerHTML = `
@@ -3021,6 +3046,51 @@
             <td class="num">${_fmtInt(t.overall_count)}</td>
             <td class="num">100%</td>
         </tr>`;
+        await _mantriSalesforceFileStatus();
+    }
+
+    async function _mantriSalesforceFileStatus() {
+        try {
+            const status = await api('GET', '/mis/mantri/salesforce/upload/status');
+            const el = document.getElementById('mantriSfFileStatus');
+            if (el && status.has_upload) {
+                const u = status.upload;
+                const dt = u.uploaded_at ? new Date(u.uploaded_at.replace(' ', 'T') + 'Z') : null;
+                const when = dt ? dt.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+                el.innerHTML = `Attached: <b>${escapeHtml(u.filename)}</b>${when ? ' · ' + when : ''}`;
+            }
+        } catch (e) { /* status is optional */ }
+    }
+
+    async function mantriSalesforceUpload(inputEl) {
+        const file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+        const statusEl = document.getElementById('mantriSfFileStatus');
+        const btn = inputEl.previousElementSibling || null;
+        if (statusEl) statusEl.textContent = 'Uploading...';
+        try {
+            const token = localStorage.getItem('adoptima_token');
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch(API + '/mis/mantri/salesforce/upload', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd,
+            });
+            if (!res.ok) {
+                let msg = 'Upload failed';
+                try { msg = (await res.json()).detail || msg; } catch (_) {}
+                throw new Error(msg);
+            }
+            toast('File attached. Generating report...');
+            await _renderActiveMantriTab();
+        } catch (e) {
+            if (statusEl) statusEl.textContent = '';
+            toast(e.message, true);
+        } finally {
+            inputEl.value = '';
+            if (btn) btn.disabled = false;
+        }
     }
 
     async function mantriRefresh(tab) {

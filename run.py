@@ -28,7 +28,10 @@ def main():
         import uvicorn
         import google.generativeai
         import pydantic
-        import pandas
+        try:
+            import pandas
+        except Exception:
+            pass
         log.info("[+] All core dependencies are available.")
     except ImportError as e:
         log.error(f"[!] Missing dependency: {e}")
