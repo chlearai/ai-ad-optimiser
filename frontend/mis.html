@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1301,6 +1301,10 @@
             <div class="card" style="margin-top:16px; padding:12px; border:1px solid var(--color-accent); background:var(--color-accent-light); border-radius:var(--radius-md); font-size:12px; color:var(--color-accent-text); font-weight:500; text-align:center;">
                 <strong>Tax Disclaimer:</strong> ${data.gst_note || 'Spend values before 19-Jun-2026 are without GST. From 19-Jun-2026 onwards, platform cost is multiplied by 1.18.'} Mixed GST: Base till 18-Jun-2026 · 18% GST from 19-Jun-2026.
             </div>
+            ${data.spend_fetch_error ? `
+            <div class="card" style="margin-top:12px; padding:12px; border:1px solid #d93025; background:#fce8e6; border-radius:var(--radius-md); font-size:12px; color:#d93025; font-weight:500; text-align:center;">
+                <strong>Google Ads spend fetch failed:</strong> ${escapeHtml(data.spend_fetch_error)} — spend shown may be zero or incomplete. Check Integrations credentials for DSU.
+            </div>` : ''}
         `;
     }
 
@@ -1916,6 +1920,10 @@
             <div class="card" style="margin-top:16px; padding:12px; border:1px solid var(--color-accent); background:var(--color-accent-light); border-radius:var(--radius-md); font-size:12px; color:var(--color-accent-text); font-weight:500; text-align:center;">
                 <strong>Tax Disclaimer:</strong> ${data.gst_note || 'Spend values before 19-Jun-2026 are without GST. From 19-Jun-2026 onwards, platform cost is multiplied by 1.18.'} Mixed GST: Base till 18-Jun-2026 · 18% GST from 19-Jun-2026.
             </div>
+            ${data.spend_fetch_error ? `
+            <div class="card" style="margin-top:12px; padding:12px; border:1px solid #d93025; background:#fce8e6; border-radius:var(--radius-md); font-size:12px; color:#d93025; font-weight:500; text-align:center;">
+                <strong>Google Ads spend fetch failed:</strong> ${escapeHtml(data.spend_fetch_error)} — spend shown may be zero or incomplete. Check Integrations credentials.
+            </div>` : ''}
         `;
     }
 

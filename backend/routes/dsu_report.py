@@ -113,6 +113,10 @@ def dsu_performance(
         for r in cumulative_raw
     ]
 
+    # Surface Google Ads spend fetch errors to the UI instead of failing silently
+    from backend.services.dsu_data import _spend_error_holder
+    spend_error = _spend_error_holder.get("message") if _spend_error_holder.get("message") else None
+
     daily_total = {
         "leads": sum(r["leads"] for r in daily),
         "spend": sum(r["spend"] for r in daily),
@@ -144,6 +148,7 @@ def dsu_performance(
         "inception_date": DSU_INCEPTION,
         "gst_transition_date": DSU_GST_TRANSITION,
         "gst_note": "Spend values before 19-Jun-2026 are without GST. From 19-Jun-2026 onwards, platform cost is multiplied by 1.18.",
+        "spend_fetch_error": spend_error,
         "data_freshness": {
             "leads_last_synced_at": freshness_iso,
             "report_generated_at": datetime.utcnow().isoformat() + "Z",

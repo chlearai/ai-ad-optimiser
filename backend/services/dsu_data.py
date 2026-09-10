@@ -258,8 +258,23 @@ def _fetch_google_ads_spend(start_date: str, end_date: str, live_only: bool = Fa
                 course_spend[course] += cost
         return dict(course_spend)
     except Exception as e:
-        logger.warning(f"DSU Google Ads spend fetch skipped or failed: {e}")
+        logger.error(f"DSU Google Ads spend fetch FAILED for {start_date}..{end_date}: {type(e).__name__}: {e}")
+        raise
+
+
+def _fetch_google_ads_spend_safe(start_date: str, end_date: str, live_only: bool = False) -> Dict[str, float]:
+    """Wrapper that captures the error message so the UI can surface it."""
+    from backend.db.database import get_active_db
+    try:
+        return _fetch_google_ads_spend(start_date, end_date, live_only=live_only)
+    except Exception as e:
+        _spend_error_holder["message"] = f"{type(e).__name__}: {e}"
+        _spend_error_holder["db"] = get_active_db()
         return {}
+
+
+# Module-level holder so routes can read the last spend-fetch error
+_spend_error_holder: Dict[str, Any] = {"message": None, "db": None}
 
 
 def _fetch_lsq_leads(start_date: str, end_date: str, account_id: int = None) -> Dict[str, int]:
@@ -476,7 +491,7 @@ def fetch_dsu_daily(report_date: str) -> List[Dict[str, Any]]:
     """Fetch daily course performance for a given date.
     Returns list of {course, leads, cpl, spend} sorted by spend desc.
     Only courses with spend > 0 or leads > 0 are included."""
-    spend_data = _fetch_google_ads_spend(report_date, report_date)
+    spend_data = _fetch_google_ads_spend_safe(report_date, report_date)
     lead_data = _fetch_lsq_leads(report_date, report_date, account_id=1)
 
     rows = []
@@ -496,7 +511,7 @@ def fetch_dsu_cumulative(start_date: str, end_date: str) -> List[Dict[str, Any]]
     """Fetch cumulative course performance from start_date to end_date.
     Returns list of {course, leads, cpl, spend} sorted by spend desc.
     Only courses with spend > 0 or leads > 0 are included."""
-    spend_data = _fetch_google_ads_spend(start_date, end_date)
+    spend_data = _fetch_google_ads_spend_safe(start_date, end_date)
     lead_data = _fetch_lsq_leads(start_date, end_date, account_id=1)
 
     rows = []
@@ -518,7 +533,7 @@ def fetch_dsu_daily_range(start_date: str, end_date: str) -> List[Dict[str, Any]
     All campaigns (enabled, paused, or otherwise) are included in spend.
     Returns list of {course, leads, cpl, spend} sorted by spend desc.
     Only courses with leads > 0 or spend > 0 are included."""
-    spend_data = _fetch_google_ads_spend(start_date, end_date, live_only=False)
+    spend_data = _fetch_google_ads_spend_safe(start_date, end_date, live_only=False)
     lead_data = _fetch_lsq_leads(start_date, end_date, account_id=1)
 
     rows = []
@@ -1310,7 +1325,7 @@ def fetch_dsu_cumulative_range(start_date: str, end_date: str) -> List[Dict[str,
         from backend.db.models import DsuTable2Historical
 
         # Live API spend (new account, Apr-26 onwards, GST-adjusted)
-        live_spend = _fetch_google_ads_spend(DSU_NEW_ACCOUNT_START, end_date)
+        live_spend = _fetch_google_ads_spend_safe(DSU_NEW_ACCOUNT_START, end_date)
 
         db = SessionLocal()
         try:
@@ -1345,7 +1360,7 @@ def fetch_dsu_cumulative_range(start_date: str, end_date: str) -> List[Dict[str,
         return rows
 
     # Custom range: compute from legacy + live API
-    live_spend = _fetch_google_ads_spend(start_date, end_date)
+    live_spend = _fetch_google_ads_spend_safe(start_date, end_date)
     legacy_spend = _fetch_legacy_spend(start_date, end_date)
     
     merged_spend = defaultdict(float)
