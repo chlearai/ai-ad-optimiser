@@ -292,8 +292,9 @@
     <!-- ACCOUNT PICKER MODAL -->
     <div id="pickerOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:100;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('pickerOverlay').style.display='none'">
         <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
-            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;">Pick Google Ads accounts to protect</h2>
+            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;" id="pickerTitle">Pick Google Ads accounts to protect</h2>
             <input type="hidden" id="pickerWsId">
+            <input type="hidden" id="pickerPlatform" value="google">
             <div id="pickerList" style="margin-bottom:16px;"></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button class="btn btn-secondary" onclick="document.getElementById('pickerOverlay').style.display='none'">Cancel</button>
@@ -386,6 +387,7 @@
                 } else {
                     $('connectBanner').classList.add('hidden');
                 }
+                renderMetaButtonState();
             } catch (e) { console.error(e); }
             await loadClients();
         }
@@ -423,6 +425,10 @@
 
         function maybeShowPickerAfterConnect() {
             const params = new URLSearchParams(window.location.search);
+            if (params.get('oauth_success') === 'meta') {
+                const mws = workspaces.find(w => w.meta_is_live);
+                if (mws) { openMetaAccountPicker(); return; }
+            }
             if (params.get('oauth_success') !== 'google') return;
             const ws = workspaces.find(w => w.google_is_live);
             if (ws && (ws.discovered_accounts || []).length) openAccountPicker();
@@ -442,12 +448,46 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
+        function renderMetaButtonState() {
+            const btn = $('addMetaBtn');
+            if (!btn) return;
+            const ws = workspaces.find(w => w.meta_is_live);
+            if (ws && ws.meta_is_live) {
+                const nAcc = (ws.discovered_meta_accounts || []).filter(a => a.selected).length;
+                btn.textContent = nAcc > 0 ? ('✅ Meta Ads connected (' + nAcc + ' accounts)') : '✅ Meta Ads connected — pick accounts';
+                btn.onclick = openMetaAccountPicker;
+                btn.style.opacity = '0.9';
+            } else {
+                btn.textContent = '🔗 Connect Meta Ads';
+                btn.onclick = startMetaConnect;
+                btn.style.opacity = '';
+            }
+        }
+
+        function openMetaAccountPicker() {
+            const ws = workspaces.find(w => w.meta_is_live);
+            if (!ws) { startMetaConnect(); return; }
+            $('pickerTitle').textContent = 'Pick Meta ad accounts to protect';
+            const all = ws.discovered_meta_accounts || [];
+            const rows = all.map(a => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;">
+                    <input type="checkbox" value="${escapeHtml(String(a.id))}" ${a.selected ? 'checked' : ''}>
+                    <span>${escapeHtml(a.name || a.id)} <span style="color:var(--color-text-muted)">(${escapeHtml(a.formatted || a.currency || '')})</span></span>
+                </label>`).join('');
+            $('pickerList').innerHTML = rows || '<p style="font-size:13px;color:var(--color-text-muted)">No Meta ad accounts discovered.</p>';
+            $('pickerWsId').value = ws.id;
+            $('pickerPlatform').value = 'meta';
+            $('pickerOverlay').style.display = 'flex';
+        }
+
         function addAccount() { startConnect(); }
 
         // Account picker shown when a workspace has unselected discovered accounts
         function openAccountPicker() {
             const ws = workspaces.find(w => w.google_is_live);
             if (!ws) return;
+            $('pickerTitle').textContent = 'Pick Google Ads accounts to protect';
+            $('pickerPlatform').value = 'google';
             const unselected = (ws.discovered_accounts || []).filter(a => !a.selected);
             const all = ws.discovered_accounts || [];
             const rows = all.map(a => `
@@ -464,7 +504,7 @@
         async function saveAccountPicker() {
             const ids = Array.from($('pickerList').querySelectorAll('input:checked')).map(cb => cb.value);
             try {
-                await api('POST', '/oauth/select', { workspace_id: parseInt($('pickerWsId').value), selected_ids: ids });
+                await api('POST', '/oauth/select', { workspace_id: parseInt($('pickerWsId').value), selected_ids: ids, platform: $('pickerPlatform').value || 'google' });
                 toast('Ad accounts saved');
                 $('pickerOverlay').style.display = 'none';
                 await loadWorkspaces();
