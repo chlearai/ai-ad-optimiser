@@ -146,18 +146,22 @@ async def webhook(
 
     from backend.services.adguard import process_incoming_lead
 
-    try:
-        result = process_incoming_lead(payload, account=account, raw_payload=raw)
-    except Exception as e:
-        logger.error(f"[AdGuard] webhook processing failed: {e}")
-        raise HTTPException(status_code=502, detail=str(e))
+    # Respond 200 immediately — Google's webhook test times out on slow
+    # responses (Gemini scoring + LSQ push can take 5-10s synchronously).
+    # Full pipeline (dedup -> score -> LSQ push -> persist) runs in background.
+    import threading
+
+    def _process_background():
+        try:
+            process_incoming_lead(payload, account=account, raw_payload=raw)
+        except Exception as e:
+            logger.error(f"[AdGuard] background lead processing failed: {e}")
+
+    threading.Thread(target=_process_background, daemon=True).start()
 
     return {
         "status": "ok",
-        "lead_id": result["id"],
-        "verdict": result["verdict"],
-        "integrity_score": result["integrity_score"],
-        "lsq_status": result["lsq_status"],
+        "queued": True,
     }
 
 
