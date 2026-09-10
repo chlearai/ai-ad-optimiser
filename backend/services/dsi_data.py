@@ -255,14 +255,25 @@ def _rollup_to_dept(course: str) -> str:
 
 def _get_dsi_account_creds() -> Dict[str, Any]:
     """Load DSI's Google Ads credentials from the DB."""
+    import os
+
     c = _db_connect()
     cur = c.cursor()
-    cur.execute("SELECT google_credentials FROM accounts WHERE name='DSI'")
+    cur.execute("SELECT google_credentials, google_login_customer_id FROM accounts WHERE name='DSI'")
     row = cur.fetchone()
     c.close()
     if not row or not row[0]:
         raise ValueError("DSI has no stored google_credentials")
-    return json.loads(decrypt(row[0]))
+    creds = json.loads(decrypt(row[0]))
+    login_cid = (
+        creds.get("login_customer_id")
+        or (row[1] if len(row) > 1 and row[1] else None)
+        or os.environ.get("GOOGLE_LOGIN_CUSTOMER_ID")
+        or os.environ.get("GOOGLE_MCC_ID")
+    )
+    if login_cid:
+        creds["login_customer_id"] = str(login_cid).replace("-", "").strip()
+    return creds
 
 
 def _apply_gst(raw_cost: float, date_str: str) -> float:
