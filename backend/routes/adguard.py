@@ -631,6 +631,135 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
     return {"status": "ok", "pages_subscribed": ok_count, "results": results}
 
 
+@router.get("/meta/debug-subscriptions")
+def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Show app-level webhook subscriptions + which apps each Page subscribes to."""
+    _require_adguard_access(user)
+    from backend.services.adguard_meta import (
+        _graph_get,
+        get_meta_token_from_credentials,
+        get_page_access_token,
+    )
+
+    app_id = os.getenv("META_APP_ID", "")
+    app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
+    out: Dict[str, Any] = {"app_id": app_id, "app_subscriptions": None, "pages": []}
+
+    if app_id and app_secret:
+        try:
+            out["app_subscriptions"] = _graph_get(f"{app_id}/subscriptions", {"token": f"{app_id}|{app_secret}"})
+        except Exception as e:
+            out["app_subscriptions_error"] = str(e)
+
+    q = db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True)  # noqa: E712
+    if user.role not in ("admin", "superadmin"):
+        q = q.filter(AdGuardAccount.owner_email == user.email)
+    for ws in q.all():
+        token = get_meta_token_from_credentials(ws.meta_credentials or "")
+        if not token:
+            continue
+        try:
+            pages = json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
+        except Exception:
+            pages = []
+        for p in pages:
+            pid = str(p.get("id"))
+            entry: Dict[str, Any] = {"workspace_id": ws.id, "page_id": pid, "page_name": p.get("name")}
+            try:
+                page_token = get_page_access_token(token, pid)
+                if not page_token:
+                    entry["error"] = "no_page_token"
+                else:
+                    entry["subscribed_apps"] = _graph_get(f"{pid}/subscribed_apps", {"token": page_token})
+            except Exception as e:
+                entry["error"] = str(e)
+            out["pages"].append(entry)
+    return out
+
+
+@router.post("/meta/pull-leads")
+def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Manually pull recent leads from Meta Pages API and run them through the gatekeeper."""
+    _require_adguard_access(user)
+    from backend.services.adguard_meta import (
+        _graph_get,
+        get_meta_token_from_credentials,
+        get_page_access_token,
+    )
+    from backend.services.adguard import process_incoming_lead
+    from backend.db.models import AdGuardLead
+
+    q = db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True)  # noqa: E712
+    if user.role not in ("admin", "superadmin"):
+        q = q.filter(AdGuardAccount.owner_email == user.email)
+    processed, failed, skipped = 0, 0, 0
+    details = []
+
+    def _fields_map(field_data: list) -> Dict[str, str]:
+        fields: Dict[str, str] = {}
+        for item in field_data or []:
+            name = (item.get("name") or "").strip()
+            values = item.get("values") or []
+            if name and values:
+                fields[name] = values[0]
+        return fields
+
+    for ws in q.all():
+        token = get_meta_token_from_credentials(ws.meta_credentials or "")
+        if not token:
+            continue
+        try:
+            pages = json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
+        except Exception:
+            pages = []
+        for p in pages:
+            pid = str(p.get("id"))
+            try:
+                page_token = get_page_access_token(token, pid)
+                if not page_token:
+                    continue
+                data = _graph_get(f"{pid}/leads", {
+                    "fields": "id,created_time,form_id,ad_id,ad_name,campaign_id,campaign_name,field_data",
+                    "limit": "25",
+                    "token": page_token,
+                })
+                for ld in (data or {}).get("data", []):
+                    lead_id = str(ld.get("id") or "")
+                    if not lead_id:
+                        continue
+                    exists = db.query(AdGuardLead).filter(AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
+                    if exists:
+                        skipped += 1
+                        continue
+                    fields = _fields_map(ld.get("field_data"))
+                    payload = {
+                        "full_name": fields.get("full_name") or fields.get("name") or "",
+                        "email": fields.get("email") or "",
+                        "phone": fields.get("phone_number") or fields.get("phone") or "",
+                        "city": fields.get("city") or "",
+                        "state": fields.get("state") or "",
+                        "country": fields.get("country") or "",
+                        "postal_code": fields.get("zip_code") or fields.get("postal_code") or "",
+                        "message": fields.get("message") or fields.get("comments") or "",
+                        "campaign_name": ld.get("campaign_name") or ld.get("ad_name") or "",
+                        "form_id": str(ld.get("form_id") or ""),
+                        "gclid": None,
+                        "lead_type": "meta_leadgen",
+                        "platform": "meta",
+                    }
+                    try:
+                        process_incoming_lead(payload, account=None, raw_payload=json.dumps(ld))
+                        processed += 1
+                        details.append({"page_id": pid, "lead_id": lead_id, "email": payload["email"] or payload["phone"]})
+                    except Exception as pe:
+                        failed += 1
+                        details.append({"page_id": pid, "lead_id": lead_id, "error": str(pe)})
+            except Exception as e:
+                details.append({"page_id": pid, "error": str(e)})
+    db.commit()
+    return {"status": "ok", "processed": processed, "failed": failed, "skipped": skipped, "details": details}
+
+
 @router.post("/oauth/disconnect")
 def oauth_disconnect(req: SelectAccountsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Remove OAuth tokens from a workspace (keeps lead history)."""

@@ -238,6 +238,9 @@
             <button class="add-account-btn" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="margin-top:6px;display:none;background:#1f6feb;color:#fff;">
                 🔔 Subscribe Pages to leadgen
             </button>
+            <button class="add-account-btn" id="pullMetaBtn" onclick="pullMetaLeads()" style="margin-top:6px;display:none;background:#21834f;color:#fff;">
+                ⬇️ Pull Meta leads now
+            </button>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
@@ -462,6 +465,17 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
+        async function pullMetaLeads() {
+            try {
+                toast('Pulling leads from Meta...', 'info');
+                const res = await api('POST', '/meta/pull-leads');
+                loadLeads();
+                if (res.processed > 0) toast('Pulled ' + res.processed + ' new lead(s).', 'success');
+                else if (res.skipped > 0) toast('No new leads (' + res.skipped + ' already exist).', 'info');
+                else toast('No leads found on Pages. Details: ' + JSON.stringify(res.details || []).slice(0, 150), 'error');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
         function renderMetaButtonState() {
             const btn = $('addMetaBtn');
             if (!btn) return;
@@ -473,6 +487,8 @@
                 btn.style.opacity = '0.9';
                 const rs = $('resubMetaBtn');
                 if (rs) rs.style.display = 'inline-block';
+                const pb = $('pullMetaBtn');
+                if (pb) pb.style.display = 'inline-block';
             } else {
                 btn.textContent = '🔗 Connect Meta Ads';
                 btn.onclick = startMetaConnect;
