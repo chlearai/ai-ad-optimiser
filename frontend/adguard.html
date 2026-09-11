@@ -462,9 +462,9 @@
                 toast('Subscribing Pages to leadgen webhooks...', 'info');
                 const res = await api('POST', '/oauth/meta/resubscribe');
                 const n = res.pages_subscribed || 0;
-                const fails = (res.results || []).filter(r => !r.subscribed && !r.skipped);
-                if (n > 0) toast('Done. ' + n + ' page(s) subscribed to leadgen.', 'success');
-                else toast('No pages subscribed. ' + JSON.stringify(fails).slice(0, 200), 'error');
+                const appStep = (res.results || []).find(r => r.step === 'app_level_subscription') || {};
+                let msg = 'Pages subscribed: ' + n + '. App-level leadgen: ' + (appStep.ok ? 'OK' : 'FAILED') + (appStep.error ? ' — ' + appStep.error : '');
+                toast(msg, appStep.ok ? 'success' : 'error');
             } catch (e) { toast(e.message, 'error'); }
         }
 
