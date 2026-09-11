@@ -589,13 +589,39 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
 
 @router.post("/oauth/meta/resubscribe")
 def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Re-subscribe all manageable Pages to the app's leadgen webhooks."""
+    """Ensure app-level leadgen webhook + subscribe all manageable Pages (bulk tokens)."""
     _require_adguard_access(user)
+    results = []
+    from backend.services.adguard_meta import (
+        _graph_get,
+        get_all_page_tokens,
+        get_meta_token_from_credentials,
+        subscribe_page_to_app,
+    )
+
+    # Step 1: ensure the APP itself subscribes to leadgen webhooks at app level
+    app_id = os.getenv("META_APP_ID", "")
+    app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
+    app_token = f"{app_id}|{app_secret}" if app_id and app_secret else ""
+    app_sub_ok = False
+    if app_token:
+        try:
+            data = urllib.parse.urlencode({
+                "subscribed_fields": "leadgen",
+                "access_token": app_token,
+            }).encode()
+            req = urllib.request.Request(f"https://graph.facebook.com/v21.0/{app_id}/subscriptions", data=data, method="POST")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                out = json.loads(resp.read().decode())
+                app_sub_ok = bool(out.get("success"))
+        except Exception as e:
+            logger.error(f"[AdGuard] app-level leadgen subscribe failed: {e}")
+    results.append({"step": "app_level_subscription", "ok": app_sub_ok})
+
+    # Step 2: subscribe each manageable Page using bulk page tokens
     q = db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True)  # noqa: E712
     if user.role not in ("admin", "superadmin"):
         q = q.filter(AdGuardAccount.owner_email == user.email)
-    results = []
-    from backend.services.adguard_meta import get_page_access_token, subscribe_page_to_app
     for ws in q.all():
         token = None
         try:
@@ -619,19 +645,20 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
             except Exception as pe:
                 results.append({"workspace_id": ws.id, "error": str(pe)})
                 continue
+        page_tokens = get_all_page_tokens(token)
         for page in pages:
             if not page.get("can_subscribe"):
                 results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": False, "skipped": "no_manage_permission"})
                 continue
             try:
-                page_token = get_page_access_token(token, page["id"])
+                page_token = page_tokens.get(str(page["id"])) or ""
                 ok = subscribe_page_to_app(page["id"], page_token) if page_token else False
-                results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": ok})
+                results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": ok, "had_token": bool(page_token)})
             except Exception as pe:
                 results.append({"workspace_id": ws.id, "page_id": page.get("id"), "subscribed": False, "error": str(pe)})
     db.commit()
     ok_count = sum(1 for r in results if r.get("subscribed"))
-    return {"status": "ok", "pages_subscribed": ok_count, "results": results}
+    return {"status": "ok", "app_level_ok": app_sub_ok, "pages_subscribed": ok_count, "results": results}
 
 
 @router.get("/meta/debug-subscriptions")
@@ -640,8 +667,8 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
     _require_adguard_access(user)
     from backend.services.adguard_meta import (
         _graph_get,
+        get_all_page_tokens,
         get_meta_token_from_credentials,
-        get_page_access_token,
     )
 
     app_id = os.getenv("META_APP_ID", "")
@@ -665,11 +692,12 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
             pages = json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
         except Exception:
             pages = []
+        page_tokens = get_all_page_tokens(token)
         for p in pages:
             pid = str(p.get("id"))
             entry: Dict[str, Any] = {"workspace_id": ws.id, "page_id": pid, "page_name": p.get("name")}
             try:
-                page_token = get_page_access_token(token, pid)
+                page_token = page_tokens.get(pid) or ""
                 if not page_token:
                     entry["error"] = "no_page_token"
                 else:
@@ -690,7 +718,7 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
     from backend.services.adguard_meta import (
         _graph_get,
         get_meta_token_from_credentials,
-        get_page_access_token,
+        get_all_page_tokens,
     )
     from backend.services.adguard import process_incoming_lead
     from backend.db.models import AdGuardLead
@@ -720,10 +748,11 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
         except Exception:
             pages = []
         details.append({"workspace_id": ws.id, "pages_count": len(pages)})
+        page_tokens = get_all_page_tokens(token)
         for p in pages:
             pid = str(p.get("id"))
             try:
-                page_token = get_page_access_token(token, pid)
+                page_token = page_tokens.get(pid) or ""
                 if not page_token:
                     details.append({"page_id": pid, "page_name": p.get("name"), "error": "no_page_token"})
                     continue

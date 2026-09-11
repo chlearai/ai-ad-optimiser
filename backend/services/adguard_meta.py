@@ -178,6 +178,37 @@ def get_page_access_token(user_token: str, page_id: str) -> Optional[str]:
     return (data or {}).get("access_token")
 
 
+def get_all_page_tokens(user_token: str) -> Dict[str, str]:
+    """Fetch ALL page access tokens in one call (avoids per-page rate limits).
+
+    Returns {page_id: page_access_token}.
+    """
+    out: Dict[str, str] = {}
+    data = _graph_get("me/accounts", {"fields": "id,access_token", "limit": "100", "token": user_token})
+    for page in (data or {}).get("data", []):
+        pid = str(page.get("id") or "")
+        tok = page.get("access_token") or ""
+        if pid and tok:
+            out[pid] = tok
+    # handle pagination just in case
+    next_url = (data or {}).get("paging", {}).get("next")
+    while next_url and len(out) < 200:
+        try:
+            req = urllib.request.Request(next_url)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode())
+        except Exception as e:
+            logger.error(f"[AdGuard] page token pagination failed: {e}")
+            break
+        for page in (data or {}).get("data", []):
+            pid = str(page.get("id") or "")
+            tok = page.get("access_token") or ""
+            if pid and tok:
+                out[pid] = tok
+        next_url = (data or {}).get("paging", {}).get("next")
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Lead retrieval
 # ---------------------------------------------------------------------------
