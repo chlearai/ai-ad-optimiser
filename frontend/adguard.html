@@ -235,6 +235,9 @@
             <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="margin-top:6px;">
                 🔗 Connect Meta Ads
             </button>
+            <button class="add-account-btn" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="margin-top:6px;display:none;background:#1f6feb;color:#fff;">
+                🔔 Subscribe Pages to leadgen
+            </button>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
@@ -448,6 +451,17 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
+        async function resubscribeMetaPages() {
+            try {
+                toast('Subscribing Pages to leadgen webhooks...', 'info');
+                const res = await api('POST', '/oauth/meta/resubscribe');
+                const n = res.pages_subscribed || 0;
+                const fails = (res.results || []).filter(r => !r.subscribed && !r.skipped);
+                if (n > 0) toast('Done. ' + n + ' page(s) subscribed to leadgen.', 'success');
+                else toast('No pages subscribed. ' + JSON.stringify(fails).slice(0, 200), 'error');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
         function renderMetaButtonState() {
             const btn = $('addMetaBtn');
             if (!btn) return;
@@ -457,6 +471,8 @@
                 btn.textContent = nAcc > 0 ? ('✅ Meta Ads connected (' + nAcc + ' accounts)') : '✅ Meta Ads connected — pick accounts';
                 btn.onclick = openMetaAccountPicker;
                 btn.style.opacity = '0.9';
+                const rs = $('resubMetaBtn');
+                if (rs) rs.style.display = 'inline-block';
             } else {
                 btn.textContent = '🔗 Connect Meta Ads';
                 btn.onclick = startMetaConnect;

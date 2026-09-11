@@ -584,6 +584,53 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
     ]
 
 
+@router.post("/oauth/meta/resubscribe")
+def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Re-subscribe all manageable Pages to the app's leadgen webhooks."""
+    _require_adguard_access(user)
+    q = db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True)  # noqa: E712
+    if user.role not in ("admin", "superadmin"):
+        q = q.filter(AdGuardAccount.owner_email == user.email)
+    results = []
+    from backend.services.adguard_meta import get_page_access_token, subscribe_page_to_app
+    for ws in q.all():
+        token = None
+        try:
+            from backend.services.adguard_meta import get_meta_token_from_credentials
+            token = get_meta_token_from_credentials(ws.meta_credentials)
+        except Exception:
+            token = None
+        if not token:
+            results.append({"workspace_id": ws.id, "error": "no_token"})
+            continue
+        pages = []
+        try:
+            pages = json.loads(ws.discovered_meta_pages or "[]")
+        except Exception:
+            pages = []
+        if not pages:
+            try:
+                from backend.services.adguard_meta import discover_meta_pages
+                pages = discover_meta_pages(token)
+                ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
+            except Exception as pe:
+                results.append({"workspace_id": ws.id, "error": str(pe)})
+                continue
+        for page in pages:
+            if not page.get("can_subscribe"):
+                results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": False, "skipped": "no_manage_permission"})
+                continue
+            try:
+                page_token = get_page_access_token(token, page["id"])
+                ok = subscribe_page_to_app(page["id"], page_token) if page_token else False
+                results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": ok})
+            except Exception as pe:
+                results.append({"workspace_id": ws.id, "page_id": page.get("id"), "subscribed": False, "error": str(pe)})
+    db.commit()
+    ok_count = sum(1 for r in results if r.get("subscribed"))
+    return {"status": "ok", "pages_subscribed": ok_count, "results": results}
+
+
 @router.post("/oauth/disconnect")
 def oauth_disconnect(req: SelectAccountsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Remove OAuth tokens from a workspace (keeps lead history)."""
