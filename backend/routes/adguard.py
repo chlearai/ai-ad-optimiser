@@ -625,7 +625,7 @@ def meta_webhook_verify(
 
 
 @router.post("/meta/webhook")
-async def meta_webhook_receive(request: Request, x_hub_signature_256: str = Header(default="", alias="X-Hub-Signature-256")):
+async def meta_webhook_receive(request: Request, db: Session = Depends(get_db), x_hub_signature_256: str = Header(default="", alias="X-Hub-Signature-256")):
     """Meta pushes leadgen events here for all connected workspaces' Pages.
 
     Signature-verified with ADGUARD_META_APP_SECRET when configured.
@@ -634,7 +634,7 @@ async def meta_webhook_receive(request: Request, x_hub_signature_256: str = Head
     """
     raw = await request.body()
 
-    app_secret = os.getenv("ADGUARD_META_APP_SECRET", "")
+    app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
     if app_secret:
         if not x_hub_signature_256:
             raise HTTPException(status_code=403, detail="Missing signature")
