@@ -39,6 +39,9 @@ def start_scheduler():
     # Crash Club Meta leads -> Google Sheets, every 5 minutes
     if os.getenv("CRASH_CLUB_SYNC_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_crashclub_sync, 'interval', minutes=5, id='crashclub_meta_leads_sync', replace_existing=True)
+    # AdGuard: poll Meta Pages for new leadgen leads every 5 minutes (webhook-free path)
+    if os.getenv("ADGUARD_META_POLL_ENABLED", "true").lower() in ("true", "1", "yes"):
+        _scheduler.add_job(_run_adguard_meta_poll, 'interval', minutes=5, id='adguard_meta_leads_poll', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=1))
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 
@@ -50,6 +53,85 @@ def _run_crashclub_sync():
         run_scheduled_sync()
     except Exception as e:
         logger.warning(f"CrashClub scheduled sync failed: {e}")
+
+
+def _run_adguard_meta_poll():
+    """AdGuard: poll all connected workspaces' Meta Pages for new leads."""
+    try:
+        from backend.db.models import AdGuardAccount, AdGuardLead
+        from backend.services.adguard_meta import (
+            _graph_get,
+            get_meta_token_from_credentials,
+            get_all_page_tokens,
+        )
+        from backend.services.adguard import process_incoming_lead
+        import json as _json
+
+        db = SessionLocal()
+        processed, failed = 0, 0
+        try:
+            for ws in db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True).all():  # noqa: E712
+                token = get_meta_token_from_credentials(ws.meta_credentials or "")
+                if not token:
+                    continue
+                try:
+                    pages = _json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
+                except Exception:
+                    pages = []
+                page_tokens = get_all_page_tokens(token)
+                if "__error__" in page_tokens:
+                    logger.warning(f"[AdGuard poll] ws {ws.id} bulk page tokens failed: {page_tokens['__error__']}")
+                    continue
+                for p in pages:
+                    pid = str(p.get("id"))
+                    page_token = page_tokens.get(pid) or ""
+                    if not page_token:
+                        continue
+                    try:
+                        data = _graph_get(f"{pid}/leads", {
+                            "fields": "id,created_time,form_id,ad_id,ad_name,campaign_id,campaign_name,field_data",
+                            "limit": "25",
+                            "token": page_token,
+                        })
+                        for ld in (data or {}).get("data", []):
+                            lead_id = str(ld.get("id") or "")
+                            if not lead_id:
+                                continue
+                            exists = db.query(AdGuardLead).filter(AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
+                            if exists:
+                                continue
+                            fields = {}
+                            for item in ld.get("field_data") or []:
+                                name = (item.get("name") or "").strip()
+                                vals = item.get("values") or []
+                                if name and vals:
+                                    fields[name] = vals[0]
+                            payload = {
+                                "full_name": fields.get("full_name") or fields.get("name") or "",
+                                "email": fields.get("email") or "",
+                                "phone": fields.get("phone_number") or fields.get("phone") or "",
+                                "city": fields.get("city") or "",
+                                "state": fields.get("state") or "",
+                                "country": fields.get("country") or "",
+                                "postal_code": fields.get("zip_code") or fields.get("postal_code") or "",
+                                "message": fields.get("message") or fields.get("comments") or "",
+                                "campaign_name": ld.get("campaign_name") or ld.get("ad_name") or "",
+                                "form_id": str(ld.get("form_id") or ""),
+                                "gclid": None,
+                                "lead_type": "meta_leadgen",
+                                "platform": "meta",
+                            }
+                            process_incoming_lead(payload, account=None, raw_payload=_json.dumps(ld))
+                            processed += 1
+                    except Exception as pe:
+                        failed += 1
+                        logger.warning(f"[AdGuard poll] page {pid} failed: {pe}")
+        finally:
+            db.close()
+        if processed or failed:
+            logger.info(f"[AdGuard poll] processed={processed} failed={failed}")
+    except Exception as e:
+        logger.warning(f"AdGuard Meta poll failed: {e}")
 
 
 def _run_daily_smart_audit():
