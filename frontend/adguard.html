@@ -252,6 +252,7 @@
                 </div>
                 <div class="nav-section-items">
                     <div class="nav-item" data-admin="subscribers" onclick="openAdminSubscribers()">📊 Subscribers</div>
+                    <div class="nav-item" data-admin="cleanup" onclick="openCleanupPanel()">🧹 Cleanup Test Leads</div>
                 </div>
             </div>
         </div>
@@ -282,6 +283,29 @@
 
             <div class="kpi-grid" id="kpiGrid"></div>
 
+            <!-- ADMIN: cleanup panel (hidden for customers) -->
+            <div class="card hidden" id="cleanupCard">
+                <div class="card-header">
+                    <span class="card-title">🧹 Cleanup Test Leads</span>
+                </div>
+                <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px;">
+                    Delete junk leads by keyword (email / phone / name / campaign contains) or age. Shows a preview count before deleting. Cannot be undone.
+                </p>
+                <div class="filters" style="margin-bottom:12px;">
+                    <input class="filter-input" id="cleanupPatterns" placeholder="Keywords, comma-separated (e.g. test, junk, @example.com)" style="min-width:320px;">
+                    <select class="filter-select" id="cleanupAge">
+                        <option value="">Any age</option>
+                        <option value="1">Older than 1 day</option>
+                        <option value="7">Older than 7 days</option>
+                        <option value="30">Older than 30 days</option>
+                        <option value="90">Older than 90 days</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" onclick="previewCleanup()">Preview</button>
+                    <button class="btn btn-primary btn-sm" onclick="runCleanup(true)">Delete</button>
+                </div>
+                <div id="cleanupResult" style="font-size:13px;"></div>
+            </div>
+
             <!-- ADMIN: subscribers panel (hidden for customers) -->
             <div class="card hidden" id="adminSubscribersCard">
                 <div class="card-header">
@@ -309,6 +333,7 @@
                             <option value="verified">Verified only</option>
                             <option value="flagged">Flagged only</option>
                         </select>
+                        <button class="btn btn-secondary btn-sm" onclick="exportCsv()">⬇ Export CSV</button>
                         <button class="btn btn-secondary btn-sm" onclick="loadLeads()">Refresh</button>
                     </div>
                 </div>
@@ -409,6 +434,68 @@
             adminOpen = !adminOpen;
             $('adminSubscribersCard').classList.toggle('hidden', !adminOpen);
             if (adminOpen) loadAdminSubscribers();
+        }
+
+        // ---------- Admin: cleanup test leads ----------
+        function openCleanupPanel() {
+            $('cleanupCard').classList.toggle('hidden');
+        }
+
+        function _cleanupParams() {
+            const patterns = ($('cleanupPatterns').value || '').split(',').map(s => s.trim()).filter(Boolean);
+            const age = $('cleanupAge').value;
+            const body = {};
+            if (patterns.length) body.patterns = patterns;
+            if (age) body.older_than_days = parseInt(age);
+            return body;
+        }
+
+        async function previewCleanup() {
+            try {
+                const body = _cleanupParams();
+                if (!body.patterns && !body.older_than_days) { toast('Enter keywords or pick an age', 'error'); return; }
+                const res = await fetch(API + '/leads/cleanup-test-leads', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...body, _preview_only: true })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                $('cleanupResult').innerHTML = '<b>' + data.deleted + '</b> leads match.' +
+                    (data.preview || []).map(p => '<div style="font-size:12px;">#' + p.id + ' — ' + escapeHtml(p.name || '') + ' ' + escapeHtml(p.email || '') + ' (' + p.verdict + ')</div>').join('') +
+                    '<div style="color:var(--color-text-muted);font-size:11px;margin-top:4px;">Review the list, then click Delete.</div>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function runCleanup() {
+            const body = _cleanupParams();
+            if (!body.patterns && !body.older_than_days) { toast('Enter keywords or pick an age', 'error'); return; }
+            if (!confirm('Delete these leads permanently?')) return;
+            try {
+                const res = await fetch(API + '/leads/cleanup-test-leads', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                $('cleanupResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">Deleted ' + data.deleted + ' leads.</span>';
+                toast('Deleted ' + data.deleted + ' test leads');
+                loadLeads();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function exportCsv() {
+            fetch(API + '/leads/export', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => { if (!r.ok) throw new Error('Export failed'); return r.blob(); })
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'adguard_leads.csv';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(e => toast(e.message, 'error'));
         }
 
         async function loadAdminSubscribers() {

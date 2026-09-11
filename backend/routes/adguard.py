@@ -13,19 +13,21 @@ Endpoints:
   POST /api/adguard/oauth/disconnect       -> remove a workspace
 """
 import base64
+import csv
 import hashlib
 import hmac
+import io
 import json
 import logging
 import os
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -359,6 +361,102 @@ def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user_r
         "lsq_push_failed": push_failed,
         "avg_integrity_score": round(float(avg_score), 1) if avg_score is not None else None,
     }
+
+
+class TestLeadCleanupRequest(BaseModel):
+    patterns: Optional[list] = None  # email/phone/name substrings to delete
+    older_than_days: Optional[int] = None
+    _preview_only: Optional[bool] = None  # dry run: return count + preview, delete nothing
+
+
+def _scoped_lead_ids(db: Session, user: User):
+    if user.role in ("admin", "superadmin"):
+        return None  # no restriction
+    ws_ids = [ws.id for ws in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
+    return ws_ids or [0]
+
+
+@router.post("/leads/cleanup-test-leads")
+def cleanup_test_leads(req: TestLeadCleanupRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Delete test/junk leads. Admin: all workspaces. Customer: own workspace only.
+
+    Two modes (can combine):
+      - patterns: delete leads whose email/phone/full_name/campaign contains any substring
+      - older_than_days: delete leads older than N days
+    Returns counts + preview of what was removed.
+    """
+    _require_adguard_access(user)
+    if not req.patterns and not req.older_than_days:
+        raise HTTPException(status_code=400, detail="Provide patterns or older_than_days")
+    q = db.query(AdGuardLead)
+    ids = _scoped_lead_ids(db, user)
+    if ids is not None:
+        q = q.filter(AdGuardLead.adguard_account_id.in_(ids))
+    conditions = []
+    if req.patterns:
+        for p in req.patterns:
+            pat = f"%{p.strip()}%"
+            conditions.append(
+                (AdGuardLead.email.ilike(pat))
+                | (AdGuardLead.phone.ilike(pat))
+                | (AdGuardLead.full_name.ilike(pat))
+                | (AdGuardLead.campaign_name.ilike(pat))
+            )
+    if req.older_than_days is not None:
+        cutoff = datetime.utcnow() - timedelta(days=req.older_than_days)
+        conditions.append(AdGuardLead.received_at < cutoff)
+    from sqlalchemy import or_
+    q = q.filter(or_(*conditions))
+    to_delete = q.all()
+    preview = [
+        {"id": l.id, "name": l.full_name, "email": l.email, "phone": l.phone, "verdict": l.verdict}
+        for l in to_delete[:20]
+    ]
+    count = len(to_delete)
+    if getattr(req, "_preview_only", False):
+        return {"status": "preview", "deleted": count, "preview": preview}
+    for l in to_delete:
+        db.delete(l)
+    db.commit()
+    log_activity(
+        module="AdGuard",
+        action="Test Lead Cleanup",
+        description=f"Deleted {count} test leads (patterns={req.patterns}, older_than_days={req.older_than_days})",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        db=db,
+    )
+    return {"status": "ok", "deleted": count, "preview": preview}
+
+
+@router.get("/leads/export")
+def export_leads_csv(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """CSV export of leads. Admin: all. Customer: own workspace only."""
+    _require_adguard_access(user)
+    q = db.query(AdGuardLead)
+    ids = _scoped_lead_ids(db, user)
+    if ids is not None:
+        q = q.filter(AdGuardLead.adguard_account_id.in_(ids))
+    rows = q.order_by(AdGuardLead.received_at.desc()).limit(5000).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "received_at", "full_name", "email", "phone", "city", "state", "country", "postal_code",
+        "campaign_name", "lead_type", "integrity_score", "verdict", "lsq_status", "flags",
+    ])
+    for l in rows:
+        writer.writerow([
+            l.received_at.isoformat() if l.received_at else "",
+            l.full_name or "", l.email or "", l.phone or "", l.city or "", l.state or "", l.country or "", l.postal_code or "",
+            l.campaign_name or "", l.lead_type or "", l.integrity_score, l.verdict, l.lsq_status or "", l.flags or "",
+        ])
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=adguard_leads.csv"},
+    )
 
 
 @router.post("/leads/{lead_id}/retry-lsq")
