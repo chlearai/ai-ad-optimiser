@@ -707,23 +707,28 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
     for ws in q.all():
         token = get_meta_token_from_credentials(ws.meta_credentials or "")
         if not token:
+            details.append({"workspace_id": ws.id, "error": "no_token"})
             continue
         try:
             pages = json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
         except Exception:
             pages = []
+        details.append({"workspace_id": ws.id, "pages_count": len(pages)})
         for p in pages:
             pid = str(p.get("id"))
             try:
                 page_token = get_page_access_token(token, pid)
                 if not page_token:
+                    details.append({"page_id": pid, "page_name": p.get("name"), "error": "no_page_token"})
                     continue
                 data = _graph_get(f"{pid}/leads", {
                     "fields": "id,created_time,form_id,ad_id,ad_name,campaign_id,campaign_name,field_data",
                     "limit": "25",
                     "token": page_token,
                 })
-                for ld in (data or {}).get("data", []):
+                lead_list = (data or {}).get("data", [])
+                details.append({"page_id": pid, "page_name": p.get("name"), "lead_count": len(lead_list)})
+                for ld in lead_list:
                     lead_id = str(ld.get("id") or "")
                     if not lead_id:
                         continue
@@ -755,7 +760,7 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
                         failed += 1
                         details.append({"page_id": pid, "lead_id": lead_id, "error": str(pe)})
             except Exception as e:
-                details.append({"page_id": pid, "error": str(e)})
+                details.append({"page_id": pid, "page_name": p.get("name"), "error": str(e)})
     db.commit()
     return {"status": "ok", "processed": processed, "failed": failed, "skipped": skipped, "details": details}
 

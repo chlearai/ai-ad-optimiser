@@ -472,7 +472,7 @@
                 loadLeads();
                 if (res.processed > 0) toast('Pulled ' + res.processed + ' new lead(s).', 'success');
                 else if (res.skipped > 0) toast('No new leads (' + res.skipped + ' already exist).', 'info');
-                else toast('No leads found on Pages. Details: ' + JSON.stringify(res.details || []).slice(0, 150), 'error');
+                else toast('No leads found on Pages. Details: ' + JSON.stringify(res.details || []).slice(0, 400), 'error');
             } catch (e) { toast(e.message, 'error'); }
         }
 
