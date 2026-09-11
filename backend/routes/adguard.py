@@ -604,6 +604,7 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
     app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
     app_token = f"{app_id}|{app_secret}" if app_id and app_secret else ""
     app_sub_ok = False
+    app_sub_error = ""
     if app_token:
         try:
             data = urllib.parse.urlencode({
@@ -614,9 +615,20 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
             with urllib.request.urlopen(req, timeout=30) as resp:
                 out = json.loads(resp.read().decode())
                 app_sub_ok = bool(out.get("success"))
+        except urllib.error.HTTPError as e:
+            body = ""
+            try:
+                body = e.read().decode()
+            except Exception:
+                pass
+            app_sub_error = f"HTTP {e.code}: {body[:300]}"
+            logger.error(f"[AdGuard] app-level leadgen subscribe failed: {app_sub_error}")
         except Exception as e:
-            logger.error(f"[AdGuard] app-level leadgen subscribe failed: {e}")
-    results.append({"step": "app_level_subscription", "ok": app_sub_ok})
+            app_sub_error = f"{type(e).__name__}: {e}"
+            logger.error(f"[AdGuard] app-level leadgen subscribe failed: {app_sub_error}")
+    else:
+        app_sub_error = "missing META_APP_ID or app secret env vars"
+    results.append({"step": "app_level_subscription", "ok": app_sub_ok, "error": app_sub_error})
 
     # Step 2: subscribe each manageable Page using bulk page tokens
     q = db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True)  # noqa: E712
@@ -646,6 +658,9 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
                 results.append({"workspace_id": ws.id, "error": str(pe)})
                 continue
         page_tokens = get_all_page_tokens(token)
+        if "__error__" in page_tokens:
+            results.append({"workspace_id": ws.id, "error": "bulk_page_tokens: " + str(page_tokens["__error__"])})
+            continue
         for page in pages:
             if not page.get("can_subscribe"):
                 results.append({"workspace_id": ws.id, "page_id": page.get("id"), "page_name": page.get("name"), "subscribed": False, "skipped": "no_manage_permission"})
@@ -693,6 +708,9 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
         except Exception:
             pages = []
         page_tokens = get_all_page_tokens(token)
+        if "__error__" in page_tokens:
+            out["pages"].append({"workspace_id": ws.id, "error": "bulk_page_tokens: " + str(page_tokens["__error__"])})
+            continue
         for p in pages:
             pid = str(p.get("id"))
             entry: Dict[str, Any] = {"workspace_id": ws.id, "page_id": pid, "page_name": p.get("name")}
@@ -702,9 +720,13 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
                     entry["error"] = "no_page_token"
                 else:
                     apps = _graph_get(f"{pid}/subscribed_apps", {"token": page_token})
-                    app_ids = [str(a.get("id")) for a in (apps or {}).get("data", [])]
-                    entry["subscribed_apps"] = app_ids
-                    entry["our_app_subscribed"] = str(os.getenv("META_APP_ID", "")) in app_ids
+                    if apps is None:
+                        from backend.services.adguard_meta import get_last_graph_error
+                        entry["error"] = get_last_graph_error() or "subscribed_apps returned nothing"
+                    else:
+                        app_ids = [str(a.get("id")) for a in (apps or {}).get("data", [])]
+                        entry["subscribed_apps"] = app_ids
+                        entry["our_app_subscribed"] = str(os.getenv("META_APP_ID", "")) in app_ids
             except Exception as e:
                 entry["error"] = str(e)
             out["pages"].append(entry)

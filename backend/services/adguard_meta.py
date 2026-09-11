@@ -55,14 +55,32 @@ def _redirect_base(cfg: Dict[str, Any]) -> str:
     return cfg.get("redirect_base_url", "http://127.0.0.1:8000").rstrip("/")
 
 
+_last_graph_error: Optional[str] = None
+
+
+def get_last_graph_error() -> Optional[str]:
+    return _last_graph_error
+
+
 def _graph_get(path: str, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    global _last_graph_error
     query = dict(params)
     query.setdefault("access_token", params.pop("token", ""))
     url = f"{GRAPH}/{path.lstrip('/')}?" + urllib.parse.urlencode(query)
     try:
         with urllib.request.urlopen(url, timeout=30) as resp:
             return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode()
+        except Exception:
+            pass
+        _last_graph_error = f"HTTP {e.code} on {path}: {body[:300]}"
+        logger.error(f"[AdGuard] Meta GET {path} HTTP {e.code}: {body[:500]}")
+        return None
     except Exception as e:
+        _last_graph_error = f"{type(e).__name__} on {path}: {e}"
         logger.error(f"[AdGuard] Meta GET {path} failed: {e}")
         return None
 
@@ -185,6 +203,9 @@ def get_all_page_tokens(user_token: str) -> Dict[str, str]:
     """
     out: Dict[str, str] = {}
     data = _graph_get("me/accounts", {"fields": "id,access_token", "limit": "100", "token": user_token})
+    if data is None:
+        out["__error__"] = get_last_graph_error() or "me/accounts returned nothing"
+        return out
     for page in (data or {}).get("data", []):
         pid = str(page.get("id") or "")
         tok = page.get("access_token") or ""
