@@ -180,6 +180,12 @@ def init_db():
             run_adguard_meta_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard Meta columns migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard SaaS plan/quota columns
+        try:
+            from backend.migrations.add_adguard_plan_columns import run_migration as run_adguard_plan_migration
+            run_adguard_plan_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard plan columns migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise

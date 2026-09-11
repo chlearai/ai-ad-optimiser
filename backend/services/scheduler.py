@@ -64,7 +64,7 @@ def _run_adguard_meta_poll():
             get_meta_token_from_credentials,
             get_all_page_tokens,
         )
-        from backend.services.adguard import process_incoming_lead
+        from backend.services.adguard import process_incoming_lead, QuotaExceededError
         import json as _json
 
         db = SessionLocal()
@@ -121,8 +121,15 @@ def _run_adguard_meta_poll():
                                 "lead_type": "meta_leadgen",
                                 "platform": "meta",
                             }
-                            process_incoming_lead(payload, account=None, raw_payload=_json.dumps(ld))
-                            processed += 1
+                            try:
+                                process_incoming_lead(payload, account=None, raw_payload=_json.dumps(ld), workspace_id=ws.id)
+                                processed += 1
+                            except QuotaExceededError:
+                                logger.warning(f"[AdGuard poll] ws {ws.id} over quota — skipping rest of page {pid}")
+                                break
+                            except Exception as pe:
+                                failed += 1
+                                logger.warning(f"[AdGuard poll] lead {lead_id} failed: {pe}")
                     except Exception as pe:
                         failed += 1
                         logger.warning(f"[AdGuard poll] page {pid} failed: {pe}")

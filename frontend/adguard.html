@@ -215,11 +215,11 @@
             <a href="/" class="brand"><div class="logo-icon">AG</div>AdGuard</a>
         </div>
         <div class="nav">
-            <a class="nav-item" href="/" style="margin-bottom:4px;">🏠 ChlearSakhaaOps Home</a>
-            <div style="border-bottom:1px solid var(--color-border);margin:4px 8px;"></div>
+            <a class="nav-item" href="/" id="navHome" style="margin-bottom:4px;">🏠 ChlearSakhaaOps Home</a>
+            <div style="border-bottom:1px solid var(--color-border);margin:4px 8px;" id="navDivider"></div>
 
             <!-- CLIENTS (from Manage Client/Brand masterlist) -->
-            <div class="nav-section open" data-section="clients">
+            <div class="nav-section open" data-section="clients" id="clientsSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
                     <span class="nav-section-arrow">▶</span><span>Clients</span>
                 </div>
@@ -235,15 +235,25 @@
             <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="margin-top:6px;">
                 🔗 Connect Meta Ads
             </button>
-            <button class="add-account-btn" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="margin-top:6px;display:none;background:#1f6feb;color:#fff;">
+            <button class="add-account-btn admin-only" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="margin-top:6px;display:none;background:#1f6feb;color:#fff;">
                 🔔 Subscribe Pages to leadgen
             </button>
-            <button class="add-account-btn" id="pullMetaBtn" onclick="pullMetaLeads()" style="margin-top:6px;display:none;background:#21834f;color:#fff;">
+            <button class="add-account-btn admin-only" id="pullMetaBtn" onclick="pullMetaLeads()" style="margin-top:6px;display:none;background:#21834f;color:#fff;">
                 ⬇️ Pull Meta leads now
             </button>
-            <button class="add-account-btn" id="subsMetaBtn" onclick="checkMetaSubs()" style="margin-top:6px;display:none;background:#6b46c1;color:#fff;">
+            <button class="add-account-btn admin-only" id="subsMetaBtn" onclick="checkMetaSubs()" style="margin-top:6px;display:none;background:#6b46c1;color:#fff;">
                 🔍 Check page subscriptions
             </button>
+
+            <!-- ADMIN: subscriber panel -->
+            <div class="nav-section admin-only" data-section="admin" id="adminSection" style="display:none;">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Admin</span>
+                </div>
+                <div class="nav-section-items">
+                    <div class="nav-item" data-admin="subscribers" onclick="openAdminSubscribers()">📊 Subscribers</div>
+                </div>
+            </div>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
@@ -271,6 +281,23 @@
             </div>
 
             <div class="kpi-grid" id="kpiGrid"></div>
+
+            <!-- ADMIN: subscribers panel (hidden for customers) -->
+            <div class="card hidden" id="adminSubscribersCard">
+                <div class="card-header">
+                    <span class="card-title">📊 Subscribers — Storage &amp; Health</span>
+                    <button class="btn btn-secondary btn-sm" onclick="loadAdminSubscribers()">Refresh</button>
+                </div>
+                <div id="adminTotals" style="margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);"></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                            <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Storage</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="adminSubsBody"></tbody>
+                    </table>
+                </div>
+            </div>
 
             <div class="card">
                 <div class="card-header">
@@ -349,11 +376,107 @@
             } catch (e) { window.location.href = '/'; return; }
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
             if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/'; return; }
+            applyRoleVisibility(isAdmin);
             $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
             handleOAuthResult();
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
             loadLeads();
+        }
+
+        function applyRoleVisibility(isAdmin) {
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (!isAdmin) el.style.display = 'none';
+            });
+            if (isAdmin) {
+                const sec = $('adminSection');
+                if (sec) sec.style.display = '';
+            } else {
+                // Customer view: no masterlist, no "back home" chrome
+                const cs = $('clientsSection');
+                if (cs) cs.style.display = 'none';
+                const divider = $('navDivider');
+                if (divider) divider.style.display = 'none';
+                const home = $('navHome');
+                if (home) home.style.display = 'none';
+            }
+        }
+
+        // ---------- Admin: subscribers ----------
+        let adminOpen = false;
+
+        async function openAdminSubscribers() {
+            adminOpen = !adminOpen;
+            $('adminSubscribersCard').classList.toggle('hidden', !adminOpen);
+            if (adminOpen) loadAdminSubscribers();
+        }
+
+        async function loadAdminSubscribers() {
+            try {
+                const res = await fetch(API + '/admin/subscribers', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                renderAdminSubscribers(data);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function renderAdminSubscribers(data) {
+            const t = data.totals || {};
+            $('adminTotals').innerHTML = 'Subscribers: <b>' + (t.subscribers || 0) + '</b> · Leads stored: <b>' + (t.leads || 0) +
+                '</b> · Raw storage: <b>' + fmtBytes(t.storage_bytes || 0) + '</b> · Meta poller: <b>' + (t.poller_enabled ? 'ON' : 'OFF') + '</b>' +
+                ' · Webhook hits: <b>' + ((t.webhook_hits || []).length) + '</b>';
+            const plans = ['trial', 'starter', 'pro', 'agency'];
+            $('adminSubsBody').innerHTML = (data.subscribers || []).map(s => {
+                const quota = s.lead_quota < 0 ? '∞' : (s.lead_count + '/' + s.lead_quota + (s.quota_pct != null ? ' (' + s.quota_pct + '%)' : ''));
+                const over = s.lead_quota >= 0 && s.quota_pct != null && s.quota_pct >= 80;
+                return '<tr>' +
+                    '<td style="font-weight:500;">' + escapeHtml(s.display_name || s.owner_email) + '<div style="font-size:11px;color:var(--color-text-muted);">' + escapeHtml(s.owner_email) + '</div></td>' +
+                    '<td><select class="filter-select" style="padding:4px 8px;font-size:12px;" onchange="setPlan(' + s.id + ', this.value)">' +
+                        plans.map(p => '<option value="' + p + '"' + (s.plan === p ? ' selected' : '') + '>' + p + '</option>').join('') +
+                    '</select></td>' +
+                    '<td>' + s.lead_count + ' <span style="color:var(--color-text-muted);font-size:11px;">(' + s.flagged_count + ' flagged)</span></td>' +
+                    '<td' + (over ? ' style="color:var(--color-danger-text);font-weight:600;"' : '') + '>' + quota + '</td>' +
+                    '<td>' + fmtBytes(s.storage_bytes) + '</td>' +
+                    '<td>' + (s.google_is_live ? '<span class="badge badge-green">live</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
+                    '<td>' + (s.meta_is_live ? '<span class="badge badge-green">live</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
+                    '<td style="font-size:12px;">' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</td>' +
+                    '<td><button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button></td>' +
+                '</tr>';
+            }).join('') || '<tr><td colspan="9"><div class="empty-state"><h3>No subscribers yet</h3></div></td></tr>';
+        }
+
+        async function setPlan(subId, plan) {
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                toast('Plan set to ' + plan + ' (quota auto-updated)');
+                loadAdminSubscribers();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function toggleArchive(subId, archive) {
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_archived: archive })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                toast(archive ? 'Subscriber archived' : 'Subscriber unarchived');
+                loadAdminSubscribers();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function fmtBytes(b) {
+            if (!b || b <= 0) return '0 B';
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+            if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+            return (b / 1073741824).toFixed(2) + ' GB';
         }
 
         // ---------- OAuth connect flow (Ryze-style) ----------
@@ -403,6 +526,20 @@
 
         // ---------- Client masterlist sidebar (Manage Client/Brand) ----------
         async function loadClients() {
+            // Admins see the full client masterlist; customers see only their own workspace
+            if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) {
+                const ws = (workspaces || []).find(w => w.owner_email === currentUser.email) || (workspaces || [])[0];
+                const list = $('accountList');
+                list.innerHTML = '';
+                if (ws) {
+                    list.appendChild(makeClientItem(ws.display_name || ws.owner_email, '', ws.display_name || ws.owner_email, true));
+                    $('pageTitle').textContent = ws.display_name || ws.owner_email;
+                } else {
+                    list.appendChild(makeClientItem('', '', 'My Leads', true));
+                    $('pageTitle').textContent = 'My Leads';
+                }
+                return;
+            }
             try {
                 const res = await fetch('/api/accounts?active_only=false', { headers: { 'Authorization': 'Bearer ' + token } });
                 if (res.status === 401) { window.location.href = '/'; return; }
@@ -618,7 +755,8 @@
             el.classList.add('active');
             selectedAccount = el.dataset.account || '';
             selectedClientId = el.dataset.accountId || '';
-            $('pageTitle').textContent = selectedAccount || 'All Clients';
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+            $('pageTitle').textContent = selectedAccount || (isAdmin ? 'All Clients' : 'My Leads');
             renderKpis();
             renderFeed();
         }
@@ -692,7 +830,7 @@
             const scored = rows.filter(l => l.integrity_score != null);
             const avg = scored.length ? Math.round(scored.reduce((s, l) => s + l.integrity_score, 0) / scored.length) : null;
             const cards = [
-                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: selectedAccount || 'all clients' },
+                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: isAdminLabel() },
                 { label: 'Verified & Pushed to LSQ', value: verifiedPushed, icon: '✅', cls: 'c-green', sub: 'passed gatekeeper' },
                 { label: 'Flagged as Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'blocked from LSQ' },
                 { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-amber', sub: 'out of 100' },
@@ -704,6 +842,12 @@
                     <div class="kpi-value">${c.value}</div>
                     <div class="kpi-sub">${c.sub}</div>
                 </div>`).join('');
+        }
+
+        function isAdminLabel() {
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+            if (selectedAccount) return selectedAccount;
+            return isAdmin ? 'all clients' : 'my workspace';
         }
 
         function contactText(l) {

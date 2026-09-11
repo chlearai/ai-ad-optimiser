@@ -168,7 +168,7 @@ async def webhook(
     if account is None:
         account = db.query(Account).filter(Account.is_active == True).first()  # noqa: E712
 
-    from backend.services.adguard import process_incoming_lead
+    from backend.services.adguard import process_incoming_lead, QuotaExceededError as QuotaExceeded
 
     # Respond 200 immediately — Google's webhook test times out on slow
     # responses (Gemini scoring + LSQ push can take 5-10s synchronously).
@@ -178,6 +178,8 @@ async def webhook(
     def _process_background():
         try:
             process_incoming_lead(payload, account=account, raw_payload=raw)
+        except QuotaExceeded:
+            logger.warning("[AdGuard] lead dropped: workspace over quota")
         except Exception as e:
             logger.error(f"[AdGuard] background lead processing failed: {e}")
 
@@ -307,6 +309,15 @@ def list_leads(
 ):
     _require_adguard_access(user)
     q = db.query(AdGuardLead)
+    if user.role not in ("admin", "superadmin"):
+        # SaaS scoping: customers only see leads from their own workspace(s)
+        ws_ids = [
+            ws.id
+            for ws in db.query(AdGuardAccount.id)
+            .filter(AdGuardAccount.owner_email == user.email)
+            .all()
+        ]
+        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     if verdict in ("verified", "flagged"):
         q = q.filter(AdGuardLead.verdict == verdict)
     if search:
@@ -325,12 +336,21 @@ def list_leads(
 @router.get("/stats")
 def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     _require_adguard_access(user)
-    total = db.query(AdGuardLead).count()
-    verified = db.query(AdGuardLead).filter(AdGuardLead.verdict == "verified").count()
-    flagged = db.query(AdGuardLead).filter(AdGuardLead.verdict == "flagged").count()
-    pushed = db.query(AdGuardLead).filter(AdGuardLead.lsq_status == "pushed").count()
-    push_failed = db.query(AdGuardLead).filter(AdGuardLead.lsq_status == "failed").count()
-    avg_score = db.query(func.avg(AdGuardLead.integrity_score)).scalar()
+    q = db.query(AdGuardLead)
+    if user.role not in ("admin", "superadmin"):
+        ws_ids = [
+            ws.id
+            for ws in db.query(AdGuardAccount.id)
+            .filter(AdGuardAccount.owner_email == user.email)
+            .all()
+        ]
+        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    total = q.count()
+    verified = q.filter(AdGuardLead.verdict == "verified").count()
+    flagged = q.filter(AdGuardLead.verdict == "flagged").count()
+    pushed = q.filter(AdGuardLead.lsq_status == "pushed").count()
+    push_failed = q.filter(AdGuardLead.lsq_status == "failed").count()
+    avg_score = q.with_entities(func.avg(AdGuardLead.integrity_score)).scalar()
     return {
         "total": total,
         "verified": verified,
@@ -591,6 +611,121 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
     ]
 
 
+# ---------------------------------------------------------------------------
+# Admin: subscriber management (plan, quota, storage, health)
+# ---------------------------------------------------------------------------
+
+PLAN_LIMITS = {
+    "trial": {"lead_quota": 100, "workspaces": 1},
+    "starter": {"lead_quota": 1000, "workspaces": 1},
+    "pro": {"lead_quota": 5000, "workspaces": 3},
+    "agency": {"lead_quota": -1, "workspaces": 10},
+}
+
+
+class PlanUpdateRequest(BaseModel):
+    plan: Optional[str] = None
+    lead_quota: Optional[int] = None
+    plan_expires_at: Optional[str] = None
+    is_archived: Optional[bool] = None
+
+
+@router.get("/admin/subscribers")
+def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """All AdGuard subscribers with storage + connection health. Admin/superadmin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    subs = []
+    for ws in db.query(AdGuardAccount).order_by(AdGuardAccount.created_at).all():
+        lead_count = (
+            db.query(func.count(AdGuardLead.id))
+            .filter(AdGuardLead.adguard_account_id == ws.id)
+            .scalar()
+        ) or 0
+        flagged_count = (
+            db.query(func.count(AdGuardLead.id))
+            .filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.verdict == "flagged")
+            .scalar()
+        ) or 0
+        raw_bytes = (
+            db.query(func.sum(func.length(AdGuardLead.raw_payload)))
+            .filter(AdGuardLead.adguard_account_id == ws.id)
+            .scalar()
+        ) or 0
+        last_lead = (
+            db.query(AdGuardLead.received_at)
+            .filter(AdGuardLead.adguard_account_id == ws.id)
+            .order_by(AdGuardLead.received_at.desc())
+            .first()
+        )
+        quota = ws.lead_quota if ws.lead_quota is not None else 100
+        subs.append({
+            "id": ws.id,
+            "owner_email": ws.owner_email,
+            "display_name": ws.display_name,
+            "plan": ws.plan or "trial",
+            "plan_expires_at": ws.plan_expires_at.isoformat() if ws.plan_expires_at else None,
+            "lead_quota": quota,
+            "lead_count": lead_count,
+            "flagged_count": flagged_count,
+            "storage_bytes": int(raw_bytes),
+            "quota_pct": None if quota < 0 else round(100 * lead_count / quota, 1),
+            "google_is_live": ws.google_is_live,
+            "meta_is_live": ws.meta_is_live,
+            "is_archived": bool(ws.is_archived),
+            "last_lead_at": last_lead[0].isoformat() if last_lead and last_lead[0] else None,
+            "created_at": ws.created_at.isoformat() if ws.created_at else None,
+        })
+    total_leads = db.query(func.count(AdGuardLead.id)).scalar() or 0
+    total_bytes = db.query(func.sum(func.length(AdGuardLead.raw_payload))).scalar() or 0
+    return {
+        "subscribers": subs,
+        "totals": {
+            "subscribers": len(subs),
+            "leads": total_leads,
+            "storage_bytes": int(total_bytes),
+            "poller_enabled": os.getenv("ADGUARD_META_POLL_ENABLED", "true").lower() in ("true", "1", "yes"),
+            "webhook_hits": list(_webhook_hits),
+        },
+    }
+
+
+@router.put("/admin/subscribers/{sub_id}")
+def admin_update_subscriber(sub_id: int, req: PlanUpdateRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Set plan / quota / archive for a subscriber. Admin/superadmin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    if req.plan is not None:
+        if req.plan not in PLAN_LIMITS:
+            raise HTTPException(status_code=400, detail="Invalid plan")
+        ws.plan = req.plan
+        ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
+    if req.lead_quota is not None:
+        ws.lead_quota = req.lead_quota
+    if req.plan_expires_at is not None:
+        try:
+            ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
+    if req.is_archived is not None:
+        ws.is_archived = req.is_archived
+    db.commit()
+    log_activity(
+        module="AdGuard",
+        action="Subscriber Updated",
+        description=f"Updated subscriber {ws.owner_email} (plan={ws.plan}, quota={ws.lead_quota})",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        entity_type="adguard_account",
+        entity_id=str(ws.id),
+        db=db,
+    )
+    return ws.to_dict()
+
+
 @router.post("/oauth/meta/resubscribe")
 def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Ensure app-level leadgen webhook + subscribe all manageable Pages (bulk tokens)."""
@@ -819,7 +954,7 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
                         "platform": "meta",
                     }
                     try:
-                        process_incoming_lead(payload, account=None, raw_payload=json.dumps(ld))
+                        process_incoming_lead(payload, account=None, raw_payload=json.dumps(ld), workspace_id=ws.id)
                         processed += 1
                         details.append({"page_id": pid, "lead_id": lead_id, "email": payload["email"] or payload["phone"]})
                     except Exception as pe:
@@ -944,7 +1079,7 @@ async def meta_webhook_receive(request: Request, db: Session = Depends(get_db), 
         }
         import json as _json
 
-        process_incoming_lead(payload, account=None, raw_payload=_json.dumps(lead.get("raw", lead)))
+        process_incoming_lead(payload, account=None, raw_payload=_json.dumps(lead.get("raw", lead)), workspace_id=ws.id if ws else None)
         return "processed"
 
     for entry in payload.get("entry", []):

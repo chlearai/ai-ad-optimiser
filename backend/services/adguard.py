@@ -337,17 +337,28 @@ def normalize_google_ads_lead(payload: Dict[str, Any]) -> Dict[str, Any]:
     return lead
 
 
-def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payload: Optional[str] = None) -> Dict[str, Any]:
+def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payload: Optional[str] = None, workspace_id: Optional[int] = None) -> Dict[str, Any]:
     """Full pipeline: normalize -> dedup -> score -> (verified) LSQ push -> persist.
 
     Returns the saved AdGuardLead.to_dict().
     """
     from backend.db.database import SessionLocal
-    from backend.db.models import AdGuardLead
+    from backend.db.models import AdGuardLead, AdGuardAccount
 
     lead = normalize_google_ads_lead(payload)
     db = SessionLocal()
     try:
+        # Quota: block ingest when the workspace is over its lead limit
+        if workspace_id:
+            ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+            if ws is not None and (ws.lead_quota or 0) >= 0:
+                count = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).count()
+                if count >= ws.lead_quota:
+                    logger.warning(
+                        f"[AdGuard] quota block: ws {ws.id} at {count}/{ws.lead_quota} leads"
+                    )
+                    raise QuotaExceededError(f"Lead quota reached ({ws.lead_quota}). Upgrade plan to continue.")
+
         # Dedup: same email or same phone in the last 7 days.
         dup = None
         now = datetime.utcnow()
@@ -365,6 +376,7 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
 
         record = AdGuardLead(
             account_id=getattr(account, "id", None) if account is not None else None,
+            adguard_account_id=workspace_id,
             gclid=lead.get("gclid"),
             form_id=lead.get("form_id"),
             campaign_name=lead.get("campaign_name"),
@@ -409,3 +421,7 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
         return record.to_dict()
     finally:
         db.close()
+
+
+class QuotaExceededError(Exception):
+    """Workspace hit its plan's lead storage limit — ingest blocked."""

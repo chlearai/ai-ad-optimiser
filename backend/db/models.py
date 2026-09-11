@@ -976,6 +976,12 @@ class AdGuardAccount(Base):
     verification_threshold = Column(Integer, default=70)
     auto_push_enabled = Column(Boolean, default=False)  # Module 3 CAPI later; LSQ edge toggled off by default
 
+    # SaaS subscription (set by admin)
+    plan = Column(String(20), default="trial")  # trial | starter | pro | agency
+    plan_expires_at = Column(DateTime, nullable=True)
+    lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
+    is_archived = Column(Boolean, default=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -991,6 +997,10 @@ class AdGuardAccount(Base):
             "discovered_meta_pages": json.loads(self.discovered_meta_pages) if self.discovered_meta_pages else [],
             "verification_threshold": self.verification_threshold,
             "auto_push_enabled": self.auto_push_enabled,
+            "plan": self.plan,
+            "plan_expires_at": self.plan_expires_at.isoformat() if self.plan_expires_at else None,
+            "lead_quota": self.lead_quota,
+            "is_archived": self.is_archived,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
