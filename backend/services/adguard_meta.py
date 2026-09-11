@@ -82,6 +82,7 @@ def get_adguard_meta_auth_url(adguard_account_id: int) -> str:
         "scope": ",".join(META_SCOPES),
         # re-prompt for declined permissions so a partial consent can be repaired
         "auth_type": "rerequest",
+        "state": str(adguard_account_id),
     }
     return f"https://www.facebook.com/{GRAPH_VERSION}/dialog/oauth?" + urllib.parse.urlencode(params)
 

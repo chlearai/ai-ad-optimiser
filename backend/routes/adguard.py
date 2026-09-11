@@ -427,7 +427,8 @@ def oauth_meta_connect(db: Session = Depends(get_db), user: User = Depends(get_c
 
 @router.get("/oauth/meta/callback")
 def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
-                        error_description: Optional[str] = None, db: Session = Depends(get_db)):
+                        error_description: Optional[str] = None, state: Optional[str] = None,
+                        db: Session = Depends(get_db)):
     """Meta redirects here after the consent dialog. Stores token, discovers accounts + Pages."""
     if error:
         desc = error_description or error
@@ -446,11 +447,13 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     if not token:
         return RedirectResponse(url="/adguard?oauth_error=meta_token_exchange_failed")
 
-    # The callback state was not used for workspace binding (Meta dialog keeps
-    # it simple); bind to the most recently created workspace for this login
-    # is not possible here — instead the frontend re-fetches and the workspace
-    # is the one whose meta flow started. We accept the first admin workspace:
-    ws = db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.asc()).first()
+    # The OAuth `state` carries the workspace id that started the flow (SaaS-safe:
+    # each customer's token lands in their own workspace).
+    ws = None
+    if state and state.isdigit():
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == int(state)).first()
+    if ws is None:
+        ws = db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.asc()).first()
     if not ws:
         return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
 

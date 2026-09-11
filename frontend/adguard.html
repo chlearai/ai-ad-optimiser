@@ -470,10 +470,30 @@
                 toast('Pulling leads from Meta...', 'info');
                 const res = await api('POST', '/meta/pull-leads');
                 loadLeads();
-                if (res.processed > 0) toast('Pulled ' + res.processed + ' new lead(s).', 'success');
-                else if (res.skipped > 0) toast('No new leads (' + res.skipped + ' already exist).', 'info');
-                else toast('No leads found on Pages. Details: ' + JSON.stringify(res.details || []).slice(0, 400), 'error');
+                showDebugPanel('Meta pull result', res);
             } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showDebugPanel(title, data) {
+            let panel = $('debugPanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'debugPanel';
+                panel.style.cssText = 'position:fixed;top:70px;right:20px;max-width:520px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:12px;';
+                document.body.appendChild(panel);
+            }
+            const rows = (data.details || []).map(d => {
+                const label = d.page_name ? (d.page_name + ' (' + d.page_id + ')') : ('ws ' + (d.workspace_id ?? '?'));
+                let status = '';
+                if (d.error) status = '❌ ' + d.error;
+                else if (d.lead_count !== undefined) status = 'leads: ' + d.lead_count;
+                else if (d.pages_count !== undefined) status = 'pages: ' + d.pages_count;
+                else if (d.lead_id) status = '✅ pulled lead ' + d.lead_id + (d.email ? ' — ' + d.email : '');
+                return '<div style="padding:3px 0;border-bottom:1px solid #eee;">' + escapeHtml(label) + ' — ' + escapeHtml(status) + '</div>';
+            }).join('');
+            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">' + escapeHtml(title) +
+                ' <span style="color:#21834f;">processed: ' + (data.processed || 0) + '</span>, skipped: ' + (data.skipped || 0) + ', failed: ' + (data.failed || 0) +
+                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' + rows;
         }
 
         function renderMetaButtonState() {
