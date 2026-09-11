@@ -21,6 +21,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
@@ -696,7 +697,7 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
 
     app_id = os.getenv("META_APP_ID", "")
     app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
-    out: Dict[str, Any] = {"app_id": app_id, "app_subscriptions": None, "pages": []}
+    out: Dict[str, Any] = {"app_id": app_id, "app_subscriptions": None, "pages": [], "webhook_hits": list(_webhook_hits)}
 
     if app_id and app_secret:
         try:
@@ -870,6 +871,8 @@ def meta_webhook_verify(
     raise HTTPException(status_code=403, detail="Verification failed")
 
 
+_webhook_hits: list = []
+
 @router.post("/meta/webhook")
 async def meta_webhook_receive(request: Request, db: Session = Depends(get_db), x_hub_signature_256: str = Header(default="", alias="X-Hub-Signature-256")):
     """Meta pushes leadgen events here for all connected workspaces' Pages.
@@ -879,6 +882,8 @@ async def meta_webhook_receive(request: Request, db: Session = Depends(get_db), 
     workspace's stored token, then scored by the same gatekeeper.
     """
     raw = await request.body()
+    _webhook_hits.append({"time": datetime.utcnow().isoformat(), "sig_present": bool(x_hub_signature_256), "bytes": len(raw)})
+    del _webhook_hits[:-20]
 
     app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
     if app_secret:

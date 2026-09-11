@@ -499,9 +499,14 @@
                 return '<div style="padding:3px 0;border-bottom:1px solid #eee;">' + escapeHtml((d.page_name || '?') + ' (' + d.page_id + ')') + ' — ' + escapeHtml(status) + '</div>';
             }).join('');
             const appSubs = data.app_subscriptions && data.app_subscriptions.data ?
-                data.app_subscriptions.data.map(s => s.field).join(', ') : 'none';
+                data.app_subscriptions.data.flatMap(s => s.fields || [s.field] || []).filter(Boolean).join(', ') : 'none';
+            const hits = data.webhook_hits || [];
+            const hitsHtml = hits.length ?
+                hits.map(h => '<div style="color:#21834f;">POST hit ' + escapeHtml(h.time) + ' sig:' + (h.sig_present ? 'yes' : 'NO') + ' bytes:' + h.bytes + '</div>').reverse().join('') :
+                '<div style="color:#c00;">No webhook POSTs received yet</div>';
             panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">App webhook fields: ' + escapeHtml(appSubs) +
-                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' + rows;
+                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' +
+                '<div style="font-weight:600;margin:6px 0;">Webhook hits (recent 20):</div>' + hitsHtml + rows;
         }
 
         function showDebugPanel(title, data) {
