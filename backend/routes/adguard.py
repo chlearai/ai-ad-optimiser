@@ -610,8 +610,13 @@ def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(g
     app_sub_error = ""
     if app_token:
         try:
+            callback_url = f"{os.getenv('REDIRECT_BASE_URL', '').rstrip('/')}/api/adguard/meta/webhook"
+            verify_token = os.getenv("ADGUARD_META_VERIFY_TOKEN", "")
             data = urllib.parse.urlencode({
-                "subscribed_fields": "leadgen",
+                "object": "page",
+                "callback_url": callback_url,
+                "verify_token": verify_token,
+                "fields": '["leadgen"]',
                 "access_token": app_token,
             }).encode()
             req = urllib.request.Request(f"https://graph.facebook.com/v21.0/{app_id}/subscriptions", data=data, method="POST")
