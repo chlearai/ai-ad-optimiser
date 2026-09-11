@@ -673,7 +673,10 @@ def meta_debug_subscriptions(db: Session = Depends(get_db), user: User = Depends
                 if not page_token:
                     entry["error"] = "no_page_token"
                 else:
-                    entry["subscribed_apps"] = _graph_get(f"{pid}/subscribed_apps", {"token": page_token})
+                    apps = _graph_get(f"{pid}/subscribed_apps", {"token": page_token})
+                    app_ids = [str(a.get("id")) for a in (apps or {}).get("data", [])]
+                    entry["subscribed_apps"] = app_ids
+                    entry["our_app_subscribed"] = str(os.getenv("META_APP_ID", "")) in app_ids
             except Exception as e:
                 entry["error"] = str(e)
             out["pages"].append(entry)

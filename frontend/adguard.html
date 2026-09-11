@@ -241,6 +241,9 @@
             <button class="add-account-btn" id="pullMetaBtn" onclick="pullMetaLeads()" style="margin-top:6px;display:none;background:#21834f;color:#fff;">
                 ⬇️ Pull Meta leads now
             </button>
+            <button class="add-account-btn" id="subsMetaBtn" onclick="checkMetaSubs()" style="margin-top:6px;display:none;background:#6b46c1;color:#fff;">
+                🔍 Check page subscriptions
+            </button>
         </div>
         <a href="/" class="nav-back">← Back to Home</a>
     </div>
@@ -474,6 +477,33 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
+        async function checkMetaSubs() {
+            try {
+                toast('Checking page subscriptions...', 'info');
+                const res = await api('GET', '/meta/debug-subscriptions');
+                showSubsPanel(res);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showSubsPanel(data) {
+            let panel = $('subsPanel');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'subsPanel';
+                panel.style.cssText = 'position:fixed;top:70px;right:20px;max-width:560px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:12px;';
+                document.body.appendChild(panel);
+            }
+            const rows = (data.pages || []).map(d => {
+                const ok = d.our_app_subscribed;
+                const status = d.error ? ('❌ ' + d.error) : (ok ? '✅ subscribed' : '⚠️ NOT subscribed');
+                return '<div style="padding:3px 0;border-bottom:1px solid #eee;">' + escapeHtml((d.page_name || '?') + ' (' + d.page_id + ')') + ' — ' + escapeHtml(status) + '</div>';
+            }).join('');
+            const appSubs = data.app_subscriptions && data.app_subscriptions.data ?
+                data.app_subscriptions.data.map(s => s.field).join(', ') : 'none';
+            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">App webhook fields: ' + escapeHtml(appSubs) +
+                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' + rows;
+        }
+
         function showDebugPanel(title, data) {
             let panel = $('debugPanel');
             if (!panel) {
@@ -509,6 +539,8 @@
                 if (rs) rs.style.display = 'inline-block';
                 const pb = $('pullMetaBtn');
                 if (pb) pb.style.display = 'inline-block';
+                const sb = $('subsMetaBtn');
+                if (sb) sb.style.display = 'inline-block';
             } else {
                 btn.textContent = '🔗 Connect Meta Ads';
                 btn.onclick = startMetaConnect;
