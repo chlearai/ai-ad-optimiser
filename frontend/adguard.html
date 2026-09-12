@@ -393,11 +393,12 @@
                 <div id="cleanupResult" style="font-size:13px;"></div>
             </div>
 
-            <!-- LIVE LEAD FEED (Available to both Admin & Customers) -->
-            <div class="card" id="leadFeedCard">
+            <!-- LIVE LEAD FEED (Admin: only when a specific subscriber selected; Customer: always) -->
+            <div class="card hidden" id="leadFeedCard">
                 <div class="card-header">
                     <span class="card-title" id="leadFeedTitle">Live Lead Feed</span>
                     <div class="filters">
+                        <select class="filter-select" id="feedSubscriberFilter" onchange="onFeedSubscriberChange()" style="display:none;"></select>
                         <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
                         <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
                             <option value="">All Leads</option>
@@ -557,6 +558,7 @@
                 }
                 
                 renderWorkspaceSidebar(isAdmin);
+                populateFeedSubscriberDropdown();
                 renderMetaButtonState();
             } catch (e) { console.error(e); }
         }
@@ -645,7 +647,7 @@
             selectedWorkspaceObj = wsObj;
 
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
-            
+
             if (isAdmin && wsObj) {
                 // Admin simulating specific customer workspace
                 renderCustomerQuota(wsObj);
@@ -659,6 +661,72 @@
                 $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount || 'My Workspace')}</span>`;
             }
 
+            // Admin: lead feed hidden unless a specific subscriber is selected
+            const feed = $('leadFeedCard');
+            if (isAdmin) {
+                if (selectedClientId) {
+                    feed.classList.remove('hidden');
+                    $('leadFeedTitle').innerHTML = 'Live Lead Feed — <span style="color:var(--color-purple-text);">' + escapeHtml(selectedAccount) + '</span>';
+                    syncFeedSubscriberDropdown(selectedClientId);
+                } else {
+                    feed.classList.add('hidden');
+                }
+            } else {
+                feed.classList.remove('hidden');
+                $('leadFeedTitle').textContent = 'Live Lead Feed';
+            }
+
+            renderKpis();
+            renderFeed();
+        }
+
+        // Feed subscriber dropdown (admin): pick which subscriber's leads to view
+        function populateFeedSubscriberDropdown() {
+            const sel = $('feedSubscriberFilter');
+            if (!sel) return;
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+            if (!isAdmin) { sel.style.display = 'none'; return; }
+            sel.style.display = '';
+            let html = '<option value="">— Select subscriber —</option>';
+            (workspaces || []).forEach(w => {
+                const label = w.display_name || w.owner_email;
+                html += '<option value="' + w.id + '">' + escapeHtml(label) + '</option>';
+            });
+            sel.innerHTML = html;
+            if (selectedClientId) sel.value = selectedClientId;
+        }
+
+        function syncFeedSubscriberDropdown(wsId) {
+            const sel = $('feedSubscriberFilter');
+            if (!sel || !sel.options || !sel.options.length) populateFeedSubscriberDropdown();
+            const s2 = $('feedSubscriberFilter');
+            if (s2) s2.value = String(wsId);
+        }
+
+        function onFeedSubscriberChange() {
+            const v = $('feedSubscriberFilter').value;
+            if (!v) {
+                // None picked: hide feed again
+                selectedClientId = '';
+                selectedAccount = '';
+                $('leadFeedCard').classList.add('hidden');
+                return;
+            }
+            const ws = (workspaces || []).find(w => String(w.id) === v);
+            if (!ws) return;
+            // Reuse sidebar selection logic
+            const items = document.querySelectorAll('#accountList .nav-item');
+            let matched = null;
+            items.forEach(n => { if (String(n.dataset.accountId) === String(v)) matched = n; });
+            if (matched) { selectClient(matched, ws); return; }
+            // Fallback: no sidebar item, still scope feed
+            selectedClientId = String(v);
+            selectedAccount = ws.display_name || ws.owner_email;
+            selectedWorkspaceObj = ws;
+            renderCustomerQuota(ws);
+            $('pageTitle').innerHTML = '<span>' + escapeHtml(selectedAccount) + '</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>';
+            $('leadFeedCard').classList.remove('hidden');
+            $('leadFeedTitle').innerHTML = 'Live Lead Feed — <span style="color:var(--color-purple-text);">' + escapeHtml(selectedAccount) + '</span>';
             renderKpis();
             renderFeed();
         }
