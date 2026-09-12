@@ -275,7 +275,6 @@
                     <div class="nav-item active" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
                     <div class="nav-item" id="navGlobalLeads" onclick="showMasterView('global_leads')">🛡️ Global Lead Stream</div>
                     <div class="nav-item" id="navCleanup" onclick="showMasterView('cleanup')">🧹 Test Lead Cleanup</div>
-                    <div class="nav-item" id="navDebug" onclick="checkMetaSubs()">🔍 Webhook &amp; Poller Logs</div>
                 </div>
             </div>
 
@@ -302,12 +301,6 @@
                     </button>
                     <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">
                         🔗 Connect Meta Ads
-                    </button>
-                    <button class="add-account-btn admin-only" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="display:none;background:#1f6feb;color:#fff;">
-                        🔔 Subscribe Meta Pages
-                    </button>
-                    <button class="add-account-btn admin-only" id="pullMetaBtn" onclick="pullMetaLeads()" style="display:none;background:#21834f;color:#fff;">
-                        ⬇️ 5-Min Meta Pull Now
                     </button>
                 </div>
             </div>
@@ -909,6 +902,9 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
+        // NOTE: resubscribeMetaPages / pullMetaLeads / checkMetaSubs kept as functions
+        // (still callable from console if needed) but no UI buttons on admin page.
+
         async function pullMetaLeads() {
             try {
                 toast('Triggering 5-minute Meta lead pull...', 'info');
@@ -932,8 +928,6 @@
             if (ws && ws.meta_is_live) {
                 btn.textContent = '✅ Meta Ads Connected';
                 btn.onclick = openMetaAccountPicker;
-                const rs = $('resubMetaBtn'); if (rs) rs.style.display = 'inline-block';
-                const pb = $('pullMetaBtn'); if (pb) pb.style.display = 'inline-block';
             } else {
                 btn.textContent = '🔗 Connect Meta Ads';
                 btn.onclick = startMetaConnect;
