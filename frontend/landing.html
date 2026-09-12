@@ -2212,300 +2212,48 @@
     })();
     </script>
 
-    <!-- Hero Canvas Thread Effect -->
+    <!-- Subtle Static Background Glow (professional, no cursor effects) -->
     <script>
     (function() {
         var canvas = document.getElementById('heroCanvas');
         if (!canvas) return;
         var ctx = canvas.getContext('2d');
 
-        var isMobile = window.matchMedia('(pointer: coarse)').matches;
-        var isDark = false;
-
-        var COLS = 36, ROWS = 22;
-        var points = [];
-        var mouseX = -9999, mouseY = -9999;
-        var prevMouseX = -9999, prevMouseY = -9999;
-        var mouseSpeed = 0;
-        var mouseActive = false;
-
-        var trailDots = [];
-        var smokeParticles = [];
-
-        var colours = [
-            {r:30,g:80,b:170},{r:70,g:140,b:210},{r:20,g:150,b:160},{r:80,g:150,b:100},
-            {r:30,g:130,b:76},{r:60,g:179,b:136},{r:140,g:100,b:180},{r:106,g:60,b:160},
-            {r:180,g:100,b:120},{r:150,g:90,b:130},{r:200,g:110,b:100},{r:210,g:150,b:100},
-            {r:190,g:140,b:50},{r:180,g:155,b:40},{r:110,g:130,b:60},{r:40,g:120,b:110},
-            {r:70,g:90,b:150},{r:110,g:110,b:190},{r:120,g:60,b:130},{r:30,g:80,b:170}
-        ];
-        var colourIdx = 0;
-        var colourT = 0;
-
-        function lerp(a, b, t) { return a + (b - a) * t; }
-
-        function getCurrentColour() {
-            var c1 = colours[colourIdx];
-            var c2 = colours[(colourIdx + 1) % colours.length];
-            return {
-                r: lerp(c1.r, c2.r, colourT),
-                g: lerp(c1.g, c2.g, colourT),
-                b: lerp(c1.b, c2.b, colourT)
-            };
-        }
-
-        function initPoints() {
-            points = [];
-            var w = window.innerWidth, h = window.innerHeight;
-            var sx = w / (COLS - 1);
-            var sy = h / (ROWS - 1);
-            for (var r = 0; r < ROWS; r++) {
-                for (var c = 0; c < COLS; c++) {
-                    points.push({
-                        ox: c * sx, oy: r * sy,
-                        x: c * sx, y: r * sy,
-                        col: c, row: r
-                    });
-                }
-            }
-        }
-
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            initPoints();
+            draw();
         }
 
+        function draw() {
+            var w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            var isDark = document.documentElement.classList.contains('dark-mode');
+            var g1 = ctx.createRadialGradient(w * 0.5, -h * 0.2, 0, w * 0.5, -h * 0.2, h * 0.9);
+            var op1 = isDark ? 0.10 : 0.07;
+            g1.addColorStop(0, 'rgba(16,217,126,' + op1 + ')');
+            g1.addColorStop(1, 'rgba(16,217,126,0)');
+            ctx.fillStyle = g1;
+            ctx.fillRect(0, 0, w, h);
+
+            var g2 = ctx.createRadialGradient(w * 0.15, h * 1.05, 0, w * 0.15, h * 1.05, h * 0.7);
+            var op2 = isDark ? 0.07 : 0.05;
+            g2.addColorStop(0, 'rgba(59,158,255,' + op2 + ')');
+            g1.stopIdx = 0;
+            g2.addColorStop(1, 'rgba(59,158,255,0)');
+            ctx.fillStyle = g2;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        var t;
+        window.addEventListener('resize', function() {
+            clearTimeout(t);
+            t = setTimeout(resizeCanvas, 150);
+        });
+
+        new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        if (!isMobile) {
-            window.addEventListener('mousemove', function(e) {
-                mouseX = e.clientX;
-                mouseY = e.clientY;
-                mouseActive = true;
-            });
-            window.addEventListener('mouseout', function(e) {
-                if (!e.relatedTarget) {
-                    mouseActive = false;
-                    mouseX = -9999;
-                    mouseY = -9999;
-                }
-            });
-        }
-
-        var time = 0;
-
-        function animate() {
-            time += 0.016;
-
-            // Update colour cycle
-            colourT += 0.004;
-            if (colourT >= 1) {
-                colourT = 0;
-                colourIdx = (colourIdx + 1) % (colours.length - 1);
-            }
-            var col = getCurrentColour();
-            isDark = document.documentElement.classList.contains('dark-mode');
-
-            // Mouse speed
-            if (mouseActive && !isMobile) {
-                var dx = mouseX - prevMouseX;
-                var dy = mouseY - prevMouseY;
-                mouseSpeed = Math.sqrt(dx * dx + dy * dy);
-            } else {
-                mouseSpeed = 0;
-            }
-            prevMouseX = mouseX;
-            prevMouseY = mouseY;
-
-            // Clear
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.lineCap = 'butt';
-            ctx.lineJoin = 'miter';
-
-            // Breathing
-            var breathe = Math.sin(time * 0.7) * 0.5 + 0.5;
-
-            // Update points
-            for (var i = 0; i < points.length; i++) {
-                var p = points[i];
-                var bx = Math.sin(time * 0.3 + p.ox * 0.005) * 2 * breathe;
-                var by = Math.cos(time * 0.25 + p.oy * 0.006) * 2 * breathe;
-                var targetX = p.ox + bx;
-                var targetY = p.oy + by;
-
-                if (!isMobile && mouseActive) {
-                    var ddx = p.x - mouseX;
-                    var ddy = p.y - mouseY;
-                    var dist = Math.sqrt(ddx * ddx + ddy * ddy);
-                    if (dist < 170) {
-                        var angle = Math.atan2(ddy, ddx);
-                        var force = (170 - dist) / 170 * 28 * (1 + mouseSpeed * 0.04);
-                        targetX += Math.cos(angle) * force;
-                        targetY += Math.sin(angle) * force;
-                    }
-                }
-
-                if (!isMobile && mouseActive) {
-                    p.x += (targetX - p.x) * 0.07;
-                    p.y += (targetY - p.y) * 0.07;
-                } else {
-                    p.x += (targetX - p.x) * 0.05;
-                    p.y += (targetY - p.y) * 0.05;
-                }
-            }
-
-            // Default thread colour
-            var defR = isDark ? 200 : 35;
-            var defG = isDark ? 198 : 33;
-            var defB = isDark ? 195 : 30;
-            var defA = isDark ? 0.12 : 0.15;
-            var maxA = isDark ? 0.7 : 0.6;
-
-            // Draw threads
-            for (var i = 0; i < points.length; i++) {
-                var p = points[i];
-                var ddx = p.x - mouseX;
-                var ddy = p.y - mouseY;
-                var dist = Math.sqrt(ddx * ddx + ddy * ddy);
-                var glow = Math.max(0, (190 - dist) / 190);
-                var r, g, b, a, lw;
-
-                if (glow > 0 && !isMobile) {
-                    r = lerp(defR, col.r, glow);
-                    g = lerp(defG, col.g, glow);
-                    b = lerp(defB, col.b, glow);
-                    a = lerp(defA, maxA, glow);
-                    lw = lerp(1.2, 2.5, glow);
-                } else {
-                    r = defR; g = defG; b = defB; a = defA; lw = 1.2;
-                }
-
-                ctx.strokeStyle = 'rgba(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ',' + a + ')';
-                ctx.lineWidth = lw;
-
-                // Horizontal
-                if (p.col < COLS - 1) {
-                    var right = points[p.row * COLS + p.col + 1];
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(right.x, right.y);
-                    ctx.stroke();
-                }
-                // Vertical
-                if (p.row < ROWS - 1) {
-                    var below = points[(p.row + 1) * COLS + p.col];
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(below.x, below.y);
-                    ctx.stroke();
-                }
-                // Diagonal
-                if (p.col < COLS - 1 && p.row < ROWS - 1) {
-                    var diag = points[(p.row + 1) * COLS + p.col + 1];
-                    var dlw = glow > 0 ? lerp(0.4, 0.8, glow) : 0.4;
-                    var da = glow > 0 ? a * 0.5 : defA * 0.5;
-                    ctx.strokeStyle = 'rgba(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ',' + da + ')';
-                    ctx.lineWidth = dlw;
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(diag.x, diag.y);
-                    ctx.stroke();
-                }
-            }
-
-            // Node dots near cursor
-            if (!isMobile && mouseActive) {
-                for (var i = 0; i < points.length; i++) {
-                    var p = points[i];
-                    var ddx = p.x - mouseX;
-                    var ddy = p.y - mouseY;
-                    var dist = Math.sqrt(ddx * ddx + ddy * ddy);
-                    if (dist < 150) {
-                        var glow = (150 - dist) / 150;
-                        var radius = 2 + glow * 4;
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(' + (col.r|0) + ',' + (col.g|0) + ',' + (col.b|0) + ',' + (glow * 0.7) + ')';
-                        ctx.fill();
-                    }
-                }
-            }
-
-            // Trail dots
-            if (!isMobile && mouseSpeed > 1.5 && mouseActive) {
-                trailDots.push({
-                    x: mouseX, y: mouseY,
-                    radius: mouseSpeed * 0.5 + 5,
-                    life: 1,
-                    r: col.r, g: col.g, b: col.b
-                });
-            }
-            for (var i = trailDots.length - 1; i >= 0; i--) {
-                var t = trailDots[i];
-                t.life -= 0.006;
-                t.radius += 0.4;
-                if (t.life <= 0) { trailDots.splice(i, 1); continue; }
-                var op = t.life * (isDark ? 0.25 : 0.2);
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(' + (t.r|0) + ',' + (t.g|0) + ',' + (t.b|0) + ',' + op + ')';
-                ctx.fill();
-            }
-            if (trailDots.length > 150) trailDots.splice(0, trailDots.length - 150);
-
-            // Smoke particles
-            if (!isMobile && mouseSpeed > 6 && mouseActive && smokeParticles.length < 200) {
-                var count = Math.min(4, Math.floor(mouseSpeed / 6));
-                for (var j = 0; j < count; j++) {
-                    var vr = (Math.random() - 0.5) * 2;
-                    var angle = Math.random() * Math.PI * 2;
-                    smokeParticles.push({
-                        x: mouseX + (Math.random() - 0.5) * 40,
-                        y: mouseY + (Math.random() - 0.5) * 40,
-                        vx: Math.cos(angle) * (0.3 + Math.random() * 1.2),
-                        vy: Math.sin(angle) * (0.3 + Math.random() * 1.2) - 0.4,
-                        radius: 3 + Math.random() * 5,
-                        life: 1,
-                        r: Math.max(0, Math.min(255, col.r + (Math.random() - 0.5) * 60)),
-                        g: Math.max(0, Math.min(255, col.g + (Math.random() - 0.5) * 60)),
-                        b: Math.max(0, Math.min(255, col.b + (Math.random() - 0.5) * 60))
-                    });
-                }
-            }
-            for (var i = smokeParticles.length - 1; i >= 0; i--) {
-                var s = smokeParticles[i];
-                s.x += s.vx;
-                s.y += s.vy;
-                s.vy -= 0.008;
-                s.vx *= 0.995;
-                s.radius += 0.1;
-                s.life -= 0.008;
-                if (s.life <= 0) { smokeParticles.splice(i, 1); continue; }
-                var op = s.life * (isDark ? 0.25 : 0.18);
-                ctx.beginPath();
-                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(' + (s.r|0) + ',' + (s.g|0) + ',' + (s.b|0) + ',' + op + ')';
-                ctx.fill();
-            }
-            if (smokeParticles.length > 200) smokeParticles.splice(0, smokeParticles.length - 200);
-
-            // Cursor glow
-            if (!isMobile && mouseActive) {
-                var gr = 130;
-                var gradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, gr);
-                var glowOp = isDark ? 0.08 : 0.06;
-                gradient.addColorStop(0, 'rgba(' + (col.r|0) + ',' + (col.g|0) + ',' + (col.b|0) + ',' + glowOp + ')');
-                gradient.addColorStop(1, 'rgba(' + (col.r|0) + ',' + (col.g|0) + ',' + (col.b|0) + ',0)');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(mouseX - gr, mouseY - gr, gr * 2, gr * 2);
-            }
-
-            requestAnimationFrame(animate);
-        }
-
-        animate();
     })();
     </script>
 
