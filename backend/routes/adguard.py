@@ -694,19 +694,27 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
 
 @router.get("/oauth/accounts")
 def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """List my workspaces with connection + discovered account status."""
+    """List my workspaces with connection + discovered account status + live lead count for quota display."""
     _require_adguard_access(user)
     q = db.query(AdGuardAccount)
     if user.role not in ("admin", "superadmin"):
         q = q.filter(AdGuardAccount.owner_email == user.email)
     workspaces = q.all()
-    return [
-        {
-            **ws.to_dict(),
-            "credentials_set": bool(ws.google_credentials),
-        }
-        for ws in workspaces
-    ]
+    out = []
+    for ws in workspaces:
+        lead_count = (
+            db.query(func.count(AdGuardLead.id))
+            .filter(AdGuardLead.adguard_account_id == ws.id)
+            .scalar()
+        ) or 0
+        out.append(
+            {
+                **ws.to_dict(),
+                "credentials_set": bool(ws.google_credentials),
+                "lead_count": lead_count,
+            }
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -822,6 +830,73 @@ def admin_update_subscriber(sub_id: int, req: PlanUpdateRequest, db: Session = D
         db=db,
     )
     return ws.to_dict()
+
+
+class CreateSubscriberRequest(BaseModel):
+    email: str
+    full_name: str
+    plan: str = "trial"
+    password: Optional[str] = None  # auto-generated if blank
+
+
+@router.post("/admin/create-subscriber")
+def admin_create_subscriber(req: CreateSubscriberRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Create a customer: user login + AdGuard workspace + plan in one call. Admin/superadmin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    email = req.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    if req.plan not in PLAN_LIMITS:
+        raise HTTPException(status_code=400, detail="Invalid plan")
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    from backend.routes.auth import get_password_hash
+    import secrets as _secrets
+
+    password = req.password or _secrets.token_urlsafe(8)
+    new_user = User(
+        email=email,
+        hashed_password=get_password_hash(password),
+        full_name=req.full_name or email,
+        role="user",
+        access_adguard=True,
+        onboarding_completed=True,
+        is_active=True,
+    )
+    db.add(new_user)
+
+    ws = AdGuardAccount(
+        owner_email=email,
+        display_name=req.full_name or email,
+        plan=req.plan,
+        lead_quota=PLAN_LIMITS[req.plan]["lead_quota"],
+    )
+    db.add(ws)
+    db.commit()
+    db.refresh(ws)
+
+    log_activity(
+        module="AdGuard",
+        action="Subscriber Created",
+        description=f"Created subscriber {email} (plan={req.plan})",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        entity_type="adguard_account",
+        entity_id=str(ws.id),
+        db=db,
+    )
+    return {
+        "status": "ok",
+        "workspace_id": ws.id,
+        "login_email": email,
+        "login_password": password,
+        "plan": req.plan,
+        "lead_quota": ws.lead_quota,
+        "message": "Share the password with the customer securely. They can change it later.",
+    }
 
 
 @router.post("/oauth/meta/resubscribe")

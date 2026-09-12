@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard — My Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            try { if (localStorage.getItem('adoptima_theme') === 'dark') document.documentElement.classList.add('dark-mode'); } catch (e) {}
+        })();
+    </script>
+    <style>
+        :root {
+            --color-bg-page: #ffffff;
+            --color-bg-sidebar: #fafaf9;
+            --color-bg-card: #fafaf9;
+            --color-bg-card-hover: #f5f5f4;
+            --color-bg-input: #ffffff;
+            --color-border: #e7e5e4;
+            --color-border-strong: #d6d3d1;
+            --color-border-input: #d6d3d1;
+            --color-border-focus: #d97706;
+            --color-text-primary: #1c1917;
+            --color-text-secondary: #57534e;
+            --color-text-muted: #a8a29e;
+            --color-accent: #d97706;
+            --color-accent-hover: #b45309;
+            --color-accent-light: #fef3c7;
+            --color-accent-text: #92400e;
+            --color-success: #059669;
+            --color-success-light: #d1fae5;
+            --color-success-text: #065f46;
+            --color-danger: #dc2626;
+            --color-danger-light: #fee2e2;
+            --color-danger-text: #991b1b;
+            --color-warning: #d97706;
+            --color-warning-light: #fef3c7;
+            --color-warning-text: #92400e;
+            --color-info: #2563eb;
+            --color-info-light: #dbeafe;
+            --color-info-text: #1e40af;
+            --color-purple: #7c3aed;
+            --color-purple-light: #ede9fe;
+            --color-purple-text: #5b21b6;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --overlay-bg: rgba(0,0,0,0.4);
+        }
+        html.dark-mode {
+            --color-bg-page: #1c1917;
+            --color-bg-sidebar: #151310;
+            --color-bg-card: #292524;
+            --color-bg-card-hover: #33302e;
+            --color-bg-input: #292524;
+            --color-border: #3d3937;
+            --color-border-strong: #57534e;
+            --color-border-input: #57534e;
+            --color-border-focus: #f59e0b;
+            --color-text-primary: #fafaf9;
+            --color-text-secondary: #d6d3d1;
+            --color-text-muted: #78716c;
+            --color-accent: #f59e0b;
+            --color-accent-hover: #d97706;
+            --color-accent-light: rgba(245,158,11,0.12);
+            --color-accent-text: #fbbf24;
+            --color-success: #34d399;
+            --color-success-light: rgba(52,211,153,0.12);
+            --color-success-text: #6ee7b7;
+            --color-danger: #f87171;
+            --color-danger-light: rgba(248,113,113,0.12);
+            --color-danger-text: #fca5a5;
+            --color-warning: #fbbf24;
+            --color-warning-light: rgba(251,191,36,0.12);
+            --color-warning-text: #fde68a;
+            --color-info: #60a5fa;
+            --color-info-light: rgba(96,165,250,0.12);
+            --color-info-text: #93bbfd;
+            --color-purple: #a78bfa;
+            --color-purple-light: rgba(167,139,250,0.12);
+            --color-purple-text: #c4b5fd;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+            --overlay-bg: rgba(0,0,0,0.6);
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',-apple-system,sans-serif;background:var(--color-bg-page);color:var(--color-text-primary);height:100vh;overflow:hidden;display:flex;font-size:14px;line-height:1.6;transition:background-color .2s ease,color .2s ease,border-color .2s ease}
+        h1,h2,h3,.font-head{font-family:'DM Sans',-apple-system,sans-serif}
+        ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--color-text-muted)}
+
+        .sidebar{width:230px;background:var(--color-bg-sidebar);border-right:1px solid var(--color-border);display:flex;flex-direction:column;flex-shrink:0}
+        .sidebar-header{padding:16px 16px 12px;display:flex;flex-direction:column;gap:8px}
+        .brand{display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;text-decoration:none;color:var(--color-text-primary)}
+        .logo-icon{width:24px;height:24px;background:var(--color-accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--color-text-on-accent, #fff);font-weight:700;font-size:10px}
+        .role-pill{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:20px;width:fit-content}
+        .pill-customer{background:var(--color-success-light);color:var(--color-success-text)}
+        .pill-admin{background:var(--color-purple-light);color:var(--color-purple-text)}
+
+        .quota-box{margin:0 12px 12px;padding:12px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg)}
+        .quota-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .quota-header span:first-child{font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em;color:var(--color-text-muted)}
+        .quota-plan-tag{font-size:10px;font-weight:700;background:var(--color-accent-light);color:var(--color-accent-text);padding:2px 8px;border-radius:10px}
+        .quota-progress{height:6px;background:var(--color-border);border-radius:3px;overflow:hidden;margin-bottom:6px}
+        .quota-bar{height:100%;background:var(--color-success);border-radius:3px;transition:width .4s ease}
+        .quota-bar.warn{background:var(--color-warning)}
+        .quota-bar.danger{background:var(--color-danger)}
+        .quota-stats{display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary)}
+
+        .nav{flex-grow:1;padding:8px 0;overflow-y:auto}
+        .nav-section-header{display:flex;align-items:center;gap:6px;padding:14px 16px 6px;font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:.06em;color:var(--color-text-muted);cursor:pointer;user-select:none}
+        .nav-section-arrow{font-size:10px;color:var(--color-text-muted);transition:transform .2s ease;display:inline-block;width:12px}
+        .nav-section.open .nav-section-arrow{transform:rotate(90deg)}
+        .nav-section-items{max-height:0;overflow:hidden;transition:max-height .25s ease}
+        .nav-section.open .nav-section-items{max-height:600px}
+        .nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;margin:1px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--color-text-secondary);border-left:3px solid transparent;padding-left:13px}
+        .nav-item:hover{background:var(--color-bg-card-hover)}
+        .nav-item.active{background:var(--color-bg-card-hover);color:var(--color-text-primary);font-weight:500;border-left:3px solid var(--color-accent)}
+        .account-dot{width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);flex-shrink:0}
+        .nav-item.active .account-dot{background:var(--color-accent)}
+        .add-account-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 8px;padding:7px 10px;border-radius:6px;border:1px dashed var(--color-border-strong);background:transparent;color:var(--color-text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;width:calc(100% - 16px)}
+        .add-account-btn:hover{background:var(--color-bg-card-hover);border-color:var(--color-accent);color:var(--color-accent)}
+        .nav-back{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:13px;color:var(--color-text-secondary);text-decoration:none;cursor:pointer;border-top:1px solid var(--color-border)}
+        .nav-back:hover{background:var(--color-bg-card-hover)}
+
+        .main{flex-grow:1;display:flex;flex-direction:column;min-width:0}
+        .topbar{height:52px;background:var(--color-bg-page);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+        .topbar h1{font-size:18px;font-weight:600}
+        .topbar-right{display:flex;align-items:center;gap:12px}
+        .user-badge{font-size:12px;color:var(--color-accent-text);padding:4px 12px;background:var(--color-accent-light);border-radius:20px;font-weight:500}
+        .theme-toggle{width:32px;height:32px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+        .btn{padding:6px 14px;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:'Inter',sans-serif}
+        .btn-primary{background:var(--color-accent);color:#fff}
+        .btn-primary:hover{background:var(--color-accent-hover)}
+        .btn-secondary{background:transparent;border:1px solid var(--color-border);color:var(--color-text-secondary)}
+        .btn-secondary:hover{background:var(--color-bg-card-hover)}
+        .btn-sm{padding:4px 10px;font-size:12px}
+
+        .content{flex-grow:1;overflow-y:auto;padding:20px 24px}
+
+        .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+        .kpi-card{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;display:flex;flex-direction:column}
+        .kpi-card .kpi-icon-wrap{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin-bottom:10px}
+        .kpi-card .kpi-label{font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:.05em;color:var(--color-text-muted);margin-bottom:4px}
+        .kpi-card .kpi-value{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1.2}
+        .kpi-card .kpi-sub{font-size:11px;color:var(--color-text-muted);margin-top:2px}
+        .kpi-card.c-blue .kpi-icon-wrap{background:var(--color-info-light);color:var(--color-info)}
+        .kpi-card.c-green .kpi-icon-wrap{background:var(--color-success-light);color:var(--color-success)}
+        .kpi-card.c-amber .kpi-icon-wrap{background:var(--color-warning-light);color:var(--color-warning)}
+        .kpi-card.c-red .kpi-icon-wrap{background:var(--color-danger-light);color:var(--color-danger)}
+
+        .quota-alert-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--color-warning-light);border:1px solid var(--color-warning);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--color-warning-text)}
+
+        .card{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
+        .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+        .card-title{font-size:14px;font-weight:600}
+
+        .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .filter-input,.filter-select{padding:8px 12px;border:1px solid var(--color-border-input);border-radius:var(--radius-md);font-size:13px;font-family:'Inter',sans-serif;background:var(--color-bg-input);color:var(--color-text-primary)}
+        .filter-input:focus,.filter-select:focus{outline:none;border-color:var(--color-border-focus)}
+
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:13px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden}
+        thead{background:var(--color-bg-card-hover)}
+        th{padding:10px 14px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);border-bottom:1px solid var(--color-border)}
+        td{padding:10px 14px;border-bottom:1px solid var(--color-border);vertical-align:middle}
+        tbody tr:hover{background:var(--color-bg-card-hover)}
+
+        .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap}
+        .badge-green{background:var(--color-success-light);color:var(--color-success-text)}
+        .badge-red{background:var(--color-danger-light);color:var(--color-danger-text)}
+        .badge-orange{background:var(--color-warning-light);color:var(--color-warning-text)}
+        .badge-gray{background:var(--color-bg-card-hover);color:var(--color-text-muted)}
+        .badge-purple{background:var(--color-purple-light);color:var(--color-purple-text)}
+        .score-pill{display:inline-block;min-width:38px;text-align:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+        .score-high{background:var(--color-success-light);color:var(--color-success-text)}
+        .score-mid{background:var(--color-warning-light);color:var(--color-warning-text)}
+        .score-low{background:var(--color-danger-light);color:var(--color-danger-text)}
+        .flag-chip{display:inline-block;background:var(--color-danger-light);color:var(--color-danger-text);border-radius:10px;padding:1px 8px;margin:1px 2px;font-size:10px}
+        .empty-state{text-align:center;padding:3rem 1rem;color:var(--color-text-muted)}
+        .empty-state h3{font-size:16px;margin-bottom:8px;color:var(--color-text-primary)}
+
+        .toast{position:fixed;top:20px;right:20px;padding:12px 16px;border-radius:var(--radius-md);font-size:13px;font-weight:500;z-index:200;animation:slideIn .3s ease;box-shadow:var(--shadow-md)}
+        .toast-success{background:var(--color-success-light);color:var(--color-success-text);border-left:4px solid var(--color-success)}
+        .toast-error{background:var(--color-danger-light);color:var(--color-danger-text);border-left:4px solid var(--color-danger)}
+        .toast-info{background:var(--color-info-light);color:var(--color-info-text);border-left:4px solid var(--color-info)}
+        @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+        .hidden{display:none !important;}
+        @media (max-width: 768px) {
+            .sidebar { width: 190px; }
+            .content { padding: 12px; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <a href="/adguard-landing" class="brand">
+                <div class="logo-icon">AG</div>
+                <span>AdGuard</span>
+            </a>
+            <div id="roleBadgeContainer">
+                <span class="role-pill pill-customer" id="sideRoleBadge">Customer Portal</span>
+            </div>
+        </div>
+
+        <div class="nav">
+            <!-- QUOTA WIDGET -->
+            <div class="quota-box" id="sidebarQuotaWidget" style="display:none;">
+                <div class="quota-header">
+                    <span>Lead Quota</span>
+                    <span class="quota-plan-tag" id="quotaPlanTag">TRIAL</span>
+                </div>
+                <div class="quota-progress">
+                    <div class="quota-bar" id="quotaBar" style="width: 0%;"></div>
+                </div>
+                <div class="quota-stats">
+                    <span id="quotaUsedText">0 / 100 used</span>
+                    <span id="quotaPctText">0%</span>
+                </div>
+            </div>
+
+            <!-- MY WORKSPACE -->
+            <div class="nav-section open" id="workspaceSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>My Workspace</span>
+                </div>
+                <div class="nav-section-items" id="accountList"></div>
+            </div>
+
+            <!-- CONNECTORS -->
+            <div class="nav-section open" id="connectorsSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Ad Connectors</span>
+                </div>
+                <div class="nav-section-items">
+                    <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">🔗 Connect Google Ads</button>
+                    <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
+                </div>
+            </div>
+        </div>
+
+        <a href="/adguard" class="nav-back admin-only" id="navAdminBack" style="display:none;">← Back to Admin</a>
+        <a href="javascript:void(0)" class="nav-back" onclick="logout()" style="color:var(--color-danger);"><span style="font-size:14px;">🚪</span> Log Out</a>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+        <div class="topbar">
+            <h1 id="pageTitle"><span>My Workspace</span></h1>
+            <div class="topbar-right">
+                <span class="badge badge-green" id="pillGoogle">Google: —</span>
+                <span class="badge badge-blue" id="pillMeta">Meta: —</span>
+                <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()"></button>
+                <span class="user-badge" id="userBadge">Loading...</span>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- QUOTA ALERT -->
+            <div class="quota-alert-banner hidden" id="quotaAlertBanner">
+                <div>
+                    <strong>⚠️ Plan Quota Alert:</strong> You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="window.location.href='/adguard-landing#pricing'">Upgrade Plan</button>
+            </div>
+
+            <!-- CONNECT BANNER -->
+            <div class="card hidden" id="connectBanner" style="border-color:var(--color-border-focus);">
+                <div class="card-header">
+                    <span class="card-title">🔗 Connect your Google Ads or Meta Ads account</span>
+                    <button class="btn btn-primary btn-sm" onclick="startConnect()">Connect Google Ads</button>
+                </div>
+                <p style="font-size:13px;color:var(--color-text-secondary);">
+                    One click. Sign in with Google or Meta, approve access, and your ad lead forms appear here automatically.
+                </p>
+            </div>
+
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <!-- LIVE LEAD FEED -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Live Lead Feed</span>
+                    <div class="filters">
+                        <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
+                        <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
+                            <option value="">All Leads</option>
+                            <option value="verified">Verified only</option>
+                            <option value="flagged">Flagged only</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="exportCsv()">⬇ Export CSV</button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadLeads()">Refresh</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table id="feedTable">
+                        <thead><tr>
+                            <th>Time</th><th>Lead Name</th><th>Contact Details</th><th>Score</th><th>Reason / Flags</th><th>Status</th>
+                        </tr></thead>
+                        <tbody id="feedBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ACCOUNT PICKER MODAL -->
+    <div id="pickerOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:100;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('pickerOverlay').style.display='none'">
+        <div style="background:var(--color-bg-modal, #fff);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <h2 style="font-size:16px;margin-bottom:12px;" id="pickerTitle">Pick ad accounts to protect</h2>
+            <input type="hidden" id="pickerWsId">
+            <input type="hidden" id="pickerPlatform" value="google">
+            <div id="pickerList" style="margin-bottom:16px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('pickerOverlay').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAccountPicker()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        const API = '/api/adguard';
+        const AUTH = '/api/auth';
+        let token = localStorage.getItem('adoptima_token') || '';
+        let currentUser = null;
+        let allLeads = [];
+        let workspaces = [];
+        let selectedWorkspaceObj = null;
+        // Admin simulation: /adguard-workspace?ws=<id> when opened from admin
+        const simWsId = new URLSearchParams(window.location.search).get('ws');
+
+        function $(id) { return document.getElementById(id); }
+
+        async function api(method, path, body) {
+            const opts = { method, headers: { 'Authorization': 'Bearer ' + token } };
+            if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+            const res = await fetch(API + path, opts);
+            if (res.status === 401) {
+                token = '';
+                localStorage.removeItem('adoptima_token');
+                window.location.href = '/adguard-landing';
+                throw new Error('Session expired');
+            }
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.detail || 'Request failed');
+            }
+            return res.json();
+        }
+
+        async function checkAuth() {
+            if (!token) { window.location.href = '/adguard-landing'; return; }
+            try {
+                currentUser = await fetch(AUTH + '/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
+            } catch (e) { window.location.href = '/adguard-landing'; return; }
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+            if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/adguard-landing'; return; }
+
+            if (isAdmin) {
+                $('sideRoleBadge').className = 'role-pill pill-admin';
+                $('sideRoleBadge').textContent = simWsId ? 'Admin — Simulating' : 'Owner / Admin';
+                $('navAdminBack').style.display = '';
+            } else {
+                $('sideRoleBadge').className = 'role-pill pill-customer';
+                $('sideRoleBadge').textContent = 'Customer Portal';
+            }
+            $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
+
+            handleOAuthResult();
+            await loadWorkspaces();
+            maybeShowPickerAfterConnect();
+            loadLeads();
+        }
+
+        function logout() {
+            localStorage.removeItem('adoptima_token');
+            window.location.href = '/adguard-landing';
+        }
+
+        // ---------- Workspace + Quota ----------
+        async function loadWorkspaces() {
+            try {
+                workspaces = await api('GET', '/oauth/accounts');
+                const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+
+                if (isAdmin && simWsId) {
+                    // Admin simulating a specific customer workspace
+                    selectedWorkspaceObj = workspaces.find(w => String(w.id) === String(simWsId)) || null;
+                    $('pageTitle').innerHTML = '<span>' + escapeHtml(selectedWorkspaceObj ? (selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email) : 'Unknown workspace') + '</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>';
+                } else if (!isAdmin) {
+                    selectedWorkspaceObj = workspaces.find(w => w.owner_email === currentUser.email) || workspaces[0] || null;
+                    $('pageTitle').innerHTML = '<span>' + escapeHtml(selectedWorkspaceObj ? (selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email) : 'My Workspace') + '</span>';
+                } else {
+                    selectedWorkspaceObj = workspaces.find(w => w.owner_email === currentUser.email) || workspaces[0] || null;
+                }
+
+                renderQuota(selectedWorkspaceObj);
+                renderWorkspaceSidebar();
+                renderMetaButtonState();
+                renderConnPills();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderQuota(ws) {
+            if (!ws) {
+                $('sidebarQuotaWidget').style.display = 'none';
+                $('quotaAlertBanner').classList.add('hidden');
+                return;
+            }
+            $('sidebarQuotaWidget').style.display = 'block';
+            $('quotaPlanTag').textContent = (ws.plan || 'trial').toUpperCase();
+            const quota = ws.lead_quota;
+            const count = ws.lead_count || 0;
+            if (quota < 0) {
+                $('quotaUsedText').textContent = count + ' leads';
+                $('quotaPctText').textContent = 'Unlimited';
+                $('quotaBar').style.width = '100%';
+                $('quotaBar').className = 'quota-bar';
+                $('quotaAlertBanner').classList.add('hidden');
+            } else {
+                const pct = Math.min(100, Math.round((count / (quota || 1)) * 100));
+                $('quotaUsedText').textContent = count.toLocaleString() + ' / ' + quota.toLocaleString() + ' used';
+                $('quotaPctText').textContent = pct + '%';
+                $('quotaBar').style.width = pct + '%';
+                $('quotaBar').className = 'quota-bar' + (pct >= 95 ? ' danger' : pct >= 80 ? ' warn' : '');
+                if (pct >= 80) {
+                    $('quotaAlertBanner').classList.remove('hidden');
+                    $('alertQuotaPct').textContent = pct + '%';
+                } else {
+                    $('quotaAlertBanner').classList.add('hidden');
+                }
+            }
+        }
+
+        function renderWorkspaceSidebar() {
+            const list = $('accountList');
+            list.innerHTML = '';
+            const ws = selectedWorkspaceObj;
+            if (ws) {
+                list.appendChild(makeNavItem(ws.display_name || ws.owner_email, ws.id, ws.display_name || ws.owner_email, true));
+            } else {
+                list.appendChild(makeNavItem('', '', 'My Workspace', true));
+            }
+        }
+
+        function makeNavItem(name, id, label, active) {
+            const div = document.createElement('div');
+            div.className = 'nav-item' + (active ? ' active' : '');
+            div.innerHTML = '<span class="account-dot"></span>' + escapeHtml(label);
+            return div;
+        }
+
+        function renderConnPills() {
+            const ws = selectedWorkspaceObj;
+            $('pillGoogle').textContent = 'Google: ' + (ws && ws.google_is_live ? 'connected' : '—');
+            $('pillMeta').textContent = 'Meta: ' + (ws && ws.meta_is_live ? 'connected' : '—');
+            if (!ws || (!ws.google_is_live && !ws.meta_is_live)) {
+                $('connectBanner').classList.remove('hidden');
+            } else {
+                $('connectBanner').classList.add('hidden');
+            }
+        }
+
+        // ---------- OAuth ----------
+        function handleOAuthResult() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('oauth_success') === 'google') toast('Google Ads connected successfully.');
+            else if (params.get('oauth_success') === 'meta') toast('Meta Ads connected successfully.');
+            else if (params.get('oauth_error')) toast('Connection error: ' + params.get('oauth_error'), 'error');
+            if (params.has('oauth_success') || params.has('oauth_error')) {
+                window.history.replaceState({}, '', '/adguard-workspace' + (simWsId ? '?ws=' + simWsId : ''));
+            }
+        }
+
+        function maybeShowPickerAfterConnect() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('oauth_success') === 'meta') {
+                const mws = workspaces.find(w => w.meta_is_live);
+                if (mws) { openMetaAccountPicker(); return; }
+            }
+            if (params.get('oauth_success') !== 'google') return;
+            const ws = workspaces.find(w => w.google_is_live);
+            if (ws && (ws.discovered_accounts || []).length) openAccountPicker();
+        }
+
+        async function startConnect() {
+            try {
+                const res = await api('GET', '/oauth/connect');
+                window.location.href = res.authorization_url;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function startMetaConnect() {
+            try {
+                const res = await api('GET', '/oauth/meta/connect');
+                window.location.href = res.authorization_url;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function renderMetaButtonState() {
+            const btn = $('addMetaBtn');
+            if (!btn) return;
+            const ws = workspaces.find(w => w.meta_is_live);
+            if (ws && ws.meta_is_live) {
+                btn.textContent = '✅ Meta Ads Connected';
+                btn.onclick = openMetaAccountPicker;
+            } else {
+                btn.textContent = '🔗 Connect Meta Ads';
+                btn.onclick = startMetaConnect;
+            }
+        }
+
+        function openMetaAccountPicker() {
+            const ws = workspaces.find(w => w.meta_is_live);
+            if (!ws) { startMetaConnect(); return; }
+            $('pickerTitle').textContent = 'Pick Meta ad accounts to protect';
+            const all = ws.discovered_meta_accounts || [];
+            const rows = all.map(a => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;">
+                    <input type="checkbox" value="${escapeHtml(String(a.id))}" ${a.selected ? 'checked' : ''}>
+                    <span>${escapeHtml(a.name || a.id)} <span style="color:var(--color-text-muted)">(${escapeHtml(a.formatted || a.currency || '')})</span></span>
+                </label>`).join('');
+            $('pickerList').innerHTML = rows || '<p style="font-size:13px;color:var(--color-text-muted)">No Meta ad accounts discovered.</p>';
+            $('pickerWsId').value = ws.id;
+            $('pickerPlatform').value = 'meta';
+            $('pickerOverlay').style.display = 'flex';
+        }
+
+        function openAccountPicker() {
+            const ws = workspaces.find(w => w.google_is_live);
+            if (!ws) return;
+            $('pickerTitle').textContent = 'Pick Google Ads accounts to protect';
+            $('pickerPlatform').value = 'google';
+            const all = ws.discovered_accounts || [];
+            const rows = all.map(a => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;">
+                    <input type="checkbox" value="${a.id}" ${a.selected ? 'checked' : ''}>
+                    <span>${escapeHtml(a.name)} <span style="color:var(--color-text-muted)">(${a.formatted})</span></span>
+                    ${a.manager ? '<span class="badge badge-gray">MCC</span>' : ''}
+                </label>`).join('');
+            $('pickerList').innerHTML = rows || '<p style="font-size:13px;color:var(--color-text-muted)">No ad accounts discovered.</p>';
+            $('pickerWsId').value = ws.id;
+            $('pickerOverlay').style.display = 'flex';
+        }
+
+        async function saveAccountPicker() {
+            const ids = Array.from($('pickerList').querySelectorAll('input:checked')).map(cb => cb.value);
+            try {
+                await api('POST', '/oauth/select', { workspace_id: parseInt($('pickerWsId').value), selected_ids: ids, platform: $('pickerPlatform').value || 'google' });
+                toast('Ad accounts saved');
+                $('pickerOverlay').style.display = 'none';
+                await loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ---------- Leads ----------
+        async function loadLeads() {
+            try {
+                const params = new URLSearchParams();
+                const v = $('verdictFilter').value;
+                const s = $('leadSearch').value.trim();
+                if (v) params.set('verdict', v);
+                if (s) params.set('search', s);
+                params.set('limit', '500');
+                const data = await api('GET', '/leads?' + params.toString());
+                allLeads = data.leads || [];
+                renderKpis();
+                renderFeed();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function renderKpis() {
+            const rows = allLeads;
+            const verified = rows.filter(l => l.verdict === 'verified').length;
+            const flagged = rows.filter(l => l.verdict === 'flagged').length;
+            const scored = rows.filter(l => l.integrity_score != null);
+            const avg = scored.length ? Math.round(scored.reduce((s, l) => s + l.integrity_score, 0) / scored.length) : null;
+            const recoveredSpend = flagged * 350;
+            const cards = [
+                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: '100% captured' },
+                { label: 'Verified & Pushed', value: verified, icon: '✅', cls: 'c-green', sub: 'delivered to CRM' },
+                { label: 'Blocked Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'bots & fakes blocked' },
+                { label: 'Recovered Spend (Est)', value: '₹' + recoveredSpend.toLocaleString('en-IN'), icon: '💰', cls: 'c-amber', sub: 'ad budget saved' },
+                { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-blue', sub: 'out of 100' },
+            ];
+            $('kpiGrid').innerHTML = cards.map(c => `
+                <div class="kpi-card ${c.cls}">
+                    <div class="kpi-icon-wrap">${c.icon}</div>
+                    <div class="kpi-label">${c.label}</div>
+                    <div class="kpi-value">${c.value}</div>
+                    <div class="kpi-sub">${c.sub}</div>
+                </div>`).join('');
+        }
+
+        function renderFeed() {
+            const rows = allLeads;
+            if (!rows.length) {
+                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads received yet</h3><p>Google Ads and Meta Ads lead submissions will appear here live once they fire.</p></div></td></tr>';
+                return;
+            }
+            $('feedBody').innerHTML = rows.map(l => `<tr>
+                <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
+                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+                <td>${contactText(l)}</td>
+                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
+                <td>${reasonText(l)}</td>
+                <td>${statusBadge(l)}</td>
+            </tr>`).join('');
+        }
+
+        function contactText(l) {
+            const bits = [];
+            if (l.email) bits.push('<div style="font-size:12px;">' + escapeHtml(l.email) + '</div>');
+            if (l.phone) bits.push('<div style="font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(l.phone) + '</div>');
+            return bits.join('') || '<span style="color:var(--color-text-muted)">—</span>';
+        }
+
+        function reasonText(l) {
+            const parts = [];
+            if (l.email_valid && !l.disposable_email) parts.push('valid email');
+            if (l.phone_valid) parts.push('valid phone');
+            if (l.geo_match) parts.push('geo match');
+            if (l.ai_legitimacy_score != null) parts.push('AI ' + l.ai_legitimacy_score);
+            const flags = (l.flags || []).map(f => '<span class="flag-chip">' + escapeHtml(f) + '</span>').join(' ');
+            if (flags) return parts.join(', ') + '<br>' + flags;
+            return parts.join(', ') || '—';
+        }
+
+        function statusBadge(l) {
+            if (l.verdict === 'flagged') return '<span class="badge badge-red">Blocked</span>';
+            if (l.lsq_status === 'pushed') return '<span class="badge badge-green">Sent to CRM</span>';
+            if (l.lsq_status === 'failed') return '<span class="badge badge-red" title="' + escapeHtml(l.lsq_error || '') + '">Push failed</span>';
+            return '<span class="badge badge-orange">Pending</span>';
+        }
+
+        function scoreClass(score) {
+            if (score >= 70) return 'score-high';
+            if (score >= 40) return 'score-mid';
+            return 'score-low';
+        }
+
+        function exportCsv() {
+            fetch(API + '/leads/export', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => { if (!r.ok) throw new Error('Export failed'); return r.blob(); })
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'adguard_leads.csv';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(e => toast(e.message, 'error'));
+        }
+
+        function toggleTheme() {
+            const dark = document.documentElement.classList.toggle('dark-mode');
+            try { localStorage.setItem('adoptima_theme', dark ? 'dark' : 'light'); } catch (e) {}
+            renderThemeIcon();
+        }
+        function renderThemeIcon() {
+            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀' : '☾';
+        }
+        function toggleSection(headerEl) {
+            headerEl.parentElement.classList.toggle('open');
+        }
+        function toast(msg, type = 'success') {
+            const d = document.createElement('div');
+            d.className = 'toast toast-' + type;
+            d.textContent = msg;
+            $('toastContainer').appendChild(d);
+            setTimeout(() => d.remove(), 3500);
+        }
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); checkAuth(); });
+    </script>
+</body>
+</html>

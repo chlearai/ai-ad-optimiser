@@ -174,6 +174,16 @@ def get_adguard_landing(request: Request):
     return HTMLResponse(content="<h1>AdGuard Landing Page not found.</h1>")
 
 
+@app.get("/adguard-workspace", response_class=HTMLResponse)
+def get_adguard_workspace(request: Request):
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    html_path = os.path.join(frontend_dir, "adguard_workspace.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>AdGuard Workspace Page not found.</h1>")
+
+
 @app.get("/integrations", response_class=HTMLResponse)
 def get_integrations_ui(request: Request):
     frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
