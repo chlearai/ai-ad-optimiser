@@ -1145,14 +1145,18 @@
                 setCardAccess('AdPulse', false);
                 setCardAccess('InsightDesk', false);
                 setCardAccess('RevenueOps', false);
-                setCardAccess('AdGuard', false);
+                setCardAccess('AdGuard', 'public');
             }
         }
 
     function setCardAccess(name, allowed) {
         const card = $('card' + name);
         const status = $('status' + name);
-        if (allowed) {
+        if (allowed === 'public') {
+            card.classList.remove('disabled');
+            status.textContent = 'Explore';
+            status.className = 'module-status status-active';
+        } else if (allowed) {
             card.classList.remove('disabled');
             status.textContent = 'Open';
             status.className = 'module-status status-active';
@@ -1164,6 +1168,10 @@
     }
 
     function openModule(url) {
+        if (url === '/adguard' && (!currentUser || !currentUser.access_adguard && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+            window.location.href = '/adguard-landing';
+            return;
+        }
         const card = document.querySelector(`.module-card${url.replace('/', '.')}`);
         if (card && card.classList.contains('disabled')) {
             alert('You do not have access to this module. Contact super admin.');

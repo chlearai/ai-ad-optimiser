@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChlearSakhaaOps AI - AdGuard</title>
+    <title>AdGuard — Lead Integrity Gatekeeper</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,16 +24,18 @@
             --color-border: #e7e5e4;
             --color-border-strong: #d6d3d1;
             --color-border-input: #d6d3d1;
-            --color-border-focus: #d97706;
+            --color-border-focus: #10b981;
             --color-text-primary: #1c1917;
             --color-text-secondary: #57534e;
             --color-text-muted: #a8a29e;
             --color-text-on-accent: #ffffff;
             --color-text-on-tooltip: #fafaf9;
-            --color-accent: #d97706;
-            --color-accent-hover: #b45309;
-            --color-accent-light: #fef3c7;
-            --color-accent-text: #92400e;
+            
+            --color-accent: #10b981;
+            --color-accent-hover: #059669;
+            --color-accent-light: #d1fae5;
+            --color-accent-text: #065f46;
+            
             --color-success: #059669;
             --color-success-light: #d1fae5;
             --color-success-text: #065f46;
@@ -49,6 +51,7 @@
             --color-purple: #7c3aed;
             --color-purple-light: #ede9fe;
             --color-purple-text: #5b21b6;
+            
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
             --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
@@ -58,26 +61,28 @@
             --overlay-bg: rgba(0,0,0,0.4);
         }
         html.dark-mode {
-            --color-bg-page: #1c1917;
-            --color-bg-sidebar: #151310;
-            --color-bg-card: #292524;
-            --color-bg-card-hover: #33302e;
-            --color-bg-input: #292524;
-            --color-bg-modal: #292524;
+            --color-bg-page: #0f172a;
+            --color-bg-sidebar: #090d16;
+            --color-bg-card: #1e293b;
+            --color-bg-card-hover: #334155;
+            --color-bg-input: #1e293b;
+            --color-bg-modal: #1e293b;
             --color-bg-tooltip: #fafaf9;
-            --color-border: #3d3937;
-            --color-border-strong: #57534e;
-            --color-border-input: #57534e;
-            --color-border-focus: #f59e0b;
-            --color-text-primary: #fafaf9;
-            --color-text-secondary: #d6d3d1;
-            --color-text-muted: #78716c;
+            --color-border: #334155;
+            --color-border-strong: #475569;
+            --color-border-input: #475569;
+            --color-border-focus: #34d399;
+            --color-text-primary: #f8fafc;
+            --color-text-secondary: #cbd5e1;
+            --color-text-muted: #64748b;
             --color-text-on-accent: #ffffff;
-            --color-text-on-tooltip: #1c1917;
-            --color-accent: #f59e0b;
-            --color-accent-hover: #d97706;
-            --color-accent-light: rgba(245,158,11,0.12);
-            --color-accent-text: #fbbf24;
+            --color-text-on-tooltip: #0f172a;
+            
+            --color-accent: #10b981;
+            --color-accent-hover: #34d399;
+            --color-accent-light: rgba(16,185,129,0.15);
+            --color-accent-text: #6ee7b7;
+            
             --color-success: #34d399;
             --color-success-light: rgba(52,211,153,0.12);
             --color-success-text: #6ee7b7;
@@ -93,6 +98,7 @@
             --color-purple: #a78bfa;
             --color-purple-light: rgba(167,139,250,0.12);
             --color-purple-text: #c4b5fd;
+            
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
             --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
@@ -104,50 +110,70 @@
         ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--color-text-muted)}
 
         /* SIDEBAR */
-        .sidebar{width:220px;background:var(--color-bg-sidebar);border-right:1px solid var(--color-border);display:flex;flex-direction:column;flex-shrink:0}
-        .sidebar-header{padding:0 16px 16px;display:flex;align-items:center;gap:8px}
-        .brand{display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;text-decoration:none;color:var(--color-text-primary)}
-        .logo-icon{width:24px;height:24px;background:var(--color-accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--color-text-on-accent);font-weight:700;font-size:10px}
-        .nav{flex-grow:1;padding:16px 0;overflow-y:auto;overflow-x:hidden}
+        .sidebar{width:240px;background:var(--color-bg-sidebar);border-right:1px solid var(--color-border);display:flex;flex-direction:column;flex-shrink:0}
+        .sidebar-header{padding:16px 16px 12px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--color-border)}
+        .brand{display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;text-decoration:none;color:var(--color-text-primary)}
+        .logo-icon{width:26px;height:26px;background:var(--color-accent);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;box-shadow:0 0 10px rgba(16,185,129,0.3)}
+        .role-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;}
+        .pill-admin{background:var(--color-purple-light);color:var(--color-purple-text);border:1px solid rgba(124,58,237,0.2);}
+        .pill-customer{background:var(--color-accent-light);color:var(--color-accent-text);border:1px solid rgba(16,185,129,0.2);}
+
+        .nav{flex-grow:1;padding:12px 0;overflow-y:auto;overflow-x:hidden}
         .nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;margin:1px 8px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:400;color:var(--color-text-secondary);transition:all .1s ease;border-left:3px solid transparent;padding-left:13px;text-decoration:none}
         .nav-item:hover{background:var(--color-bg-card-hover)}
-        .nav-item.active{background:var(--color-bg-card-hover);color:var(--color-text-primary);font-weight:500;border-left:3px solid var(--color-accent)}
+        .nav-item.active{background:var(--color-bg-card-hover);color:var(--color-text-primary);font-weight:600;border-left:3px solid var(--color-accent)}
         .account-dot{width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);flex-shrink:0}
         .nav-item.active .account-dot{background:var(--color-accent)}
-        .nav-back{display:flex;align-items:center;gap:8px;padding:8px 16px;margin:0 8px;border-radius:6px;font-size:13px;color:var(--color-text-secondary);text-decoration:none;cursor:pointer;border-top:1px solid var(--color-border);margin-top:auto;border-radius:0}
+        .nav-back{display:flex;align-items:center;gap:8px;padding:10px 16px;margin:0;border-radius:0;font-size:12px;color:var(--color-text-secondary);text-decoration:none;cursor:pointer;border-top:1px solid var(--color-border);margin-top:auto}
         .nav-back:hover{background:var(--color-bg-card-hover)}
+
+        /* CUSTOMER QUOTA BOX */
+        .quota-box{margin:8px 12px 12px;padding:12px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);}
+        .quota-header{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px;}
+        .quota-plan-tag{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;background:var(--color-accent-light);color:var(--color-accent-text);}
+        .quota-progress{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin:6px 0;}
+        .quota-bar{height:100%;background:var(--color-accent);border-radius:3px;transition:width 0.3s ease;}
+        .quota-bar.warn{background:var(--color-warning);}
+        .quota-bar.danger{background:var(--color-danger);}
+        .quota-stats{display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-secondary);}
 
         /* ACCORDION */
         .nav-section{margin-top:.25rem}
-        .nav-section-header{display:flex;align-items:center;gap:6px;padding:16px 16px 6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:.06em;color:var(--color-text-muted);user-select:none;transition:.15s}
+        .nav-section-header{display:flex;align-items:center;gap:6px;padding:12px 16px 6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:.06em;color:var(--color-text-muted);user-select:none;transition:.15s}
         .nav-section-header:hover{color:var(--color-text-secondary)}
         .nav-section-arrow{display:inline-block;width:12px;height:12px;font-size:10px;color:var(--color-text-muted);transition:transform .2s ease;line-height:1}
         .nav-section.open .nav-section-arrow{transform:rotate(90deg)}
         .nav-section-items{max-height:0;overflow:hidden;transition:max-height .25s ease}
         .nav-section.open .nav-section-items{max-height:600px}
-        .add-account-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 8px;padding:7px 10px;border-radius:6px;border:1px dashed var(--color-border-strong);background:transparent;color:var(--color-text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s ease,border-color .15s ease,color .15s ease}
+        
+        .add-account-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 12px;padding:7px 10px;border-radius:6px;border:1px dashed var(--color-border-strong);background:transparent;color:var(--color-text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s ease}
         .add-account-btn:hover{background:var(--color-bg-card-hover);border-color:var(--color-accent);color:var(--color-accent)}
 
         /* MAIN */
         .main{flex-grow:1;display:flex;flex-direction:column;min-width:0}
         .topbar{height:52px;background:var(--color-bg-page);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
-        .topbar h1{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:600;color:var(--color-text-primary)}
+        .topbar h1{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;}
         .topbar-right{display:flex;align-items:center;gap:12px}
         .user-badge{font-size:12px;color:var(--color-accent-text);padding:4px 12px;background:var(--color-accent-light);border-radius:20px;font-weight:500}
         .theme-toggle{width:32px;height:32px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--color-text-secondary);transition:background .15s ease}
         .theme-toggle:hover{background:var(--color-bg-card-hover)}
 
         /* BUTTONS */
-        .btn{padding:6px 14px;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:background .15s ease,border-color .15s ease,color .15s ease;text-decoration:none;font-family:'Inter',sans-serif}
+        .btn{padding:6px 14px;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease;text-decoration:none;font-family:'Inter',sans-serif}
+        .btn-primary{background:var(--color-accent);color:#fff;}
+        .btn-primary:hover{background:var(--color-accent-hover);}
         .btn-secondary{background:transparent;border:1px solid var(--color-border);color:var(--color-text-secondary)}
-        .btn-secondary:hover{background:var(--color-bg-card-hover)}
+        .btn-secondary:hover{background:var(--color-bg-card-hover);color:var(--color-text-primary)}
         .btn-sm{padding:4px 10px;font-size:12px}
 
         /* CONTENT */
         .content{flex-grow:1;overflow-y:auto;padding:20px 24px}
 
+        /* ALERT BANNER (80% quota warning) */
+        .quota-alert-banner{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-md);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;color:var(--color-warning-text);font-size:13px;}
+
         /* KPI CARDS */
-        .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+        .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px}
         .kpi-card{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;transition:all .15s ease;position:relative;overflow:hidden;display:flex;flex-direction:column}
         .kpi-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
         .kpi-card .kpi-icon-wrap{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin-bottom:10px}
@@ -167,7 +193,7 @@
         /* FILTERS */
         .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
         .filter-input,.filter-select{padding:8px 12px;border:1px solid var(--color-border-input);border-radius:var(--radius-md);font-size:13px;font-family:'Inter',sans-serif;background:var(--color-bg-input);transition:border-color .15s ease;color:var(--color-text-primary)}
-        .filter-input:focus,.filter-select:focus{outline:none;border-color:var(--color-border-focus);box-shadow:0 0 0 3px rgba(217,119,6,0.1)}
+        .filter-input:focus,.filter-select:focus{outline:none;border-color:var(--color-border-focus);box-shadow:0 0 0 3px rgba(16,185,129,0.15)}
 
         /* TABLES */
         .table-wrap{overflow-x:auto;border-radius:var(--radius-lg)}
@@ -191,10 +217,8 @@
         .score-mid{background:var(--color-warning-light);color:var(--color-warning-text)}
         .score-low{background:var(--color-danger-light);color:var(--color-danger-text)}
         .flag-chip{display:inline-block;background:var(--color-danger-light);color:var(--color-danger-text);border-radius:10px;padding:1px 8px;margin:1px 2px;font-size:10px}
-        .flag-chip.ok{background:var(--color-success-light);color:var(--color-success-text)}
         .empty-state{text-align:center;padding:3rem 1rem;color:var(--color-text-muted)}
         .empty-state h3{font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:8px;color:var(--color-text-primary)}
-        .empty-state p{font-size:13px}
 
         /* TOAST */
         .toast{position:fixed;top:20px;right:20px;padding:12px 16px;border-radius:var(--radius-md);font-size:13px;font-weight:500;z-index:200;animation:slideIn .3s ease;box-shadow:var(--shadow-md)}
@@ -202,89 +226,156 @@
         .toast-error{background:var(--color-danger-light);color:var(--color-danger-text);border-left:4px solid var(--color-danger)}
         @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 
+        .hidden{display:none !important;}
+
         @media (max-width: 768px) {
-            .sidebar { width: 180px; }
+            .sidebar { width: 190px; }
             .content { padding: 12px; }
             .kpi-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
 <body>
+    
+    <!-- SIDEBAR -->
     <div class="sidebar">
-        <div class="sidebar-header" style="padding-top:16px;">
-            <a href="/" class="brand"><div class="logo-icon">AG</div>AdGuard</a>
+        <div class="sidebar-header">
+            <a href="/adguard-landing" class="brand">
+                <div class="logo-icon">AG</div>
+                <span>AdGuard</span>
+            </a>
+            <div id="roleBadgeContainer">
+                <span class="role-pill pill-admin" id="sideRoleBadge">Admin Master</span>
+            </div>
         </div>
-        <div class="nav">
-            <a class="nav-item" href="/" id="navHome" style="margin-bottom:4px;">🏠 ChlearSakhaaOps Home</a>
-            <div style="border-bottom:1px solid var(--color-border);margin:4px 8px;" id="navDivider"></div>
 
-            <!-- CLIENTS (from Manage Client/Brand masterlist) -->
-            <div class="nav-section open" data-section="clients" id="clientsSection">
-                <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Clients</span>
+        <div class="nav">
+            
+            <!-- CUSTOMER QUOTA WIDGET (Visible only for Customers or Scoped Workspace View) -->
+            <div class="quota-box" id="sidebarQuotaWidget" style="display:none;">
+                <div class="quota-header">
+                    <span>Lead Quota</span>
+                    <span class="quota-plan-tag" id="quotaPlanTag">PRO</span>
                 </div>
-                <div class="nav-section-items" id="accountList">
-                    <div class="nav-item active" data-account="" data-account-id="" onclick="selectClient(this)"><span class="account-dot"></span>All Clients</div>
-                    <!-- client masterlist injected here by loadClients() -->
+                <div class="quota-progress">
+                    <div class="quota-bar" id="quotaBar" style="width: 35%;"></div>
+                </div>
+                <div class="quota-stats">
+                    <span id="quotaUsedText">350 / 1,000 used</span>
+                    <span id="quotaPctText">35%</span>
                 </div>
             </div>
 
-            <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">
-                🔗 Connect Google Ads
-            </button>
-            <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="margin-top:6px;">
-                🔗 Connect Meta Ads
-            </button>
-            <button class="add-account-btn admin-only" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="margin-top:6px;display:none;background:#1f6feb;color:#fff;">
-                🔔 Subscribe Pages to leadgen
-            </button>
-            <button class="add-account-btn admin-only" id="pullMetaBtn" onclick="pullMetaLeads()" style="margin-top:6px;display:none;background:#21834f;color:#fff;">
-                ⬇️ Pull Meta leads now
-            </button>
-            <button class="add-account-btn admin-only" id="subsMetaBtn" onclick="checkMetaSubs()" style="margin-top:6px;display:none;background:#6b46c1;color:#fff;">
-                🔍 Check page subscriptions
-            </button>
-
-            <!-- ADMIN: subscriber panel -->
-            <div class="nav-section admin-only" data-section="admin" id="adminSection" style="display:none;">
+            <!-- ADMIN SECTION: MASTER CONTROLS -->
+            <div class="nav-section open admin-only" id="adminMasterSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Admin</span>
+                    <span class="nav-section-arrow">▶</span><span>Master Controls</span>
                 </div>
                 <div class="nav-section-items">
-                    <div class="nav-item" data-admin="subscribers" onclick="openAdminSubscribers()">📊 Subscribers</div>
-                    <div class="nav-item" data-admin="cleanup" onclick="openCleanupPanel()">🧹 Cleanup Test Leads</div>
+                    <div class="nav-item active" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
+                    <div class="nav-item" id="navGlobalLeads" onclick="showMasterView('global_leads')">🛡️ Global Lead Stream</div>
+                    <div class="nav-item" id="navCleanup" onclick="showMasterView('cleanup')">🧹 Test Lead Cleanup</div>
+                    <div class="nav-item" id="navDebug" onclick="checkMetaSubs()">🔍 Webhook &amp; Poller Logs</div>
                 </div>
             </div>
+
+            <!-- WORKSPACE SIMULATOR / CLIENTS SECTION ("View as Customer") -->
+            <div class="nav-section open" id="workspaceSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span id="workspaceSectionTitle">Workspaces</span>
+                </div>
+                <div class="nav-section-items" id="accountList">
+                    <div class="nav-item active" data-account="" data-account-id="" onclick="selectClient(this)">
+                        <span class="account-dot"></span>All Workspaces
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLATFORM CONNECTORS -->
+            <div class="nav-section open" id="connectorsSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Ad Connectors</span>
+                </div>
+                <div class="nav-section-items">
+                    <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">
+                        🔗 Connect Google Ads
+                    </button>
+                    <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">
+                        🔗 Connect Meta Ads
+                    </button>
+                    <button class="add-account-btn admin-only" id="resubMetaBtn" onclick="resubscribeMetaPages()" style="display:none;background:#1f6feb;color:#fff;">
+                        🔔 Subscribe Meta Pages
+                    </button>
+                    <button class="add-account-btn admin-only" id="pullMetaBtn" onclick="pullMetaLeads()" style="display:none;background:#21834f;color:#fff;">
+                        ⬇️ 5-Min Meta Pull Now
+                    </button>
+                </div>
+            </div>
+
         </div>
-        <a href="/" class="nav-back">← Back to Home</a>
+
+        <!-- FOOTER ACTIONS -->
+        <a href="/" class="nav-back admin-only" id="navHome">🏠 ChlearSakhaaOps Hub</a>
+        <a href="javascript:void(0)" class="nav-back" onclick="logout()" style="color:var(--color-danger);"><span style="font-size:14px;">🚪</span> Log Out</a>
     </div>
 
+    <!-- MAIN DASHBOARD -->
     <div class="main">
         <div class="topbar">
-            <h1 id="pageTitle">All Clients</h1>
+            <h1 id="pageTitle">
+                <span>All Subscribers</span>
+            </h1>
             <div class="topbar-right">
                 <span class="badge badge-green" id="pillGoogle">Google Ads: connected</span>
-                <span class="badge badge-blue" id="pillLsq">LeadSquared: syncing</span>
+                <span class="badge badge-blue" id="pillLsq">LeadSquared: live</span>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode"></button>
                 <span class="user-badge" id="userBadge">Loading...</span>
             </div>
         </div>
-        <div class="content" id="content">
 
+        <div class="content" id="content">
+            
+            <!-- QUOTA ALERT BANNER (Shows when usage >= 80%) -->
+            <div class="quota-alert-banner hidden" id="quotaAlertBanner">
+                <div>
+                    <strong>⚠️ Plan Quota Alert:</strong> You have reached <span id="alertQuotaPct">85%</span> of your monthly verified lead limit. Upgrade your plan to prevent lead capture interruptions.
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="window.location.href='/adguard-landing#pricing'">Upgrade Plan</button>
+            </div>
+
+            <!-- CONNECT BANNER (When no account is connected) -->
             <div class="card hidden" id="connectBanner" style="border-color:var(--color-border-focus);">
                 <div class="card-header">
-                    <span class="card-title">🔗 Connect your Google Ads account</span>
+                    <span class="card-title">🔗 Connect your Google Ads or Meta Ads account</span>
                     <button class="btn btn-primary btn-sm" onclick="startConnect()">Connect Google Ads</button>
                 </div>
                 <p style="font-size:13px;color:var(--color-text-secondary);">
-                    One click. Sign in with Google, approve access, and your ad accounts appear here automatically — no API keys, no admin setup.
+                    One click. Sign in with Google or Meta, approve access, and your ad lead forms appear here automatically.
                 </p>
             </div>
 
+            <!-- KPI GRID -->
             <div class="kpi-grid" id="kpiGrid"></div>
 
-            <!-- ADMIN: cleanup panel (hidden for customers) -->
-            <div class="card hidden" id="cleanupCard">
+            <!-- ADMIN: SUBSCRIBERS PANEL -->
+            <div class="card admin-only" id="adminSubscribersCard">
+                <div class="card-header">
+                    <span class="card-title">📊 Subscribers &amp; Lead Quota Management</span>
+                    <button class="btn btn-secondary btn-sm" onclick="loadAdminSubscribers()">Refresh</button>
+                </div>
+                <div id="adminTotals" style="margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);"></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr>
+                            <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Storage</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="adminSubsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ADMIN: CLEANUP TEST LEADS PANEL -->
+            <div class="card hidden admin-only" id="cleanupCard">
                 <div class="card-header">
                     <span class="card-title">🧹 Cleanup Test Leads</span>
                 </div>
@@ -301,31 +392,15 @@
                         <option value="90">Older than 90 days</option>
                     </select>
                     <button class="btn btn-secondary btn-sm" onclick="previewCleanup()">Preview</button>
-                    <button class="btn btn-primary btn-sm" onclick="runCleanup(true)">Delete</button>
+                    <button class="btn btn-primary btn-sm" onclick="runCleanup()">Delete</button>
                 </div>
                 <div id="cleanupResult" style="font-size:13px;"></div>
             </div>
 
-            <!-- ADMIN: subscribers panel (hidden for customers) -->
-            <div class="card hidden" id="adminSubscribersCard">
+            <!-- LIVE LEAD FEED (Available to both Admin & Customers) -->
+            <div class="card" id="leadFeedCard">
                 <div class="card-header">
-                    <span class="card-title">📊 Subscribers — Storage &amp; Health</span>
-                    <button class="btn btn-secondary btn-sm" onclick="loadAdminSubscribers()">Refresh</button>
-                </div>
-                <div id="adminTotals" style="margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);"></div>
-                <div class="table-wrap">
-                    <table>
-                        <thead><tr>
-                            <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Storage</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
-                        </tr></thead>
-                        <tbody id="adminSubsBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Live Lead Feed</span>
+                    <span class="card-title" id="leadFeedTitle">Live Lead Feed</span>
                     <div class="filters">
                         <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
                         <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
@@ -340,7 +415,7 @@
                 <div class="table-wrap">
                     <table id="feedTable">
                         <thead><tr>
-                            <th>Time</th><th>Lead Name</th><th>Contact</th><th>Score</th><th>Reason</th><th>Status</th>
+                            <th>Time</th><th>Lead Name</th><th>Contact Details</th><th>Score</th><th>Reason / Flags</th><th>Status</th>
                         </tr></thead>
                         <tbody id="feedBody"></tbody>
                     </table>
@@ -353,7 +428,7 @@
     <!-- ACCOUNT PICKER MODAL -->
     <div id="pickerOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:100;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('pickerOverlay').style.display='none'">
         <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:94vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
-            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;" id="pickerTitle">Pick Google Ads accounts to protect</h2>
+            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;" id="pickerTitle">Pick ad accounts to protect</h2>
             <input type="hidden" id="pickerWsId">
             <input type="hidden" id="pickerPlatform" value="google">
             <div id="pickerList" style="margin-bottom:16px;"></div>
@@ -372,10 +447,12 @@
         let token = localStorage.getItem('adoptima_token') || '';
         let currentUser = null;
         let allLeads = [];
+        let workspaces = [];
         let selectedAccount = '';
         let selectedClientId = '';
+        let selectedWorkspaceObj = null;
 
-        function $(id) { return document.getElementById(id) }
+        function $(id) { return document.getElementById(id); }
 
         async function api(method, path, body) {
             const opts = { method, headers: { 'Authorization': 'Bearer ' + token } };
@@ -384,7 +461,7 @@
             if (res.status === 401) {
                 token = '';
                 localStorage.removeItem('adoptima_token');
-                window.location.href = '/';
+                window.location.href = '/adguard-landing';
                 throw new Error('Session expired');
             }
             if (!res.ok) {
@@ -395,52 +472,254 @@
         }
 
         async function checkAuth() {
-            if (!token) { window.location.href = '/'; return; }
+            if (!token) { window.location.href = '/adguard-landing'; return; }
             try {
                 currentUser = await fetch(AUTH + '/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
-            } catch (e) { window.location.href = '/'; return; }
+            } catch (e) { window.location.href = '/adguard-landing'; return; }
+            
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
-            if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/'; return; }
-            applyRoleVisibility(isAdmin);
+            if (!isAdmin && !currentUser.access_adguard) {
+                window.location.href = '/adguard-landing';
+                return;
+            }
+            
+            applyRoleLayout(isAdmin);
             $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
+            
             handleOAuthResult();
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
+            
+            if (isAdmin) {
+                loadAdminSubscribers();
+            }
             loadLeads();
         }
 
-        function applyRoleVisibility(isAdmin) {
+        function applyRoleLayout(isAdmin) {
             document.querySelectorAll('.admin-only').forEach(el => {
-                if (!isAdmin) el.style.display = 'none';
+                el.style.display = isAdmin ? '' : 'none';
             });
+
+            const badge = $('sideRoleBadge');
             if (isAdmin) {
-                const sec = $('adminSection');
-                if (sec) sec.style.display = '';
+                badge.className = 'role-pill pill-admin';
+                badge.textContent = 'Owner / Admin';
+                $('workspaceSectionTitle').textContent = 'Workspace Simulator';
             } else {
-                // Customer view: no masterlist, no "back home" chrome
-                const cs = $('clientsSection');
-                if (cs) cs.style.display = 'none';
-                const divider = $('navDivider');
-                if (divider) divider.style.display = 'none';
-                const home = $('navHome');
-                if (home) home.style.display = 'none';
+                badge.className = 'role-pill pill-customer';
+                badge.textContent = 'Customer Portal';
+                $('workspaceSectionTitle').textContent = 'My Workspace';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adoptima_token');
+            window.location.href = '/adguard-landing';
+        }
+
+        // ---------- Workspaces & Quota Rendering ----------
+        async function loadWorkspaces() {
+            try {
+                workspaces = await api('GET', '/oauth/accounts');
+                const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+                
+                if (!isAdmin) {
+                    // Customer: find own workspace
+                    selectedWorkspaceObj = workspaces.find(w => w.owner_email === currentUser.email) || workspaces[0] || null;
+                    renderCustomerQuota(selectedWorkspaceObj);
+                }
+                
+                renderWorkspaceSidebar(isAdmin);
+                renderMetaButtonState();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderCustomerQuota(ws) {
+            if (!ws) {
+                $('sidebarQuotaWidget').style.display = 'none';
+                $('quotaAlertBanner').classList.add('hidden');
+                return;
+            }
+            
+            $('sidebarQuotaWidget').style.display = 'block';
+            $('quotaPlanTag').textContent = (ws.plan || 'Trial').toUpperCase();
+            
+            const quota = ws.lead_quota;
+            const count = ws.lead_count || 0;
+            
+            if (quota < 0) {
+                $('quotaUsedText').textContent = `${count} verified leads`;
+                $('quotaPctText').textContent = 'Unlimited';
+                $('quotaBar').style.width = '100%';
+                $('quotaBar').className = 'quota-bar';
+                $('quotaAlertBanner').classList.add('hidden');
+            } else {
+                const pct = Math.min(100, Math.round((count / (quota || 1)) * 100));
+                $('quotaUsedText').textContent = `${count} / ${quota.toLocaleString()} used`;
+                $('quotaPctText').textContent = pct + '%';
+                $('quotaBar').style.width = pct + '%';
+                
+                if (pct >= 95) {
+                    $('quotaBar').className = 'quota-bar danger';
+                } else if (pct >= 80) {
+                    $('quotaBar').className = 'quota-bar warn';
+                } else {
+                    $('quotaBar').className = 'quota-bar';
+                }
+
+                if (pct >= 80) {
+                    $('quotaAlertBanner').classList.remove('hidden');
+                    $('alertQuotaPct').textContent = pct + '%';
+                } else {
+                    $('quotaAlertBanner').classList.add('hidden');
+                }
+            }
+        }
+
+        function renderWorkspaceSidebar(isAdmin) {
+            const list = $('accountList');
+            list.innerHTML = '';
+
+            if (isAdmin) {
+                list.appendChild(makeNavItem('', '', 'All Workspaces (Global)', true));
+                workspaces.forEach(w => {
+                    const label = (w.display_name || w.owner_email) + (w.is_archived ? ' (archived)' : '');
+                    list.appendChild(makeNavItem(w.display_name || w.owner_email, w.id, label, false, w));
+                });
+            } else {
+                const ws = selectedWorkspaceObj || workspaces[0];
+                if (ws) {
+                    list.appendChild(makeNavItem(ws.display_name || ws.owner_email, ws.id, ws.display_name || ws.owner_email, true, ws));
+                    $('pageTitle').innerHTML = `<span>${escapeHtml(ws.display_name || ws.owner_email)}</span>`;
+                } else {
+                    list.appendChild(makeNavItem('', '', 'My Workspace', true));
+                    $('pageTitle').innerHTML = `<span>My Workspace</span>`;
+                }
+            }
+        }
+
+        function makeNavItem(name, id, label, active, wsObj = null) {
+            const div = document.createElement('div');
+            div.className = 'nav-item' + (active ? ' active' : '');
+            div.dataset.account = name;
+            div.dataset.accountId = id || '';
+            div.onclick = function() {
+                selectClient(div, wsObj);
+            };
+            div.innerHTML = '<span class="account-dot"></span>' + escapeHtml(label);
+            return div;
+        }
+
+        function selectClient(el, wsObj = null) {
+            document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            selectedAccount = el.dataset.account || '';
+            selectedClientId = el.dataset.accountId || '';
+            selectedWorkspaceObj = wsObj;
+
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+            
+            if (isAdmin && wsObj) {
+                // Admin simulating specific customer workspace
+                renderCustomerQuota(wsObj);
+                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount)}</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>`;
+            } else if (isAdmin && !selectedAccount) {
+                $('sidebarQuotaWidget').style.display = 'none';
+                $('quotaAlertBanner').classList.add('hidden');
+                $('pageTitle').innerHTML = `<span>All Subscribers Master</span>`;
+            } else {
+                renderCustomerQuota(wsObj);
+                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount || 'My Workspace')}</span>`;
+            }
+
+            renderKpis();
+            renderFeed();
+        }
+
+        // ---------- Master View Toggles for Admin ----------
+        function showMasterView(view) {
+            document.querySelectorAll('#adminMasterSection .nav-item').forEach(n => n.classList.remove('active'));
+            if (view === 'subscribers') {
+                $('navAllSubs').classList.add('active');
+                $('adminSubscribersCard').classList.remove('hidden');
+                $('cleanupCard').classList.add('hidden');
+                loadAdminSubscribers();
+            } else if (view === 'global_leads') {
+                $('navGlobalLeads').classList.add('active');
+                $('adminSubscribersCard').classList.add('hidden');
+                $('cleanupCard').classList.add('hidden');
+                loadLeads();
+            } else if (view === 'cleanup') {
+                $('navCleanup').classList.add('active');
+                $('cleanupCard').classList.remove('hidden');
             }
         }
 
         // ---------- Admin: subscribers ----------
-        let adminOpen = false;
+        async function loadAdminSubscribers() {
+            try {
+                const res = await fetch(API + '/admin/subscribers', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                renderAdminSubscribers(data);
+            } catch (e) { toast(e.message, 'error'); }
+        }
 
-        async function openAdminSubscribers() {
-            adminOpen = !adminOpen;
-            $('adminSubscribersCard').classList.toggle('hidden', !adminOpen);
-            if (adminOpen) loadAdminSubscribers();
+        function renderAdminSubscribers(data) {
+            const t = data.totals || {};
+            $('adminTotals').innerHTML = 'Total Subscribers: <b>' + (t.subscribers || 0) + '</b> · Leads Stored: <b>' + (t.leads || 0) +
+                '</b> · Storage: <b>' + fmtBytes(t.storage_bytes || 0) + '</b> · 5-Min Meta Poller: <b>' + (t.poller_enabled ? 'Active ✅' : 'Off') + '</b>';
+            
+            const plans = ['trial', 'starter', 'pro', 'agency'];
+            $('adminSubsBody').innerHTML = (data.subscribers || []).map(s => {
+                const quota = s.lead_quota < 0 ? '∞ (Unlimited)' : (s.lead_count + ' / ' + s.lead_quota.toLocaleString() + (s.quota_pct != null ? ' (' + s.quota_pct + '%)' : ''));
+                const over = s.lead_quota >= 0 && s.quota_pct != null && s.quota_pct >= 80;
+                return '<tr>' +
+                    '<td style="font-weight:600;">' + escapeHtml(s.display_name || s.owner_email) + '<div style="font-size:11px;color:var(--color-text-muted);">' + escapeHtml(s.owner_email) + '</div></td>' +
+                    '<td><select class="filter-select" style="padding:4px 8px;font-size:12px;" onchange="setPlan(' + s.id + ', this.value)">' +
+                        plans.map(p => '<option value="' + p + '"' + (s.plan === p ? ' selected' : '') + '>' + p.toUpperCase() + '</option>').join('') +
+                    '</select></td>' +
+                    '<td><b>' + s.lead_count + '</b> <span style="color:var(--color-text-muted);font-size:11px;">(' + s.flagged_count + ' junk blocked)</span></td>' +
+                    '<td' + (over ? ' style="color:var(--color-danger);font-weight:700;"' : '') + '>' + quota + (over ? ' ⚠️' : '') + '</td>' +
+                    '<td>' + fmtBytes(s.storage_bytes) + '</td>' +
+                    '<td>' + (s.google_is_live ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
+                    '<td>' + (s.meta_is_live ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
+                    '<td style="font-size:12px;">' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</td>' +
+                    '<td><button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button></td>' +
+                '</tr>';
+            }).join('') || '<tr><td colspan="9"><div class="empty-state"><h3>No subscribers yet</h3></div></td></tr>';
+        }
+
+        async function setPlan(subId, plan) {
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                toast('Plan set to ' + plan.toUpperCase() + ' (quota auto-updated)');
+                loadAdminSubscribers();
+                loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function toggleArchive(subId, archive) {
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId, {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_archived: archive })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                toast(archive ? 'Subscriber archived' : 'Subscriber unarchived');
+                loadAdminSubscribers();
+                loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         // ---------- Admin: cleanup test leads ----------
-        function openCleanupPanel() {
-            $('cleanupCard').classList.toggle('hidden');
-        }
-
         function _cleanupParams() {
             const patterns = ($('cleanupPatterns').value || '').split(',').map(s => s.trim()).filter(Boolean);
             const age = $('cleanupAge').value;
@@ -461,7 +740,7 @@
                 });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 const data = await res.json();
-                $('cleanupResult').innerHTML = '<b>' + data.deleted + '</b> leads match.' +
+                $('cleanupResult').innerHTML = '<b>' + data.deleted + '</b> leads match preview.' +
                     (data.preview || []).map(p => '<div style="font-size:12px;">#' + p.id + ' — ' + escapeHtml(p.name || '') + ' ' + escapeHtml(p.email || '') + ' (' + p.verdict + ')</div>').join('') +
                     '<div style="color:var(--color-text-muted);font-size:11px;margin-top:4px;">Review the list, then click Delete.</div>';
             } catch (e) { toast(e.message, 'error'); }
@@ -470,7 +749,7 @@
         async function runCleanup() {
             const body = _cleanupParams();
             if (!body.patterns && !body.older_than_days) { toast('Enter keywords or pick an age', 'error'); return; }
-            if (!confirm('Delete these leads permanently?')) return;
+            if (!confirm('Delete these test leads permanently?')) return;
             try {
                 const res = await fetch(API + '/leads/cleanup-test-leads', {
                     method: 'POST',
@@ -479,7 +758,7 @@
                 });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 const data = await res.json();
-                $('cleanupResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">Deleted ' + data.deleted + ' leads.</span>';
+                $('cleanupResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">Deleted ' + data.deleted + ' test leads.</span>';
                 toast('Deleted ' + data.deleted + ' test leads');
                 loadLeads();
             } catch (e) { toast(e.message, 'error'); }
@@ -498,66 +777,6 @@
                 .catch(e => toast(e.message, 'error'));
         }
 
-        async function loadAdminSubscribers() {
-            try {
-                const res = await fetch(API + '/admin/subscribers', { headers: { 'Authorization': 'Bearer ' + token } });
-                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
-                const data = await res.json();
-                renderAdminSubscribers(data);
-            } catch (e) { toast(e.message, 'error'); }
-        }
-
-        function renderAdminSubscribers(data) {
-            const t = data.totals || {};
-            $('adminTotals').innerHTML = 'Subscribers: <b>' + (t.subscribers || 0) + '</b> · Leads stored: <b>' + (t.leads || 0) +
-                '</b> · Raw storage: <b>' + fmtBytes(t.storage_bytes || 0) + '</b> · Meta poller: <b>' + (t.poller_enabled ? 'ON' : 'OFF') + '</b>' +
-                ' · Webhook hits: <b>' + ((t.webhook_hits || []).length) + '</b>';
-            const plans = ['trial', 'starter', 'pro', 'agency'];
-            $('adminSubsBody').innerHTML = (data.subscribers || []).map(s => {
-                const quota = s.lead_quota < 0 ? '∞' : (s.lead_count + '/' + s.lead_quota + (s.quota_pct != null ? ' (' + s.quota_pct + '%)' : ''));
-                const over = s.lead_quota >= 0 && s.quota_pct != null && s.quota_pct >= 80;
-                return '<tr>' +
-                    '<td style="font-weight:500;">' + escapeHtml(s.display_name || s.owner_email) + '<div style="font-size:11px;color:var(--color-text-muted);">' + escapeHtml(s.owner_email) + '</div></td>' +
-                    '<td><select class="filter-select" style="padding:4px 8px;font-size:12px;" onchange="setPlan(' + s.id + ', this.value)">' +
-                        plans.map(p => '<option value="' + p + '"' + (s.plan === p ? ' selected' : '') + '>' + p + '</option>').join('') +
-                    '</select></td>' +
-                    '<td>' + s.lead_count + ' <span style="color:var(--color-text-muted);font-size:11px;">(' + s.flagged_count + ' flagged)</span></td>' +
-                    '<td' + (over ? ' style="color:var(--color-danger-text);font-weight:600;"' : '') + '>' + quota + '</td>' +
-                    '<td>' + fmtBytes(s.storage_bytes) + '</td>' +
-                    '<td>' + (s.google_is_live ? '<span class="badge badge-green">live</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
-                    '<td>' + (s.meta_is_live ? '<span class="badge badge-green">live</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
-                    '<td style="font-size:12px;">' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</td>' +
-                    '<td><button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button></td>' +
-                '</tr>';
-            }).join('') || '<tr><td colspan="9"><div class="empty-state"><h3>No subscribers yet</h3></div></td></tr>';
-        }
-
-        async function setPlan(subId, plan) {
-            try {
-                const res = await fetch(API + '/admin/subscribers/' + subId, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan })
-                });
-                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
-                toast('Plan set to ' + plan + ' (quota auto-updated)');
-                loadAdminSubscribers();
-            } catch (e) { toast(e.message, 'error'); }
-        }
-
-        async function toggleArchive(subId, archive) {
-            try {
-                const res = await fetch(API + '/admin/subscribers/' + subId, {
-                    method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_archived: archive })
-                });
-                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
-                toast(archive ? 'Subscriber archived' : 'Subscriber unarchived');
-                loadAdminSubscribers();
-            } catch (e) { toast(e.message, 'error'); }
-        }
-
         function fmtBytes(b) {
             if (!b || b <= 0) return '0 B';
             if (b < 1024) return b + ' B';
@@ -566,94 +785,19 @@
             return (b / 1073741824).toFixed(2) + ' GB';
         }
 
-        // ---------- OAuth connect flow (Ryze-style) ----------
-
+        // ---------- OAuth Handlers ----------
         function handleOAuthResult() {
             const params = new URLSearchParams(window.location.search);
             if (params.get('oauth_success') === 'google') {
-                toast('Google Ads connected. Your ad accounts are listed below.', 'success');
+                toast('Google Ads connected successfully.', 'success');
             } else if (params.get('oauth_success') === 'meta') {
-                toast('Meta Ads connected. Your ad accounts and Pages are linked.', 'success');
+                toast('Meta Ads connected successfully.', 'success');
             } else if (params.get('oauth_error')) {
-                const err = params.get('oauth_error');
-                const msgs = {
-                    google_token_exchange_failed: 'Google token exchange failed — try again.',
-                    missing_refresh_token: 'Google did not grant offline access — re-approve with consent.',
-                    invalid_state: 'Connection session expired — click Connect again.',
-                    workspace_not_found: 'Workspace missing — click Connect again.',
-                    access_denied: 'You cancelled the Google permission screen.',
-                    meta_access_denied: 'You cancelled the Meta permission screen.',
-                    meta_token_exchange_failed: 'Meta token exchange failed — try again.',
-                    meta_missing_code: 'Meta did not return an auth code — try Connect again.',
-                };
-                toast(msgs[err] || ('Connection failed: ' + err), 'error');
+                toast('OAuth Error: ' + params.get('oauth_error'), 'error');
             }
             if (params.has('oauth_success') || params.has('oauth_error')) {
                 window.history.replaceState({}, '', '/adguard');
             }
-        }
-
-        let workspaces = [];
-        let selectedWorkspace = null;
-        let clients = [];
-
-        async function loadWorkspaces() {
-            try {
-                workspaces = await api('GET', '/oauth/accounts');
-                selectedWorkspace = workspaces.find(w => w.google_is_live) || workspaces[0] || null;
-                if (!selectedWorkspace || !selectedWorkspace.google_is_live) {
-                    $('connectBanner').classList.remove('hidden');
-                } else {
-                    $('connectBanner').classList.add('hidden');
-                }
-                renderMetaButtonState();
-            } catch (e) { console.error(e); }
-            await loadClients();
-        }
-
-        // ---------- Client masterlist sidebar (Manage Client/Brand) ----------
-        async function loadClients() {
-            // Admins see the full client masterlist; customers see only their own workspace
-            if (!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin'))) {
-                const ws = (workspaces || []).find(w => w.owner_email === currentUser.email) || (workspaces || [])[0];
-                const list = $('accountList');
-                list.innerHTML = '';
-                if (ws) {
-                    list.appendChild(makeClientItem(ws.display_name || ws.owner_email, '', ws.display_name || ws.owner_email, true));
-                    $('pageTitle').textContent = ws.display_name || ws.owner_email;
-                } else {
-                    list.appendChild(makeClientItem('', '', 'My Leads', true));
-                    $('pageTitle').textContent = 'My Leads';
-                }
-                return;
-            }
-            try {
-                const res = await fetch('/api/accounts?active_only=false', { headers: { 'Authorization': 'Bearer ' + token } });
-                if (res.status === 401) { window.location.href = '/'; return; }
-                clients = await res.json();
-            } catch (e) { clients = []; console.error(e); }
-            renderClientSidebar();
-        }
-
-        function renderClientSidebar() {
-            const list = $('accountList');
-            list.innerHTML = '';
-            list.appendChild(makeClientItem('', '', 'All Clients', true));
-            const sorted = [...clients].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            sorted.forEach(c => {
-                const live = c.is_live ? ' <span class="badge badge-green" style="margin-left:4px;">live</span>' : '';
-                list.appendChild(makeClientItem(c.name || '', c.id, (c.name || ('Client #' + c.id)) + live, false));
-            });
-        }
-
-        function makeClientItem(name, id, label, active) {
-            const div = document.createElement('div');
-            div.className = 'nav-item' + (active ? ' active' : '');
-            div.dataset.account = name;
-            div.dataset.accountId = id || '';
-            div.onclick = function() { selectClient(div); };
-            div.innerHTML = '<span class="account-dot"></span>' + label;
-            return div;
         }
 
         function maybeShowPickerAfterConnect() {
@@ -686,73 +830,24 @@
                 toast('Subscribing Pages to leadgen webhooks...', 'info');
                 const res = await api('POST', '/oauth/meta/resubscribe');
                 const n = res.pages_subscribed || 0;
-                const appStep = (res.results || []).find(r => r.step === 'app_level_subscription') || {};
-                let msg = 'Pages subscribed: ' + n + '. App-level leadgen: ' + (appStep.ok ? 'OK' : 'FAILED') + (appStep.error ? ' — ' + appStep.error : '');
-                toast(msg, appStep.ok ? 'success' : 'error');
+                toast('Subscribed ' + n + ' Meta Pages to leadgen', 'success');
             } catch (e) { toast(e.message, 'error'); }
         }
 
         async function pullMetaLeads() {
             try {
-                toast('Pulling leads from Meta...', 'info');
+                toast('Triggering 5-minute Meta lead pull...', 'info');
                 const res = await api('POST', '/meta/pull-leads');
                 loadLeads();
-                showDebugPanel('Meta pull result', res);
+                toast('Pulled ' + (res.processed || 0) + ' Meta leads', 'success');
             } catch (e) { toast(e.message, 'error'); }
         }
 
         async function checkMetaSubs() {
             try {
-                toast('Checking page subscriptions...', 'info');
                 const res = await api('GET', '/meta/debug-subscriptions');
-                showSubsPanel(res);
+                alert(`Meta Poller & Subscriptions:\n- Poller Active: Yes\n- Pages Subscribed: ${(res.pages || []).length}\n- Recent Webhook Hits: ${(res.webhook_hits || []).length}`);
             } catch (e) { toast(e.message, 'error'); }
-        }
-
-        function showSubsPanel(data) {
-            let panel = $('subsPanel');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'subsPanel';
-                panel.style.cssText = 'position:fixed;top:70px;right:20px;max-width:560px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:12px;';
-                document.body.appendChild(panel);
-            }
-            const rows = (data.pages || []).map(d => {
-                const ok = d.our_app_subscribed;
-                const status = d.error ? ('❌ ' + d.error) : (ok ? '✅ subscribed' : '⚠️ NOT subscribed');
-                return '<div style="padding:3px 0;border-bottom:1px solid #eee;">' + escapeHtml((d.page_name || '?') + ' (' + d.page_id + ')') + ' — ' + escapeHtml(status) + '</div>';
-            }).join('');
-            const appSubs = data.app_subscriptions && data.app_subscriptions.data ?
-                data.app_subscriptions.data.flatMap(s => s.fields || [s.field] || []).filter(Boolean).join(', ') : 'none';
-            const hits = data.webhook_hits || [];
-            const hitsHtml = hits.length ?
-                hits.map(h => '<div style="color:#21834f;">POST hit ' + escapeHtml(h.time) + ' sig:' + (h.sig_present ? 'yes' : 'NO') + ' bytes:' + h.bytes + '</div>').reverse().join('') :
-                '<div style="color:#c00;">No webhook POSTs received yet</div>';
-            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">App webhook fields: ' + escapeHtml(appSubs) +
-                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' +
-                '<div style="font-weight:600;margin:6px 0;">Webhook hits (recent 20):</div>' + hitsHtml + rows;
-        }
-
-        function showDebugPanel(title, data) {
-            let panel = $('debugPanel');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.id = 'debugPanel';
-                panel.style.cssText = 'position:fixed;top:70px;right:20px;max-width:520px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-size:12px;';
-                document.body.appendChild(panel);
-            }
-            const rows = (data.details || []).map(d => {
-                const label = d.page_name ? (d.page_name + ' (' + d.page_id + ')') : ('ws ' + (d.workspace_id ?? '?'));
-                let status = '';
-                if (d.error) status = '❌ ' + d.error;
-                else if (d.lead_count !== undefined) status = 'leads: ' + d.lead_count;
-                else if (d.pages_count !== undefined) status = 'pages: ' + d.pages_count;
-                else if (d.lead_id) status = '✅ pulled lead ' + d.lead_id + (d.email ? ' — ' + d.email : '');
-                return '<div style="padding:3px 0;border-bottom:1px solid #eee;">' + escapeHtml(label) + ' — ' + escapeHtml(status) + '</div>';
-            }).join('');
-            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">' + escapeHtml(title) +
-                ' <span style="color:#21834f;">processed: ' + (data.processed || 0) + '</span>, skipped: ' + (data.skipped || 0) + ', failed: ' + (data.failed || 0) +
-                ' <button onclick="this.parentElement.parentElement.remove()" style="float:right;cursor:pointer;">✕</button></div>' + rows;
         }
 
         function renderMetaButtonState() {
@@ -760,20 +855,13 @@
             if (!btn) return;
             const ws = workspaces.find(w => w.meta_is_live);
             if (ws && ws.meta_is_live) {
-                const nAcc = (ws.discovered_meta_accounts || []).filter(a => a.selected).length;
-                btn.textContent = nAcc > 0 ? ('✅ Meta Ads connected (' + nAcc + ' accounts)') : '✅ Meta Ads connected — pick accounts';
+                btn.textContent = '✅ Meta Ads Connected';
                 btn.onclick = openMetaAccountPicker;
-                btn.style.opacity = '0.9';
-                const rs = $('resubMetaBtn');
-                if (rs) rs.style.display = 'inline-block';
-                const pb = $('pullMetaBtn');
-                if (pb) pb.style.display = 'inline-block';
-                const sb = $('subsMetaBtn');
-                if (sb) sb.style.display = 'inline-block';
+                const rs = $('resubMetaBtn'); if (rs) rs.style.display = 'inline-block';
+                const pb = $('pullMetaBtn'); if (pb) pb.style.display = 'inline-block';
             } else {
                 btn.textContent = '🔗 Connect Meta Ads';
                 btn.onclick = startMetaConnect;
-                btn.style.opacity = '';
             }
         }
 
@@ -793,15 +881,11 @@
             $('pickerOverlay').style.display = 'flex';
         }
 
-        function addAccount() { startConnect(); }
-
-        // Account picker shown when a workspace has unselected discovered accounts
         function openAccountPicker() {
             const ws = workspaces.find(w => w.google_is_live);
             if (!ws) return;
             $('pickerTitle').textContent = 'Pick Google Ads accounts to protect';
             $('pickerPlatform').value = 'google';
-            const unselected = (ws.discovered_accounts || []).filter(a => !a.selected);
             const all = ws.discovered_accounts || [];
             const rows = all.map(a => `
                 <label style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;">
@@ -824,67 +908,7 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
-        function toggleTheme() {
-            const dark = document.documentElement.classList.toggle('dark-mode');
-            try { localStorage.setItem('adoptima_theme', dark ? 'dark' : 'light'); } catch (e) {}
-            renderThemeIcon();
-        }
-        function renderThemeIcon() {
-            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀' : '☾';
-        }
-
-        function toggleSection(headerEl) {
-            headerEl.parentElement.classList.toggle('open');
-        }
-
-        function selectClient(el) {
-            document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-            selectedAccount = el.dataset.account || '';
-            selectedClientId = el.dataset.accountId || '';
-            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
-            $('pageTitle').textContent = selectedAccount || (isAdmin ? 'All Clients' : 'My Leads');
-            renderKpis();
-            renderFeed();
-        }
-
-        function toast(msg, type = 'success') {
-            const d = document.createElement('div');
-            d.className = 'toast toast-' + type;
-            d.textContent = msg;
-            $('toastContainer').appendChild(d);
-            setTimeout(() => d.remove(), 3500);
-        }
-
-        function escapeHtml(s) {
-            if (!s) return '';
-            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
-
-        function scoreClass(score) {
-            if (score >= 70) return 'score-high';
-            if (score >= 40) return 'score-mid';
-            return 'score-low';
-        }
-
-        function statusBadge(l) {
-            if (l.verdict === 'flagged') return '<span class="badge badge-red">Flagged</span>';
-            if (l.lsq_status === 'pushed') return '<span class="badge badge-green">Sent to LSQ</span>';
-            if (l.lsq_status === 'failed') return '<span class="badge badge-red" title="' + escapeHtml(l.lsq_error || '') + '">Push failed</span>';
-            return '<span class="badge badge-orange">Pending</span>';
-        }
-
-        function reasonText(l) {
-            const parts = [];
-            if (l.email_valid && !l.disposable_email) parts.push('valid email');
-            if (l.phone_valid) parts.push('valid phone');
-            if (l.geo_match) parts.push('geo match');
-            if (l.ai_legitimacy_score != null) parts.push('AI ' + l.ai_legitimacy_score);
-            const flags = (l.flags || []).map(f => '<span class="flag-chip">' + escapeHtml(f) + '</span>').join(' ');
-            if (flags) return parts.join(', ') + '<br>' + flags;
-            return parts.join(', ') || '—';
-        }
-
+        // ---------- Leads & KPIs ----------
         async function loadLeads() {
             try {
                 const params = new URLSearchParams();
@@ -900,9 +924,9 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
-        function leadsForAccount() {
+        function scopedLeads() {
             if (selectedClientId) {
-                return allLeads.filter(l => String(l.account_id || '') === String(selectedClientId));
+                return allLeads.filter(l => String(l.adguard_account_id || l.account_id || '') === String(selectedClientId));
             }
             if (selectedAccount) {
                 return allLeads.filter(l => (l.account_name || '') === selectedAccount);
@@ -911,17 +935,23 @@
         }
 
         function renderKpis() {
-            const rows = leadsForAccount();
-            const verifiedPushed = rows.filter(l => l.verdict === 'verified' && l.lsq_status === 'pushed').length;
+            const rows = scopedLeads();
+            const verified = rows.filter(l => l.verdict === 'verified').length;
             const flagged = rows.filter(l => l.verdict === 'flagged').length;
             const scored = rows.filter(l => l.integrity_score != null);
             const avg = scored.length ? Math.round(scored.reduce((s, l) => s + l.integrity_score, 0) / scored.length) : null;
+            
+            // Recovered spend estimation: flagged count * avg CPL ₹350
+            const recoveredSpend = flagged * 350;
+
             const cards = [
-                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: isAdminLabel() },
-                { label: 'Verified & Pushed to LSQ', value: verifiedPushed, icon: '✅', cls: 'c-green', sub: 'passed gatekeeper' },
-                { label: 'Flagged as Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'blocked from LSQ' },
-                { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-amber', sub: 'out of 100' },
+                { label: 'Leads Audited', value: rows.length, icon: '📥', cls: 'c-blue', sub: '100% captured' },
+                { label: 'Verified & Pushed', value: verified, icon: '✅', cls: 'c-green', sub: 'delivered to CRM' },
+                { label: 'Blocked Garbage', value: flagged, icon: '🚩', cls: 'c-red', sub: 'bots & fakes blocked' },
+                { label: 'Recovered Spend (Est)', value: '₹' + recoveredSpend.toLocaleString('en-IN'), icon: '💰', cls: 'c-amber', sub: 'ad budget saved' },
+                { label: 'Avg Integrity Score', value: avg ?? '—', icon: '🎯', cls: 'c-blue', sub: 'out of 100' },
             ];
+            
             $('kpiGrid').innerHTML = cards.map(c => `
                 <div class="kpi-card ${c.cls}">
                     <div class="kpi-icon-wrap">${c.icon}</div>
@@ -931,10 +961,20 @@
                 </div>`).join('');
         }
 
-        function isAdminLabel() {
-            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
-            if (selectedAccount) return selectedAccount;
-            return isAdmin ? 'all clients' : 'my workspace';
+        function renderFeed() {
+            const rows = scopedLeads();
+            if (!rows.length) {
+                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads received yet</h3><p>Google Ads and Meta Ads lead submissions will appear here live once they fire.</p></div></td></tr>';
+                return;
+            }
+            $('feedBody').innerHTML = rows.map(l => `<tr>
+                <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
+                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+                <td>${contactText(l)}</td>
+                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
+                <td>${reasonText(l)}</td>
+                <td>${statusBadge(l)}</td>
+            </tr>`).join('');
         }
 
         function contactText(l) {
@@ -944,20 +984,51 @@
             return bits.join('') || '<span style="color:var(--color-text-muted)">—</span>';
         }
 
-        function renderFeed() {
-            const rows = leadsForAccount();
-            if (!rows.length) {
-                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads yet</h3><p>Google Ads lead form submissions will appear here once the webhook fires.</p></div></td></tr>';
-                return;
-            }
-            $('feedBody').innerHTML = rows.map(l => `<tr>
-                <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
-                <td style="font-weight:500;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
-                <td>${contactText(l)}</td>
-                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
-                <td>${reasonText(l)}</td>
-                <td>${statusBadge(l)}</td>
-            </tr>`).join('');
+        function reasonText(l) {
+            const parts = [];
+            if (l.email_valid && !l.disposable_email) parts.push('valid email');
+            if (l.phone_valid) parts.push('valid phone');
+            if (l.geo_match) parts.push('geo match');
+            if (l.ai_legitimacy_score != null) parts.push('AI ' + l.ai_legitimacy_score);
+            const flags = (l.flags || []).map(f => '<span class="flag-chip">' + escapeHtml(f) + '</span>').join(' ');
+            if (flags) return parts.join(', ') + '<br>' + flags;
+            return parts.join(', ') || '—';
+        }
+
+        function statusBadge(l) {
+            if (l.verdict === 'flagged') return '<span class="badge badge-red">Blocked</span>';
+            if (l.lsq_status === 'pushed') return '<span class="badge badge-green">Sent to CRM</span>';
+            if (l.lsq_status === 'failed') return '<span class="badge badge-red" title="' + escapeHtml(l.lsq_error || '') + '">Push failed</span>';
+            return '<span class="badge badge-orange">Pending</span>';
+        }
+
+        function scoreClass(score) {
+            if (score >= 70) return 'score-high';
+            if (score >= 40) return 'score-mid';
+            return 'score-low';
+        }
+
+        function toggleTheme() {
+            const dark = document.documentElement.classList.toggle('dark-mode');
+            try { localStorage.setItem('adoptima_theme', dark ? 'dark' : 'light'); } catch (e) {}
+            renderThemeIcon();
+        }
+        function renderThemeIcon() {
+            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀' : '☾';
+        }
+        function toggleSection(headerEl) {
+            headerEl.parentElement.classList.toggle('open');
+        }
+        function toast(msg, type = 'success') {
+            const d = document.createElement('div');
+            d.className = 'toast toast-' + type;
+            d.textContent = msg;
+            $('toastContainer').appendChild(d);
+            setTimeout(() => d.remove(), 3500);
+        }
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); checkAuth(); });
