@@ -692,9 +692,33 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
     return {"status": "ok", "selected": list(selected)}
 
 
+class WorkspaceSettingsRequest(BaseModel):
+    workspace_id: int
+    crm_preference: Optional[str] = None  # leadsquared|zoho|salesforce|hubspot|webhook|none
+
+
+VALID_CRMS = {"leadsquared", "zoho", "salesforce", "hubspot", "webhook", "none"}
+
+
+@router.post("/workspace/settings")
+def workspace_settings(req: WorkspaceSettingsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Per-workspace subscriber settings (CRM delivery target). Admin or owner."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    if req.crm_preference is not None:
+        if req.crm_preference not in VALID_CRMS:
+            raise HTTPException(status_code=400, detail="Invalid CRM choice")
+        ws.crm_preference = req.crm_preference
+    db.commit()
+    return {"status": "ok", "crm_preference": ws.crm_preference}
+
+
 @router.get("/oauth/accounts")
 def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """List my workspaces with connection + discovered account status + live lead count for quota display."""
     _require_adguard_access(user)
     q = db.query(AdGuardAccount)
     if user.role not in ("admin", "superadmin"):

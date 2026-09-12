@@ -982,6 +982,9 @@ class AdGuardAccount(Base):
     lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
     is_archived = Column(Boolean, default=False)
 
+    # Per-subscriber CRM delivery target (leadsquared | zoho | salesforce | hubspot | webhook | none)
+    crm_preference = Column(String(30), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1001,6 +1004,7 @@ class AdGuardAccount(Base):
             "plan_expires_at": self.plan_expires_at.isoformat() if self.plan_expires_at else None,
             "lead_quota": self.lead_quota,
             "is_archived": self.is_archived,
+            "crm_preference": self.crm_preference,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

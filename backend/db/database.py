@@ -186,6 +186,12 @@ def init_db():
             run_adguard_plan_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard plan columns migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard per-subscriber CRM preference
+        try:
+            from backend.migrations.add_adguard_crm_preference import run_migration as run_adguard_crm_migration
+            run_adguard_crm_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard crm_preference migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise

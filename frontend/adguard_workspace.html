@@ -249,6 +249,41 @@
                     <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
                 </div>
             </div>
+
+            <!-- CRM INTEGRATION (each subscriber connects their own CRM) -->
+            <div class="nav-section open" id="crmSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>CRM Delivery</span>
+                </div>
+                <div class="nav-section-items" style="padding:0 12px 8px;">
+                    <select class="filter-select" id="crmSelect" onchange="saveCrmPreference(this.value)" style="width:100%;font-size:12px;padding:6px 8px;">
+                        <option value="">Choose your CRM…</option>
+                        <option value="leadsquared">LeadSquared</option>
+                        <option value="zoho">Zoho CRM</option>
+                        <option value="salesforce">Salesforce</option>
+                        <option value="hubspot">HubSpot</option>
+                        <option value="webhook">Custom Webhook</option>
+                        <option value="none">None — keep in AdGuard only</option>
+                    </select>
+                    <div id="crmStatus" style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Verified leads held in AdGuard until a CRM is connected.</div>
+                </div>
+            </div>
+
+            <!-- MORE AD PLATFORMS (roadmap) -->
+            <div class="nav-section" id="morePlatformsSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>More Ad Platforms</span>
+                </div>
+                <div class="nav-section-items" style="padding:0 8px 8px;">
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">💼 LinkedIn Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🔍 Microsoft/Bing Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🎵 TikTok Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🐦 X (Twitter) Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">📌 Pinterest Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">👻 Snapchat Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">📦 Amazon Ads — coming soon</button>
+                </div>
+            </div>
         </div>
 
         <a href="/adguard" class="nav-back admin-only" id="navAdminBack" style="display:none;">← Back to Admin</a>
@@ -414,6 +449,7 @@
                 renderWorkspaceSidebar();
                 renderMetaButtonState();
                 renderConnPills();
+                renderCrmPreference();
             } catch (e) { console.error(e); }
         }
 
@@ -475,6 +511,40 @@
             } else {
                 $('connectBanner').classList.add('hidden');
             }
+        }
+
+        // ---------- CRM preference ----------
+        const CRM_LABELS = {
+            leadsquared: 'LeadSquared', zoho: 'Zoho CRM', salesforce: 'Salesforce',
+            hubspot: 'HubSpot', webhook: 'Custom Webhook', none: 'AdGuard only'
+        };
+
+        function renderCrmPreference() {
+            const sel = $('crmSelect');
+            const st = $('crmStatus');
+            if (!sel) return;
+            const pref = (selectedWorkspaceObj && selectedWorkspaceObj.crm_preference) || '';
+            sel.value = pref || '';
+            if (pref && pref !== 'none') {
+                st.textContent = '✅ ' + CRM_LABELS[pref] + ' selected — verified leads will deliver here once credentials are connected.';
+                st.style.color = 'var(--color-success-text)';
+            } else if (pref === 'none') {
+                st.textContent = 'Leads stay in AdGuard only. Export anytime via CSV.';
+                st.style.color = 'var(--color-text-muted)';
+            } else {
+                st.textContent = 'Verified leads held in AdGuard until a CRM is connected.';
+                st.style.color = 'var(--color-text-muted)';
+            }
+        }
+
+        async function saveCrmPreference(val) {
+            if (!val || !selectedWorkspaceObj) { renderCrmPreference(); return; }
+            try {
+                await api('POST', '/workspace/settings', { workspace_id: selectedWorkspaceObj.id, crm_preference: val });
+                selectedWorkspaceObj.crm_preference = val;
+                toast('CRM preference saved: ' + (CRM_LABELS[val] || val));
+                renderCrmPreference();
+            } catch (e) { toast(e.message, 'error'); renderCrmPreference(); }
         }
 
         // ---------- OAuth ----------
