@@ -1092,6 +1092,113 @@ def admin_update_subscriber(sub_id: int, req: PlanUpdateRequest, db: Session = D
     return ws.to_dict()
 
 
+class EditSubscriberRequest(BaseModel):
+    full_name: Optional[str] = None
+    plan: Optional[str] = None
+    lead_quota: Optional[int] = None
+    plan_expires_at: Optional[str] = None
+    is_archived: Optional[bool] = None
+    reset_password: Optional[bool] = None  # generates a new password, returned once
+
+
+@router.put("/admin/subscribers/{sub_id}/edit")
+def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Edit a subscriber: name, plan, quota, expiry, archive, password reset. Admin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    ws_user = db.query(User).filter(User.email == ws.owner_email).first()
+
+    if req.full_name is not None and req.full_name.strip():
+        ws.display_name = req.full_name.strip()
+        if ws_user:
+            ws_user.full_name = req.full_name.strip()
+
+    if req.plan is not None:
+        if req.plan not in PLAN_LIMITS:
+            raise HTTPException(status_code=400, detail="Invalid plan")
+        ws.plan = req.plan
+        ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
+
+    if req.lead_quota is not None:
+        ws.lead_quota = req.lead_quota
+
+    if req.plan_expires_at is not None:
+        try:
+            ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
+
+    if req.is_archived is not None:
+        ws.is_archived = req.is_archived
+
+    new_password = None
+    if req.reset_password:
+        import secrets as _secrets
+        from backend.routes.auth import get_password_hash
+        new_password = _secrets.token_urlsafe(8)
+        if ws_user:
+            ws_user.hashed_password = get_password_hash(new_password)
+            ws_user.onboarding_completed = True
+            ws_user.is_active = True
+
+    db.commit()
+    log_activity(
+        module="AdGuard",
+        action="Subscriber Edited",
+        description=f"Edited subscriber {ws.owner_email} (plan={ws.plan}, reset_password={bool(req.reset_password)})",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        entity_type="adguard_account",
+        entity_id=str(ws.id),
+        db=db,
+    )
+    return {
+        **ws.to_dict(),
+        "new_password": new_password,
+        "message": "New password generated — share it securely (shown only once)." if new_password else None,
+    }
+
+
+class DeleteSubscriberRequest(BaseModel):
+    confirm: str  # must be the subscriber's email, typed exactly
+
+
+@router.delete("/admin/subscribers/{sub_id}")
+def admin_delete_subscriber(sub_id: int, req: DeleteSubscriberRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Delete a subscriber permanently: workspace + leads + user login. Admin only. Cannot be undone."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    if (req.confirm or "").strip().lower() != (ws.owner_email or "").strip().lower():
+        raise HTTPException(status_code=400, detail="Confirmation email does not match — deletion aborted")
+
+    owner_email = ws.owner_email
+    deleted_leads = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).delete()
+    db.delete(ws)
+    # Remove the login user too (unless it's the admin's own account record)
+    ws_user = db.query(User).filter(User.email == owner_email, User.role == "user").first()
+    if ws_user:
+        db.delete(ws_user)
+    db.commit()
+
+    log_activity(
+        module="AdGuard",
+        action="Subscriber Deleted",
+        description=f"Deleted subscriber {owner_email} + {deleted_leads} leads + user login",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        entity_type="adguard_account",
+        entity_id=str(sub_id),
+        db=db,
+    )
+    return {"status": "ok", "deleted_leads": deleted_leads, "deleted_user": bool(ws_user)}
+
+
 class CreateSubscriberRequest(BaseModel):
     email: str
     full_name: str

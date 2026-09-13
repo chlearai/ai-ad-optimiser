@@ -437,6 +437,45 @@
 
     <div id="toastContainer"></div>
 
+    <!-- EDIT SUBSCRIBER MODAL (admin-only) -->
+    <div id="editSubOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:110;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--color-bg-modal, #fff);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:440px;max-width:94vw;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <h2 style="font-family:'DM Sans',sans-serif;font-size:16px;margin-bottom:12px;">✏️ Edit Subscriber</h2>
+            <input type="hidden" id="esId">
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:500;">Name / Company</label>
+                <input class="filter-input" id="esName" style="width:100%;">
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:500;">Plan (auto-sets quota)</label>
+                <select class="filter-select" id="esPlan" style="width:100%;">
+                    <option value="trial">Trial — 100 leads</option>
+                    <option value="starter">Starter — 1,000 leads</option>
+                    <option value="pro">Pro — 5,000 leads</option>
+                    <option value="agency">Agency — Unlimited</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:500;">Custom lead quota (overrides plan)</label>
+                <input class="filter-input" id="esQuota" type="number" placeholder="leave blank to use plan default" style="width:100%;">
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px;font-weight:500;">Plan expiry (optional)</label>
+                <input class="filter-input" id="esExpiry" type="date" style="width:100%;">
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                    <input type="checkbox" id="esResetPw"> Reset their password (new one shown once)
+                </label>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('editSubOverlay').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEditSubscriber()">Save Changes</button>
+            </div>
+            <div id="editSubResult" style="margin-top:12px;font-size:13px;display:none;"></div>
+        </div>
+    </div>
+
     <!-- CREATE SUBSCRIBER MODAL (admin-only) -->
     <div id="createSubOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:110;align-items:center;justify-content:center;" onclick="if(event.target===this)document.getElementById('createSubOverlayWrap').style.display='none'">
         <div id="createSubOverlayWrap" style="background:var(--color-bg-modal, #fff);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:440px;max-width:94vw;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
@@ -773,6 +812,8 @@
 
         function renderAdminSubscribers(data) {
             const t = data.totals || {};
+            _subsCache = {};
+            (data.subscribers || []).forEach(s => { _subsCache[s.id] = s; });
             $('adminTotals').innerHTML = 'Total Subscribers: <b>' + (t.subscribers || 0) + '</b> · Leads Stored: <b>' + (t.leads || 0) +
                 '</b> · Storage: <b>' + fmtBytes(t.storage_bytes || 0) + '</b> · 5-Min Meta Poller: <b>' + (t.poller_enabled ? 'Active ✅' : 'Off') + '</b>';
             
@@ -792,7 +833,9 @@
                     '<td>' + (s.meta_is_live ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">—</span>') + '</td>' +
                     '<td style="font-size:12px;">' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</td>' +
                     '<td style="white-space:nowrap;">' +
-                        '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace page exactly as the customer sees it">👁 View Page</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace page exactly as the customer sees it">👁</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="openEditSubscriber(' + s.id + ')" title="Edit name / plan / quota / reset password">✏️</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="deleteSubscriber(' + s.id + ', \'' + escapeHtml(s.owner_email) + '\')" title="Delete permanently" style="color:var(--color-danger);">🗑</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button>' +
                     '</td>' +
                 '</tr>';
@@ -896,6 +939,74 @@
         // ---------- Admin: open subscriber workspace page ----------
         function openWorkspacePage(wsId) {
             window.open('/adguard-workspace?ws=' + wsId, '_blank');
+        }
+
+        // ---------- Admin: edit subscriber ----------
+        let _subsCache = {};
+
+        function openEditSubscriber(subId) {
+            const s = _subsCache[subId];
+            if (!s) { toast('Refresh the list first', 'error'); return; }
+            $('esId').value = subId;
+            $('esName').value = s.display_name || s.owner_email;
+            $('esPlan').value = s.plan || 'trial';
+            $('esQuota').value = '';
+            $('esExpiry').value = s.plan_expires_at ? s.plan_expires_at.slice(0, 10) : '';
+            $('esResetPw').checked = false;
+            $('editSubResult').style.display = 'none';
+            $('editSubOverlay').style.display = 'flex';
+        }
+
+        async function submitEditSubscriber() {
+            const subId = parseInt($('esId').value);
+            const body = {};
+            if ($('esName').value.trim()) body.full_name = $('esName').value.trim();
+            if ($('esPlan').value) body.plan = $('esPlan').value;
+            if ($('esQuota').value !== '') body.lead_quota = parseInt($('esQuota').value);
+            if ($('esExpiry').value) body.plan_expires_at = $('esExpiry').value;
+            if ($('esResetPw').checked) body.reset_password = true;
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId + '/edit', {
+                    method: 'PUT',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                const box = $('editSubResult');
+                box.style.display = 'block';
+                if (data.new_password) {
+                    box.innerHTML = '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:8px;padding:10px;">Saved. New password: <b style="user-select:all;">' + escapeHtml(data.new_password) + '</b> (shown once)</div>';
+                } else {
+                    box.innerHTML = '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:8px;padding:10px;">✅ Saved.</div>';
+                    setTimeout(() => { $('editSubOverlay').style.display = 'none'; }, 700);
+                }
+                toast('Subscriber updated');
+                loadAdminSubscribers();
+                loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ---------- Admin: delete subscriber ----------
+        async function deleteSubscriber(subId, ownerEmail) {
+            const typed = prompt('PERMANENTLY DELETE this subscriber?\n\nThis removes their workspace, ALL their leads, and their login. Cannot be undone.\n\nType their email to confirm: ' + ownerEmail);
+            if (typed === null) return;
+            if (typed.trim().toLowerCase() !== String(ownerEmail).trim().toLowerCase()) {
+                toast('Email did not match — deletion aborted', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: typed.trim() })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                toast('Subscriber deleted (' + data.deleted_leads + ' leads removed)');
+                loadAdminSubscribers();
+                loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         // ---------- Admin: create subscriber ----------
