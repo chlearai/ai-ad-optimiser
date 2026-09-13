@@ -319,7 +319,6 @@
                 <span>All Subscribers</span>
             </h1>
             <div class="topbar-right">
-                <span class="badge badge-green" id="pillGoogle">Google Ads: connected</span>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark mode"></button>
                 <span class="user-badge" id="userBadge">Loading...</span>
             </div>
@@ -1130,14 +1129,11 @@
         function renderMetaButtonState() {
             const btn = $('addMetaBtn');
             if (!btn) return;
-            const ws = workspaces.find(w => w.meta_is_live);
-            if (ws && ws.meta_is_live) {
-                btn.textContent = '✅ Meta Ads Connected';
-                btn.onclick = openMetaAccountPicker;
-            } else {
-                btn.textContent = '🔗 Connect Meta Ads';
-                btn.onclick = startMetaConnect;
-            }
+            // Admin page: keep the connector neutral — connection state is visible
+            // per-subscriber in the Subscribers table (Google/Meta columns), not here.
+            btn.textContent = '🔗 Connect Meta Ads';
+            btn.onclick = startMetaConnect;
+        }
         }
 
         function openMetaAccountPicker() {
