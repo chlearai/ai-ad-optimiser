@@ -695,6 +695,9 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
 class WorkspaceSettingsRequest(BaseModel):
     workspace_id: int
     crm_preference: Optional[str] = None  # leadsquared|zoho|salesforce|hubspot|webhook|none
+    shield_enabled: Optional[bool] = None
+    shield_junk_threshold: Optional[int] = None
+    shield_min_leads: Optional[int] = None
 
 
 VALID_CRMS = {"leadsquared", "zoho", "salesforce", "hubspot", "webhook", "none"}
@@ -702,7 +705,7 @@ VALID_CRMS = {"leadsquared", "zoho", "salesforce", "hubspot", "webhook", "none"}
 
 @router.post("/workspace/settings")
 def workspace_settings(req: WorkspaceSettingsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Per-workspace subscriber settings (CRM delivery target). Admin or owner."""
+    """Per-workspace subscriber settings (CRM delivery target + Money Shield Layer 1). Admin or owner."""
     _require_adguard_access(user)
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
     if not ws:
@@ -713,8 +716,86 @@ def workspace_settings(req: WorkspaceSettingsRequest, db: Session = Depends(get_
         if req.crm_preference not in VALID_CRMS:
             raise HTTPException(status_code=400, detail="Invalid CRM choice")
         ws.crm_preference = req.crm_preference
+    if req.shield_enabled is not None:
+        ws.shield_enabled = req.shield_enabled
+    if req.shield_junk_threshold is not None:
+        if not (10 <= req.shield_junk_threshold <= 100):
+            raise HTTPException(status_code=400, detail="Junk threshold must be 10-100")
+        ws.shield_junk_threshold = req.shield_junk_threshold
+    if req.shield_min_leads is not None:
+        if not (5 <= req.shield_min_leads <= 10000):
+            raise HTTPException(status_code=400, detail="Min leads must be 5-10000")
+        ws.shield_min_leads = req.shield_min_leads
     db.commit()
-    return {"status": "ok", "crm_preference": ws.crm_preference}
+    return {
+        "status": "ok",
+        "crm_preference": ws.crm_preference,
+        "shield_enabled": ws.shield_enabled,
+        "shield_junk_threshold": ws.shield_junk_threshold,
+        "shield_min_leads": ws.shield_min_leads,
+    }
+
+
+class ShieldScanRequest(BaseModel):
+    workspace_id: Optional[int] = None  # blank = all shield-enabled workspaces (admin)
+
+
+@router.post("/shield/scan")
+def shield_scan(req: ShieldScanRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Run the Money Shield governor now (junk-rate scan + auto-pause). Admin or owner."""
+    _require_adguard_access(user)
+    from backend.services.adguard_shield import scan_workspace_shield, run_shield_scan_all
+
+    if req.workspace_id:
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+        if not ws:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+            raise HTTPException(status_code=403, detail="Not your workspace")
+        return scan_workspace_shield(db, ws)
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required for global scan")
+    return run_shield_scan_all(db)
+
+
+class ShieldExclusionsRequest(BaseModel):
+    workspace_id: int
+    days: int = 30
+
+
+@router.post("/shield/exclusions")
+def shield_exclusions(req: ShieldExclusionsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Build Google Customer Match + Meta Custom Audience exclusion payloads from flagged leads (FraudGraph)."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    from backend.services.adguard_shield import build_fraudgraph_exclusions
+    return build_fraudgraph_exclusions(db, req.workspace_id, days=max(1, min(req.days, 365)))
+
+
+@router.get("/shield/actions/{workspace_id}")
+def shield_actions(workspace_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Shield action log for a workspace (pauses, exclusions). Admin or owner."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    try:
+        actions = json.loads(ws.shield_actions or "[]")
+    except Exception:
+        actions = []
+    return {
+        "workspace_id": workspace_id,
+        "shield_enabled": bool(ws.shield_enabled),
+        "junk_threshold": ws.shield_junk_threshold,
+        "min_leads": ws.shield_min_leads,
+        "actions": actions,
+    }
 
 
 @router.get("/oauth/accounts")

@@ -985,6 +985,12 @@ class AdGuardAccount(Base):
     # Per-subscriber CRM delivery target (leadsquared | zoho | salesforce | hubspot | webhook | none)
     crm_preference = Column(String(30), nullable=True)
 
+    # Money Shield Layer 1 (prevention before spend)
+    shield_enabled = Column(Boolean, default=False)
+    shield_junk_threshold = Column(Integer, default=40)  # campaign junk-rate % that triggers auto-pause
+    shield_min_leads = Column(Integer, default=50)  # minimum leads in window before pausing
+    shield_actions = Column(Text, nullable=True)  # JSON log: [{time, action, campaign, detail}]
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1005,6 +1011,9 @@ class AdGuardAccount(Base):
             "lead_quota": self.lead_quota,
             "is_archived": self.is_archived,
             "crm_preference": self.crm_preference,
+            "shield_enabled": self.shield_enabled,
+            "shield_junk_threshold": self.shield_junk_threshold,
+            "shield_min_leads": self.shield_min_leads,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

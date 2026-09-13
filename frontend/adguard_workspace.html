@@ -269,6 +269,32 @@
                 </div>
             </div>
 
+            <!-- MONEY SHIELD (Layer 1 prevention) -->
+            <div class="nav-section open" id="shieldSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>🛡️ Money Shield</span>
+                </div>
+                <div class="nav-section-items" style="padding:0 12px 10px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;">
+                        <input type="checkbox" id="shieldToggle" onchange="saveShieldSetting('shield_enabled', this.checked)">
+                        <span>Stop junk <b>before</b> ad spend burns</span>
+                    </label>
+                    <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px;">
+                        Auto-pause campaigns with junk-rate above:
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                        <input class="filter-input" id="shieldThreshold" type="number" min="10" max="100" style="width:64px;padding:4px 8px;font-size:12px;" onchange="saveShieldSetting('shield_junk_threshold', parseInt(this.value))" value="40">
+                        <span style="font-size:11px;color:var(--color-text-muted);">% junk with min</span>
+                        <input class="filter-input" id="shieldMinLeads" type="number" min="5" max="10000" style="width:64px;padding:4px 8px;font-size:12px;" onchange="saveShieldSetting('shield_min_leads', parseInt(this.value))" value="50">
+                        <span style="font-size:11px;color:var(--color-text-muted);">leads/24h</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="runShieldScan()">🛡️ Run Shield Scan Now</button>
+                    <div id="shieldScanResult" style="font-size:11px;margin-top:6px;"></div>
+                    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;" onclick="viewShieldActions()">📜 Shield Action Log</button>
+                    <div id="shieldActionsBox" style="font-size:11px;margin-top:6px;display:none;max-height:200px;overflow-y:auto;"></div>
+                </div>
+            </div>
+
             <!-- MORE AD PLATFORMS (roadmap) -->
             <div class="nav-section" id="morePlatformsSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
@@ -450,6 +476,7 @@
                 renderMetaButtonState();
                 renderConnPills();
                 renderCrmPreference();
+                renderShield(selectedWorkspaceObj);
             } catch (e) { console.error(e); }
         }
 
@@ -736,6 +763,71 @@
                     URL.revokeObjectURL(a.href);
                 })
                 .catch(e => toast(e.message, 'error'));
+        }
+
+        // ---------- Money Shield (Layer 1) ----------
+        function renderShield(ws) {
+            if (!ws) return;
+            $('shieldToggle').checked = !!ws.shield_enabled;
+            $('shieldThreshold').value = ws.shield_junk_threshold != null ? ws.shield_junk_threshold : 40;
+            $('shieldMinLeads').value = ws.shield_min_leads != null ? ws.shield_min_leads : 50;
+        }
+
+        async function saveShieldSetting(key, value) {
+            if (!selectedWorkspaceObj) return;
+            const body = { workspace_id: selectedWorkspaceObj.id };
+            body[key] = value;
+            try {
+                const res = await fetch(API + '/workspace/settings', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                Object.assign(selectedWorkspaceObj, data);
+                toast(key === 'shield_enabled'
+                    ? (value ? '🛡️ Money Shield ON — junk campaigns will be paused before they burn budget' : 'Shield off')
+                    : 'Shield setting saved');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function runShieldScan() {
+            if (!selectedWorkspaceObj) { toast('No workspace selected', 'error'); return; }
+            try {
+                toast('Running shield scan...', 'info');
+                const res = await fetch(API + '/shield/scan', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workspace_id: selectedWorkspaceObj.id })
+                });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                const box = $('shieldScanResult');
+                if (!data.shield_enabled) {
+                    box.innerHTML = '<span style="color:var(--color-text-muted);">Shield is OFF — turn it on to enable auto-pause.</span>';
+                } else if ((data.breached || []).length) {
+                    box.innerHTML = '<span style="color:var(--color-danger-text);font-weight:600;">⚠️ ' + data.breached.length + ' campaign(s) breached:</span>' +
+                        data.breached.map(b => '<div>' + escapeHtml(b.campaign) + ' — ' + b.junk_pct + '% junk (' + b.flagged + '/' + b.leads_24h + ')</div>').join('');
+                } else {
+                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ Clean — ' + data.campaigns_scanned + ' campaign(s) scanned, none breached threshold.</span>';
+                }
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function viewShieldActions() {
+            if (!selectedWorkspaceObj) return;
+            const box = $('shieldActionsBox');
+            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+            try {
+                const res = await fetch(API + '/shield/actions/' + selectedWorkspaceObj.id, { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                box.style.display = 'block';
+                box.innerHTML = (data.actions || []).length
+                    ? data.actions.slice().reverse().map(a => '<div style="padding:2px 0;border-bottom:1px solid var(--color-border);">🛡️ <b>' + escapeHtml(a.action) + '</b> ' + escapeHtml(a.campaign || '') + '<br><span style="color:var(--color-text-muted);">' + escapeHtml(a.detail || '') + '</span></div>').join('')
+                    : '<span style="color:var(--color-text-muted);">No shield actions yet.</span>';
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         function toggleTheme() {

@@ -42,8 +42,26 @@ def start_scheduler():
     # AdGuard: poll Meta Pages for new leadgen leads every 5 minutes (webhook-free path)
     if os.getenv("ADGUARD_META_POLL_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_meta_poll, 'interval', minutes=5, id='adguard_meta_leads_poll', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=1))
+    # AdGuard Money Shield: junk-rate governor scan every 30 minutes (Layer 1 prevention)
+    if os.getenv("ADGUARD_SHIELD_ENABLED", "true").lower() in ("true", "1", "yes"):
+        _scheduler.add_job(_run_adguard_shield_scan, 'interval', minutes=30, id='adguard_shield_scan', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=5))
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
+
+
+def _run_adguard_shield_scan():
+    """AdGuard Money Shield governor: scan shield-enabled workspaces for junk-heavy campaigns."""
+    try:
+        from backend.services.adguard_shield import run_shield_scan_all
+        db = SessionLocal()
+        try:
+            summary = run_shield_scan_all(db)
+            if summary.get("campaigns_paused"):
+                logger.warning(f"[Shield scan] paused {summary['campaigns_paused']} campaign(s) across {summary['workspaces_scanned']} workspace(s)")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"AdGuard shield scan failed: {e}")
 
 
 def _run_crashclub_sync():
