@@ -252,6 +252,23 @@ def get_adguard_auth_url(adguard_account_id: int) -> str:
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
 
 
+def _effective_ads_creds(creds_plain: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge stored per-connection creds with current env config.
+
+    Customers connect BEFORE the owner finishes platform setup — stored blobs
+    can lack developer_token/client fields. Env (Railway) is always the
+    owner-controlled truth, so it fills any gaps. Customers never see config.
+    """
+    cfg = load_config()
+    return {
+        "refresh_token": creds_plain.get("refresh_token") or "",
+        "client_id": creds_plain.get("client_id") or cfg.get("google_client_id", ""),
+        "client_secret": creds_plain.get("client_secret") or cfg.get("google_client_secret", ""),
+        "developer_token": creds_plain.get("developer_token") or cfg.get("google_developer_token", ""),
+        "login_customer_id": creds_plain.get("login_customer_id") or "",
+    }
+
+
 def discover_google_ads_customers_detailed(credentials_json_encrypted: str) -> Dict[str, Any]:
     """Like discover_google_ads_customers but returns {'accounts': [...], 'error': str|None}
     so the Re-scan endpoint can surface the real failure to the user."""
@@ -259,12 +276,14 @@ def discover_google_ads_customers_detailed(credentials_json_encrypted: str) -> D
         from google.ads.googleads.client import GoogleAdsClient
 
         creds_plain = json.loads(decrypt(credentials_json_encrypted))
-        refresh_token = creds_plain.get("refresh_token") or ""
-        client_id = creds_plain.get("client_id") or ""
-        client_secret = creds_plain.get("client_secret") or ""
-        developer_token = creds_plain.get("developer_token") or ""
+        merged = _effective_ads_creds(creds_plain)
+        refresh_token = merged["refresh_token"]
+        client_id = merged["client_id"]
+        client_secret = merged["client_secret"]
+        developer_token = merged["developer_token"]
         if not all([refresh_token, client_id, client_secret, developer_token]):
-            return {"accounts": [], "error": "credentials incomplete (missing developer_token or secret)"}
+            missing = [k for k, v in (("refresh_token", refresh_token), ("client_id", client_id), ("client_secret", client_secret), ("developer_token", developer_token)) if not v]
+            return {"accounts": [], "error": f"setup incomplete on the platform side (missing: {', '.join(missing)}) — the owner has been notified; try again shortly"}
 
         client = GoogleAdsClient.load_from_dict({
             "developer_token": developer_token,
