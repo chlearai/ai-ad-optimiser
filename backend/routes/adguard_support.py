@@ -243,6 +243,49 @@ class ConnectionActionRequest(BaseModel):
     identity_email: Optional[str] = None  # for google: remove one login identity
 
 
+@router.post("/connections/rediscover")
+def rediscover_accounts(req: ConnectionActionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Re-run ad-account discovery with stored credentials. Surfaces real errors."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+    platform = (req.platform or "google").lower()
+
+    if platform == "google":
+        if not ws.google_is_live:
+            raise HTTPException(status_code=400, detail="Google not connected")
+        from backend.services.oauth import discover_google_ads_customers
+        discovered = discover_google_ads_customers(ws.google_credentials)
+        ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
+        ws.google_last_sync_at = datetime.utcnow()
+        db.commit()
+        return {"status": "ok", "platform": "google", "accounts_found": len(discovered), "accounts": discovered}
+
+    if platform == "meta":
+        if not ws.meta_is_live:
+            raise HTTPException(status_code=400, detail="Meta not connected")
+        from backend.services.adguard_meta import (
+            discover_meta_ad_accounts,
+            discover_meta_pages,
+            get_meta_token_from_credentials,
+        )
+        token = get_meta_token_from_credentials(ws.meta_credentials or "")
+        if not token:
+            raise HTTPException(status_code=400, detail="Meta token unreadable — reconnect Meta")
+        accounts = discover_meta_ad_accounts(token)
+        pages = discover_meta_pages(token)
+        ws.discovered_meta_accounts = json.dumps(accounts) if accounts else "[]"
+        ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
+        ws.meta_last_sync_at = datetime.utcnow()
+        db.commit()
+        return {"status": "ok", "platform": "meta", "accounts_found": len(accounts or []), "pages_found": len(pages or [])}
+
+    raise HTTPException(status_code=400, detail="platform must be google or meta")
+
+
 @router.post("/connections/disconnect")
 def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Disconnect an ad platform (or one Google identity) from a workspace. Keeps lead history."""

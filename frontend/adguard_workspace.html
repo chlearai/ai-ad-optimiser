@@ -1274,17 +1274,60 @@
                     const connected = info.connected;
                     const lastSync = info.last_sync_at ? info.last_sync_at.replace('T', ' ').slice(0, 16) : 'never';
                     const accs = (info.accounts || []);
-                    const accList = accs.length ? accs.map(a => '<div style="font-size:12px;padding:2px 0;">• ' + escapeHtml(a.name || a.id) + (a.formatted ? ' <span style="color:var(--color-text-muted)">(' + escapeHtml(a.formatted) + ')</span>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
+                    const identities = (info.identities || []);
+                    let identityHtml = '';
+                    if (platform === 'google' && identities.length) {
+                        identityHtml = '<div style="font-size:12px;margin:8px 0 4px;font-weight:600;">Connected email IDs:</div>' + identities.map(i =>
+                            '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
+                            '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
+                            '<span style="flex:1;">' + escapeHtml(i.email) + '</span>' +
+                            '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectIdentity(\'' + escapeHtml(i.email) + '\')">✕</button></div>'
+                        ).join('');
+                    }
+                    const accList = accs.length ? accs.map(a =>
+                        '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
+                        '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                        '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                        (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                    ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
                     return '<div style="border:1px solid var(--color-border);border-radius:12px;padding:16px;margin-bottom:12px;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +
-                        '<div>' + (connected
-                            ? '<button class="btn btn-secondary btn-sm" onclick="disconnectPlatform(\'' + platform + '\')">Disconnect</button>'
+                        '<div style="display:flex;gap:6px;">' + (connected
+                            ? '<button class="btn btn-secondary btn-sm" onclick="rediscover(\'' + platform + '\')">🔄 Re-scan</button>' +
+                              '<button class="btn btn-secondary btn-sm" onclick="disconnectPlatform(\'' + platform + '\')">Disconnect</button>'
                             : '<button class="btn btn-primary btn-sm" onclick="' + (platform === 'google' ? 'startConnect()' : 'startMetaConnect()') + '">Connect</button>') + '</div></div>' +
                         '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Last sync: <b>' + lastSync + '</b>' + (platform === 'meta' && connected ? ' (auto-polls every 5 min)' : '') + '</div>' +
-                        accList + '</div>';
+                        identityHtml + accList + '</div>';
                 };
                 $('connectionsBody').innerHTML = connRow('Google Ads', 'google', c.google) + connRow('Meta Ads', 'meta', c.meta);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function rediscover(platform) {
+            if (!selectedWorkspaceObj) return;
+            try {
+                toast('Scanning for ad accounts...', 'info');
+                const res = await api('POST', '/connections/rediscover', { workspace_id: selectedWorkspaceObj.id, platform });
+                if (platform === 'google') {
+                    toast(res.accounts_found + ' Google Ads accounts found');
+                    loadConnections();
+                    await loadWorkspaces();
+                } else {
+                    toast(res.accounts_found + ' ad accounts, ' + res.pages_found + ' pages found');
+                    loadConnections();
+                    await loadWorkspaces();
+                }
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function disconnectIdentity(email) {
+            if (!selectedWorkspaceObj || !confirm('Disconnect ' + email + '? Its lead history is kept.')) return;
+            try {
+                await api('POST', '/connections/disconnect', { workspace_id: selectedWorkspaceObj.id, platform: 'google', identity_email: email });
+                toast(email + ' disconnected');
+                await loadWorkspaces();
+                loadConnections();
             } catch (e) { toast(e.message, 'error'); }
         }
 
