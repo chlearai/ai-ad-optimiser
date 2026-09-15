@@ -1251,8 +1251,13 @@
                 }
 
                 localStorage.setItem('adoptima_token', data.access_token);
-                // System routes directly to AdGuard dashboard
-                window.location.href = '/adguard';
+                // Route by role: admin -> master dashboard, customer -> their workspace
+                const role = (data.user && data.user.role) || 'user';
+                if (role === 'admin' || role === 'superadmin') {
+                    window.location.href = '/adguard';
+                } else {
+                    window.location.href = '/adguard-workspace';
+                }
             } catch (err) {
                 errBox.textContent = err.message;
                 errBox.style.display = 'block';
