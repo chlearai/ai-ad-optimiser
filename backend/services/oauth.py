@@ -252,6 +252,107 @@ def get_adguard_auth_url(adguard_account_id: int) -> str:
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
 
 
+def discover_google_ads_customers_detailed(credentials_json_encrypted: str) -> Dict[str, Any]:
+    """Like discover_google_ads_customers but returns {'accounts': [...], 'error': str|None}
+    so the Re-scan endpoint can surface the real failure to the user."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+
+        creds_plain = json.loads(decrypt(credentials_json_encrypted))
+        refresh_token = creds_plain.get("refresh_token") or ""
+        client_id = creds_plain.get("client_id") or ""
+        client_secret = creds_plain.get("client_secret") or ""
+        developer_token = creds_plain.get("developer_token") or ""
+        if not all([refresh_token, client_id, client_secret, developer_token]):
+            return {"accounts": [], "error": "credentials incomplete (missing developer_token or secret)"}
+
+        client = GoogleAdsClient.load_from_dict({
+            "developer_token": developer_token,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "use_proto_plus": True,
+        })
+
+        ga_service = client.get_service("GoogleAdsService")
+        results = {}
+        direct_managers = []
+        errors = []
+
+        # 1. Top-level accessible customers
+        try:
+            customer_service = client.get_service("CustomerService")
+            resp = customer_service.list_accessible_customers()
+            resource_names = list(resp.resource_names)
+        except Exception as e:
+            return {"accounts": [], "error": f"list_accessible_customers failed: {e}"}
+
+        def _describe(customer_id: str):
+            try:
+                query = (
+                    "SELECT customer.descriptive_name, customer.manager, customer.status "
+                    "FROM customer WHERE customer.id = " + customer_id
+                )
+                row = next(iter(ga_service.search(customer_id=customer_id, query=query)))
+                return {
+                    "id": customer_id,
+                    "formatted": f"{customer_id[:3]}-{customer_id[3:6]}-{customer_id[6:]}",
+                    "name": row.customer.descriptive_name or customer_id,
+                    "manager": bool(row.customer.manager),
+                    "selected": False,
+                }
+            except Exception as e:
+                errors.append(f"describe {customer_id}: {e}")
+                return None
+
+        for rn in resource_names[:20]:
+            customer_id = rn.split("/")[-1]
+            info = _describe(customer_id)
+            if info is None:
+                continue
+            if info["manager"]:
+                direct_managers.append(customer_id)
+                continue
+            results[info["id"]] = info
+
+        # 2. MCC traversal (depth 2 for nested MCCs)
+        seen = set(direct_managers)
+        frontier = list(direct_managers)
+        for _ in range(2):
+            for mgr in frontier:
+                try:
+                    query = (
+                        "SELECT client_customer.id, client_customer.descriptive_name, "
+                        "client_customer.manager, client_customer.status "
+                        "FROM customer_client "
+                        "WHERE client_customer.manager = false AND client_customer.status = 'ENABLED' "
+                        f"AND client_customer.id != {mgr}"
+                    )
+                    for row in ga_service.search(customer_id=mgr, query=query):
+                        cc = row.client_customer
+                        cid = str(cc.id)
+                        if cid not in results and cid not in seen:
+                            results[cid] = {
+                                "id": cid,
+                                "formatted": f"{cid[:3]}-{cid[3:6]}-{cid[6:]}",
+                                "name": cc.descriptive_name or cid,
+                                "manager": False,
+                                "selected": False,
+                            }
+                except Exception as e:
+                    errors.append(f"MCC {mgr}: {str(e)[:200]}")
+            frontier = []
+
+        accounts = list(results.values())
+        if accounts:
+            return {"accounts": accounts, "error": None}
+        if errors:
+            return {"accounts": [], "error": "; ".join(errors[:3])}
+        return {"accounts": [], "error": "no accessible customers returned by Google (token valid but nothing linked)"}
+    except Exception as e:
+        return {"accounts": [], "error": f"{type(e).__name__}: {str(e)[:300]}"}
+
+
 def discover_google_ads_customers(credentials_json_encrypted: str) -> list:
     """After OAuth connect, call listAccessibleCustomers + CustomerService to
     enumerate reachable Google Ads customer accounts.

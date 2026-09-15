@@ -257,12 +257,16 @@ def rediscover_accounts(req: ConnectionActionRequest, db: Session = Depends(get_
     if platform == "google":
         if not ws.google_is_live:
             raise HTTPException(status_code=400, detail="Google not connected")
-        from backend.services.oauth import discover_google_ads_customers
-        discovered = discover_google_ads_customers(ws.google_credentials)
+        from backend.services.oauth import discover_google_ads_customers_detailed
+        result = discover_google_ads_customers_detailed(ws.google_credentials)
+        discovered = result.get("accounts", [])
         ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
         ws.google_last_sync_at = datetime.utcnow()
         db.commit()
-        return {"status": "ok", "platform": "google", "accounts_found": len(discovered), "accounts": discovered}
+        out = {"status": "ok", "platform": "google", "accounts_found": len(discovered), "accounts": discovered}
+        if result.get("error"):
+            out["warning"] = result["error"]
+        return out
 
     if platform == "meta":
         if not ws.meta_is_live:

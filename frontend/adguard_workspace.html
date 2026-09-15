@@ -1310,7 +1310,11 @@
                 toast('Scanning for ad accounts...', 'info');
                 const res = await api('POST', '/connections/rediscover', { workspace_id: selectedWorkspaceObj.id, platform });
                 if (platform === 'google') {
-                    toast(res.accounts_found + ' Google Ads accounts found');
+                    if (res.warning) {
+                        toast('Scan failed: ' + res.warning, 'error');
+                    } else {
+                        toast(res.accounts_found + ' Google Ads accounts found');
+                    }
                     loadConnections();
                     await loadWorkspaces();
                 } else {
