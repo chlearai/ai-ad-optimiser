@@ -247,7 +247,16 @@
                 <div class="nav-section-items">
                     <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">🔗 Connect Google Ads</button>
                     <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
-                    <button class="add-account-btn" id="addWorkspaceBtn" onclick="openAddWorkspace()">➕ Add Another Account</button>
+                </div>
+            </div>
+
+            <!-- CONNECTED ACCOUNTS TREE (collapsible per platform, like competitor UX) -->
+            <div class="nav-section open" id="acctTreeSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Connected Accounts</span>
+                </div>
+                <div class="nav-section-items" id="acctTree" style="padding:0 8px 8px;">
+                    <div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>
                 </div>
             </div>
 
@@ -694,7 +703,7 @@
             window.location.href = '/adguard-workspace?ws=' + ws.id;
         }
 
-        // ---------- Add Another Account (multi-workspace) ----------
+        // ---------- Add workspace (multi-account): triggered from "My Workspace" section ----------
         function openAddWorkspace() {
             const name = prompt('Name this account (e.g. "Crash Club", "DSU"):');
             if (!name || !name.trim()) return;
@@ -732,6 +741,50 @@
             } else {
                 $('connectBanner').classList.add('hidden');
             }
+            renderAccountTree(ws);
+        }
+
+        // ---------- Connected Accounts tree (collapsible per platform) ----------
+        function renderAccountTree(ws) {
+            const tree = $('acctTree');
+            if (!tree) return;
+            if (!ws) {
+                tree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
+                return;
+            }
+            const section = (label, connected, accounts, extraHtml) => {
+                if (!connected) return '';
+                const items = accounts.length ? accounts.map(a =>
+                    '<div style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 22px;font-size:12px;color:var(--color-text-secondary);">' +
+                    '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                    '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                    (a.formatted ? '<span style="font-size:10px;color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') +
+                    '</div>'
+                ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:3px 22px;">no accounts discovered</div>';
+                return '<details style="margin-bottom:4px;" open>' +
+                    '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;color:var(--color-text-primary);list-style:none;">' +
+                    '<span style="display:inline-block;width:14px;">▸</span> ' + label + ' <span class="badge badge-green" style="font-size:9px;margin-left:4px;">' + accounts.length + '</span></summary>' +
+                    items + (extraHtml || '') + '</details>';
+            };
+            const googleAccounts = ws.discovered_accounts || [];
+            const metaAccounts = ws.discovered_meta_accounts || [];
+            const metaPages = ws.discovered_meta_pages || [];
+            let html = '';
+            html += section('Google Ads', ws.google_is_live, googleAccounts);
+            html += section('Meta Ad Accounts', ws.meta_is_live, metaAccounts);
+            html += section('Meta Pages', ws.meta_is_live, metaPages);
+            if (!html) {
+                html = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
+            }
+            tree.innerHTML = html;
+            // Toggle arrow on summary click
+            tree.querySelectorAll('summary').forEach(s => {
+                s.addEventListener('click', () => {
+                    const arrow = s.querySelector('span');
+                    const d = s.parentElement;
+                    setTimeout(() => { arrow.textContent = d.open ? '▾' : '▸'; }, 0);
+                });
+            });
         }
 
         // ---------- CRM preference + credential capture ----------
