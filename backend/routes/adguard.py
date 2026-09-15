@@ -719,13 +719,14 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
 
-    # Multi-identity: append/replace this Google login's entry in google_identities
+    # Multi-identity: append/replace THIS Google login's entry with its OWN creds + accounts
     try:
         identities = json.loads(ws.google_identities) if ws.google_identities else []
-        identities = [i for i in identities if identity_email and i.get("email") != identity_email]
+        # replace entry for same email, or the generic legacy 'google-account' placeholder
+        identities = [i for i in identities if (identity_email and i.get("email") != identity_email) and i.get("email") != "google-account"]
         identities.append({
             "email": identity_email or "google-account",
-            "credentials": ws.google_credentials,
+            "credentials": fernet_encrypt(json.dumps(creds)),
             "connected_at": datetime.utcnow().isoformat(),
         })
         ws.google_identities = json.dumps(identities)
@@ -734,8 +735,18 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     db.commit()
 
     # Auto-discover accessible Google Ads accounts (never blocks connect).
+    # Accounts are stored PER IDENTITY so multiple Gmails keep separate lists.
     try:
         discovered = oauth_service.discover_google_ads_customers(ws.google_credentials)
+        # stash discovered accounts on the identity entry too
+        try:
+            identities = json.loads(ws.google_identities) if ws.google_identities else []
+            for i in identities:
+                if i.get("email") == (identity_email or "google-account"):
+                    i["discovered"] = discovered
+            ws.google_identities = json.dumps(identities)
+        except Exception:
+            pass
         ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
         db.commit()
     except Exception as e:

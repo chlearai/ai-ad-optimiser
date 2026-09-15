@@ -205,17 +205,22 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
             except Exception:
                 return []
         identities = _load(ws.google_identities)
+        identity_accounts = {}
+        for i in identities:
+            if i.get("email"):
+                identity_accounts[i["email"]] = i.get("discovered") or []
         out.append({
             "workspace_id": ws.id,
             "name": ws.display_name or ws.owner_email,
             "google": {
                 "connected": bool(ws.google_is_live),
                 "last_sync_at": ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None,
-                "accounts": _load(ws.discovered_accounts)[:20],
+                "accounts": _load(ws.discovered_accounts)[:50],
                 "identities": [
                     {"email": i.get("email"), "connected_at": i.get("connected_at")}
                     for i in identities
                 ],
+                "identity_accounts": identity_accounts,
             },
             "meta": {
                 "connected": bool(ws.meta_is_live),
@@ -258,14 +263,42 @@ def rediscover_accounts(req: ConnectionActionRequest, db: Session = Depends(get_
         if not ws.google_is_live:
             raise HTTPException(status_code=400, detail="Google not connected")
         from backend.services.oauth import discover_google_ads_customers_detailed
-        result = discover_google_ads_customers_detailed(ws.google_credentials)
-        discovered = result.get("accounts", [])
-        ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
+
+        # Scan EVERY connected Gmail identity; store accounts per identity
+        identities = []
+        try:
+            identities = json.loads(ws.google_identities) if ws.google_identities else []
+        except Exception:
+            identities = []
+        all_accounts = []
+        warnings = []
+        if not identities:
+            # legacy single-connection workspace: scan the shared blob
+            result = discover_google_ads_customers_detailed(ws.google_credentials)
+            discovered = result.get("accounts", [])
+            ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
+            ws.google_last_sync_at = datetime.utcnow()
+            db.commit()
+            out = {"status": "ok", "platform": "google", "accounts_found": len(discovered), "accounts": discovered}
+            if result.get("error"):
+                out["warning"] = result["error"]
+            return out
+        for ident in identities:
+            enc = ident.get("credentials")
+            if not enc:
+                continue
+            result = discover_google_ads_customers_detailed(enc)
+            ident["discovered"] = result.get("accounts", [])
+            all_accounts.extend(result.get("accounts", []))
+            if result.get("error"):
+                warnings.append(f"{ident.get('email')}: {result['error']}")
+        ws.discovered_accounts = json.dumps(all_accounts) if all_accounts else "[]"
+        ws.google_identities = json.dumps(identities)
         ws.google_last_sync_at = datetime.utcnow()
         db.commit()
-        out = {"status": "ok", "platform": "google", "accounts_found": len(discovered), "accounts": discovered}
-        if result.get("error"):
-            out["warning"] = result["error"]
+        out = {"status": "ok", "platform": "google", "accounts_found": len(all_accounts), "accounts": all_accounts}
+        if warnings:
+            out["warning"] = " | ".join(warnings[:3])
         return out
 
     if platform == "meta":

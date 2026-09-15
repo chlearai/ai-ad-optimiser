@@ -772,13 +772,15 @@
 
             let html = '';
 
-            // Google: one collapsible group PER connected Gmail identity
+            // Google: one collapsible group PER Gmail identity, accounts from identity.discovered
             if (ws.google_is_live) {
-                if (identities.length > 1 || (identities.length === 1 && identities[0].email !== 'google-account')) {
+                const identities = (ws.google_identities || []).filter(i => i.email);
+                if (identities.length) {
                     identities.forEach(ident => {
-                        const email = ident.email || 'google-account';
+                        const email = ident.email;
+                        const accounts = ident.discovered || [];
                         const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" title="Disconnect this Google login" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
-                        html += groupSection('Google — ' + email, ws.discovered_accounts || [], dis);
+                        html += groupSection('📧 ' + email, accounts, dis);
                     });
                 } else {
                     html += groupSection('Google Ads', ws.discovered_accounts || []);
@@ -1273,23 +1275,45 @@
                 const connRow = (label, platform, info) => {
                     const connected = info.connected;
                     const lastSync = info.last_sync_at ? info.last_sync_at.replace('T', ' ').slice(0, 16) : 'never';
-                    const accs = (info.accounts || []);
-                    const identities = (info.identities || []);
-                    let identityHtml = '';
-                    if (platform === 'google' && identities.length) {
-                        identityHtml = '<div style="font-size:12px;margin:8px 0 4px;font-weight:600;">Connected email IDs:</div>' + identities.map(i =>
+                    let bodyHtml = '';
+                    if (platform === 'google') {
+                        const identities = (info.identities || []).filter(i => i.email);
+                        if (identities.length && info.identity_accounts) {
+                            // Per-email sections: email -> its accounts
+                            bodyHtml = identities.map(i => {
+                                const accs = info.identity_accounts[i.email] || [];
+                                return '<div style="border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;margin:8px 0;">' +
+                                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                                    '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
+                                    '<b style="font-size:12px;flex:1;">' + escapeHtml(i.email) + '</b>' +
+                                    '<span class="badge badge-green" style="font-size:9px;">' + accs.length + '</span>' +
+                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectIdentity(\'' + escapeHtml(i.email) + '\')">✕</button></div>' +
+                                    (accs.length ? accs.map(a =>
+                                        '<div style="display:flex;align-items:center;gap:8px;padding:3px 0 3px 16px;font-size:12px;">' +
+                                        '<span class="account-dot" style="width:5px;height:5px;"></span>' +
+                                        '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                                        (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered — click Re-scan</div>') +
+                                    '</div>';
+                            }).join('');
+                        } else {
+                            const accs = (info.accounts || []);
+                            bodyHtml = accs.length ? accs.map(a =>
+                                '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
+                                '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                                '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                                (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
+                        }
+                    } else {
+                        const accs = (info.accounts || []);
+                        bodyHtml = accs.length ? accs.map(a =>
                             '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
-                            '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
-                            '<span style="flex:1;">' + escapeHtml(i.email) + '</span>' +
-                            '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectIdentity(\'' + escapeHtml(i.email) + '\')">✕</button></div>'
-                        ).join('');
+                            '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                            '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                            (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                        ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
                     }
-                    const accList = accs.length ? accs.map(a =>
-                        '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
-                        '<span class="account-dot" style="width:6px;height:6px;"></span>' +
-                        '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
-                        (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                    ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
                     return '<div style="border:1px solid var(--color-border);border-radius:12px;padding:16px;margin-bottom:12px;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +
@@ -1298,7 +1322,7 @@
                               '<button class="btn btn-secondary btn-sm" onclick="disconnectPlatform(\'' + platform + '\')">Disconnect</button>'
                             : '<button class="btn btn-primary btn-sm" onclick="' + (platform === 'google' ? 'startConnect()' : 'startMetaConnect()') + '">Connect</button>') + '</div></div>' +
                         '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Last sync: <b>' + lastSync + '</b>' + (platform === 'meta' && connected ? ' (auto-polls every 5 min)' : '') + '</div>' +
-                        identityHtml + accList + '</div>';
+                        bodyHtml + '</div>';
                 };
                 $('connectionsBody').innerHTML = connRow('Google Ads', 'google', c.google) + connRow('Meta Ads', 'meta', c.meta);
             } catch (e) { toast(e.message, 'error'); }
