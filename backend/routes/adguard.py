@@ -704,8 +704,33 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     }
     from backend.services.crypto import encrypt as fernet_encrypt
 
+    # Identify which Google account granted access (for multi-identity list)
+    identity_email = None
+    try:
+        tok_req = urllib.request.Request(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {token_data.get('access_token', '')}"},
+        )
+        with urllib.request.urlopen(tok_req, timeout=15) as tok_resp:
+            identity_email = (json.loads(tok_req.read().decode()) or {}).get("email")
+    except Exception as e:
+        logger.warning(f"[AdGuard] could not read Google identity email: {e}")
+
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
+
+    # Multi-identity: append/replace this Google login's entry in google_identities
+    try:
+        identities = json.loads(ws.google_identities) if ws.google_identities else []
+        identities = [i for i in identities if identity_email and i.get("email") != identity_email]
+        identities.append({
+            "email": identity_email or "google-account",
+            "credentials": ws.google_credentials,
+            "connected_at": datetime.utcnow().isoformat(),
+        })
+        ws.google_identities = json.dumps(identities)
+    except Exception as e:
+        logger.warning(f"[AdGuard] google_identities update failed: {e}")
     db.commit()
 
     # Auto-discover accessible Google Ads accounts (never blocks connect).

@@ -204,6 +204,7 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
                 return json.loads(raw) if raw else []
             except Exception:
                 return []
+        identities = _load(ws.google_identities)
         out.append({
             "workspace_id": ws.id,
             "name": ws.display_name or ws.owner_email,
@@ -211,6 +212,10 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
                 "connected": bool(ws.google_is_live),
                 "last_sync_at": ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None,
                 "accounts": _load(ws.discovered_accounts)[:20],
+                "identities": [
+                    {"email": i.get("email"), "connected_at": i.get("connected_at")}
+                    for i in identities
+                ],
             },
             "meta": {
                 "connected": bool(ws.meta_is_live),
@@ -235,11 +240,12 @@ def _touch_sync(db: Session, ws: AdGuardAccount, platform: str):
 class ConnectionActionRequest(BaseModel):
     workspace_id: int
     platform: str  # google | meta
+    identity_email: Optional[str] = None  # for google: remove one login identity
 
 
 @router.post("/connections/disconnect")
 def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Disconnect an ad platform from a workspace (keeps lead history)."""
+    """Disconnect an ad platform (or one Google identity) from a workspace. Keeps lead history."""
     _require_adguard_access(user)
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
     if not ws:
@@ -247,6 +253,29 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
     if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Not your workspace")
     platform = (req.platform or "").lower()
+
+    if platform == "google" and req.identity_email:
+        # Remove one Google identity; keep platform live if others remain
+        try:
+            identities = json.loads(ws.google_identities) if ws.google_identities else []
+        except Exception:
+            identities = []
+        identities = [i for i in identities if i.get("email") != req.identity_email]
+        ws.google_identities = json.dumps(identities)
+        if not identities:
+            # last identity removed -> full google disconnect
+            ws.google_credentials = None
+            ws.google_is_live = False
+            ws.discovered_accounts = "[]"
+            ws.google_last_sync_at = None
+        db.commit()
+        log_activity(module="AdGuard", action="Google Identity Disconnected",
+                     description=f"{req.identity_email} disconnected from {ws.display_name or ws.owner_email}",
+                     user_id=user.id, user_name=user.full_name or user.email,
+                     entity_type="adguard_account", entity_id=str(ws.id), db=db)
+        return {"status": "disconnected", "platform": "google", "identity": req.identity_email,
+                "google_still_live": ws.google_is_live}
+
     if platform == "meta":
         ws.meta_credentials = None
         ws.meta_is_live = False
@@ -257,6 +286,7 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
         ws.google_credentials = None
         ws.google_is_live = False
         ws.discovered_accounts = "[]"
+        ws.google_identities = "[]"
         ws.google_last_sync_at = None
     else:
         raise HTTPException(status_code=400, detail="platform must be google or meta")

@@ -744,7 +744,7 @@
             renderAccountTree(ws);
         }
 
-        // ---------- Connected Accounts tree (collapsible per platform) ----------
+        // ---------- Connected Accounts tree (collapsible, grouped by Google identity) ----------
         function renderAccountTree(ws) {
             const tree = $('acctTree');
             if (!tree) return;
@@ -752,32 +752,49 @@
                 tree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
                 return;
             }
-            const section = (label, connected, accounts, extraHtml) => {
-                if (!connected) return '';
-                const items = accounts.length ? accounts.map(a =>
-                    '<div style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 22px;font-size:12px;color:var(--color-text-secondary);">' +
-                    '<span class="account-dot" style="width:6px;height:6px;"></span>' +
-                    '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
-                    (a.formatted ? '<span style="font-size:10px;color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') +
-                    '</div>'
-                ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:3px 22px;">no accounts discovered</div>';
+            const identities = (ws.google_identities || []);
+
+            const accountItem = (a) =>
+                '<div style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 30px;font-size:12px;color:var(--color-text-secondary);">' +
+                '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                (a.formatted ? '<span style="font-size:10px;color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') +
+                '</div>';
+
+            const groupSection = (label, accounts, disconnectHtml) => {
+                if (!accounts.length) return '';
                 return '<details style="margin-bottom:4px;" open>' +
-                    '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;color:var(--color-text-primary);list-style:none;">' +
-                    '<span style="display:inline-block;width:14px;">▸</span> ' + label + ' <span class="badge badge-green" style="font-size:9px;margin-left:4px;">' + accounts.length + '</span></summary>' +
-                    items + (extraHtml || '') + '</details>';
+                    '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:6px;">' +
+                    '<span style="display:inline-block;width:12px;">▸</span><span style="flex:1;">' + escapeHtml(label) + '</span>' +
+                    '<span class="badge badge-green" style="font-size:9px;">' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
+                    accounts.map(accountItem).join('') + '</details>';
             };
-            const googleAccounts = ws.discovered_accounts || [];
-            const metaAccounts = ws.discovered_meta_accounts || [];
-            const metaPages = ws.discovered_meta_pages || [];
+
             let html = '';
-            html += section('Google Ads', ws.google_is_live, googleAccounts);
-            html += section('Meta Ad Accounts', ws.meta_is_live, metaAccounts);
-            html += section('Meta Pages', ws.meta_is_live, metaPages);
+
+            // Google: one collapsible group PER connected Gmail identity
+            if (ws.google_is_live) {
+                if (identities.length > 1 || (identities.length === 1 && identities[0].email !== 'google-account')) {
+                    identities.forEach(ident => {
+                        const email = ident.email || 'google-account';
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" title="Disconnect this Google login" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
+                        html += groupSection('Google — ' + email, ws.discovered_accounts || [], dis);
+                    });
+                } else {
+                    html += groupSection('Google Ads', ws.discovered_accounts || []);
+                }
+            }
+
+            // Meta: accounts + pages
+            if (ws.meta_is_live) {
+                html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || []);
+                html += groupSection('Meta Pages', ws.discovered_meta_pages || []);
+            }
+
             if (!html) {
                 html = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
             }
             tree.innerHTML = html;
-            // Toggle arrow on summary click
             tree.querySelectorAll('summary').forEach(s => {
                 s.addEventListener('click', () => {
                     const arrow = s.querySelector('span');
@@ -785,6 +802,15 @@
                     setTimeout(() => { arrow.textContent = d.open ? '▾' : '▸'; }, 0);
                 });
             });
+        }
+
+        async function disconnectGoogleIdentity(email) {
+            if (!selectedWorkspaceObj || !confirm('Disconnect ' + email + '? Its lead history is kept; new leads from its accounts stop.')) return;
+            try {
+                await api('POST', '/connections/disconnect', { workspace_id: selectedWorkspaceObj.id, platform: 'google', identity_email: email });
+                toast(email + ' disconnected');
+                await loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         // ---------- CRM preference + credential capture ----------

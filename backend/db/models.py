@@ -997,6 +997,10 @@ class AdGuardAccount(Base):
     google_last_sync_at = Column(DateTime, nullable=True)
     meta_last_sync_at = Column(DateTime, nullable=True)
 
+    # Multi-identity Google connections: JSON list of
+    # [{"email": "...", "credentials": "<fernet>", "discovered": [...], "connected_at": ...}]
+    google_identities = Column(Text, nullable=True)
+
     # Per-workspace settings
     timezone = Column(String(50), default="Asia/Kolkata")
     alert_emails = Column(Text, nullable=True)  # JSON list of emails for alerts/reports

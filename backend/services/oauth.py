@@ -255,6 +255,10 @@ def discover_google_ads_customers(credentials_json_encrypted: str) -> list:
     """After OAuth connect, call listAccessibleCustomers + CustomerService to
     enumerate reachable Google Ads customer accounts.
 
+    Traverses the MCC tree: listAccessibleCustomers returns manager accounts
+    (MCCs); their client accounts are resolved via customer_client (manager-link
+    traversal, depth 3). Direct non-manager accounts are included too.
+
     Returns list of {"id": "123-456-7890", "name": "...", "manager": bool}.
     Empty list on any failure (never raises — connect must not break).
     """
@@ -279,38 +283,91 @@ def discover_google_ads_customers(credentials_json_encrypted: str) -> list:
             "use_proto_plus": True,
         })
 
+        ga_service = client.get_service("GoogleAdsService")
+        results = {}
+        direct_managers = []
+
         # 1. Top-level accessible customers
         customer_service = client.get_service("CustomerService")
         resp = customer_service.list_accessible_customers()
         resource_names = list(resp.resource_names)
-        results = []
+        login_customer_id = creds_plain.get("login_customer_id") or ""
 
-        for rn in resource_names[:20]:
-            customer_id = rn.split("/")[-1]
-            display_name = ""
-            is_manager = False
+        def _describe(customer_id: str, via_login: str = None):
+            """Fetch name/manager for a customer; returns dict or None."""
             try:
-                ga_client_service = client.get_service("GoogleAdsService")
+                kwargs = {"customer_id": customer_id}
+                if customer_id != customer_id.strip():
+                    return None
                 query = (
                     "SELECT customer.descriptive_name, customer.manager, customer.status "
-                    "FROM customer WHERE customer.id = "
-                    + customer_id
+                    "FROM customer WHERE customer.id = " + customer_id
                 )
-                row = next(iter(ga_client_service.search(customer_id=customer_id, query=query)))
-                display_name = row.customer.descriptive_name or ""
-                is_manager = bool(row.customer.manager)
+                row = next(iter(ga_service.search(**kwargs)))
+                return {
+                    "id": customer_id,
+                    "formatted": f"{customer_id[:3]}-{customer_id[3:6]}-{customer_id[6:]}",
+                    "name": row.customer.descriptive_name or customer_id,
+                    "manager": bool(row.customer.manager),
+                    "selected": False,
+                }
             except Exception as e:
                 logger.info(f"[AdGuard] could not read details for customer {customer_id}: {e}")
+                return None
 
-            results.append({
-                "id": customer_id,
-                "formatted": f"{customer_id[:3]}-{customer_id[3:6]}-{customer_id[6:]}",
-                "name": display_name or customer_id,
-                "manager": is_manager,
-                "selected": False,
-            })
-        logger.info(f"[AdGuard] discovered {len(results)} Google Ads customers")
-        return results
+        def _add(result: dict):
+            if result and result["id"] not in results:
+                results[result["id"]] = result
+
+        # 2. Describe each accessible customer
+        for rn in resource_names[:20]:
+            customer_id = rn.split("/")[-1]
+            info = _describe(customer_id)
+            if info is None:
+                continue
+            if info["manager"]:
+                direct_managers.append(customer_id)
+                # Manager accounts themselves are not lead targets; skip adding
+                continue
+            _add(info)
+
+        # 3. Traverse MCC trees: pull client accounts under each manager (depth 2)
+        seen_managers = set(direct_managers)
+        frontier = list(direct_managers)
+        for _ in range(2):  # depth 2 handles nested MCCs
+            next_frontier = []
+            for mgr in frontier:
+                try:
+                    query = (
+                        "SELECT client_customer.id, client_customer.descriptive_name, "
+                        "client_customer.manager, client_customer.status "
+                        "FROM customer_client "
+                        "WHERE client_customer.manager = false AND client_customer.status = 'ENABLED' "
+                        f"AND client_customer.id != {mgr}"
+                    )
+                    rows = ga_service.search(customer_id=mgr, query=query)
+                    for row in rows:
+                        cc = row.client_customer
+                        cid = str(cc.id)
+                        if cid in results or cid in seen_managers:
+                            continue
+                        child = {
+                            "id": cid,
+                            "formatted": f"{cid[:3]}-{cid[3:6]}-{cid[6:]}",
+                            "name": cc.descriptive_name or cid,
+                            "manager": False,
+                            "selected": False,
+                        }
+                        results[cid] = child
+                except Exception as e:
+                    logger.info(f"[AdGuard] MCC traversal failed for {mgr}: {e}")
+                seen_managers.add(mgr)
+            frontier = next_frontier
+
+        out = list(results.values())
+        logger.info(f"[AdGuard] discovered {len(out)} Google Ads customers (managers: {len(direct_managers)})")
+        return out
     except Exception as e:
         logger.error(f"[AdGuard] Google Ads customer discovery failed: {e}")
+        return []
         return []
