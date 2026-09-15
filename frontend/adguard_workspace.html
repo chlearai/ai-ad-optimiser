@@ -339,7 +339,25 @@
             </div>
         </div>
 
+        <!-- TAB NAV -->
+        <div style="height:44px;background:var(--color-bg-page);border-bottom:1px solid var(--color-border);display:flex;align-items:center;padding:0 24px;gap:4px;" id="tabNav">
+            <div class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</div>
+            <div class="tab-item" data-tab="reports" onclick="switchTab('reports')">📈 Reports</div>
+            <div class="tab-item" data-tab="connections" onclick="switchTab('connections')">🔗 Connections</div>
+            <div class="tab-item" data-tab="support" onclick="switchTab('support')">💬 Support</div>
+            <div class="tab-item" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</div>
+        </div>
+        <style>
+            .tab-item{padding:10px 14px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;user-select:none}
+            .tab-item:hover{color:var(--color-text-primary)}
+            .tab-item.active{color:var(--color-accent);border-bottom:2px solid var(--color-accent)}
+            .flag-bar{height:8px;border-radius:4px;background:var(--color-danger)}
+        </style>
+
         <div class="content">
+
+            <!-- ============ TAB: DASHBOARD ============ -->
+            <div id="tab-dashboard">
 
             <!-- QUOTA ALERT -->
             <div class="quota-alert-banner hidden" id="quotaAlertBanner">
@@ -384,6 +402,128 @@
                         </tr></thead>
                         <tbody id="feedBody"></tbody>
                     </table>
+                </div>
+            </div>
+
+            </div>
+
+            <!-- ============ TAB: REPORTS ============ -->
+            <div id="tab-reports" class="hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📈 Campaign Junk Report</span>
+                        <div class="filters">
+                            <select class="filter-select" id="reportRange" onchange="loadReports()">
+                                <option value="1">Last 24 hours</option>
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="28">Last 28 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="loadReports()">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr>
+                                <th>Campaign</th><th>Leads</th><th>Verified</th><th>Blocked</th><th>Junk %</th><th>Recovered Spend</th>
+                            </tr></thead>
+                            <tbody id="reportCampaignBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🚩 Waste Analysis — why leads were blocked</span>
+                    </div>
+                    <div id="flagsBreakdown"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">⬇ Export</span>
+                        <div class="filters">
+                            <select class="filter-select" id="exportRange">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="365">Last 365 days</option>
+                            </select>
+                            <button class="btn btn-primary btn-sm" onclick="exportReportCsv()">Export CSV</button>
+                        </div>
+                    </div>
+                    <p style="font-size:12px;color:var(--color-text-secondary);">Weekly summary email: automatically sent every Monday to your alert emails (Settings). Data range and filters applied.</p>
+                </div>
+            </div>
+
+            <!-- ============ TAB: CONNECTIONS ============ -->
+            <div id="tab-connections" class="hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🔗 Connected Ad Accounts</span>
+                    </div>
+                    <div id="connectionsBody"></div>
+                </div>
+            </div>
+
+            <!-- ============ TAB: SUPPORT ============ -->
+            <div id="tab-support" class="hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">💬 Support Tickets</span>
+                        <button class="btn btn-primary btn-sm" onclick="openNewTicket()">+ New Ticket</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>#</th><th>Subject</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                            <tbody id="ticketsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card hidden" id="ticketThreadCard">
+                    <div class="card-header">
+                        <span class="card-title" id="ticketThreadTitle">Ticket</span>
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ticketThreadCard').classList.add('hidden')">Close</button>
+                    </div>
+                    <div id="ticketThread" style="max-height:340px;overflow-y:auto;margin-bottom:12px;"></div>
+                    <div style="display:flex;gap:8px;">
+                        <input class="filter-input" id="ticketReply" placeholder="Type your message..." style="flex:1;" onkeydown="if(event.key==='Enter')sendTicketReply()">
+                        <button class="btn btn-primary btn-sm" onclick="sendTicketReply()">Send</button>
+                        <button class="btn btn-secondary btn-sm" onclick="closeTicket()">Resolve &amp; Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TAB: SETTINGS ============ -->
+            <div id="tab-settings" class="hidden">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">⚙️ Workspace Settings</span></div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:500;">Timezone (for reports)</label>
+                        <select class="filter-select" id="setTimezone" style="width:100%;max-width:320px;">
+                            <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                            <option value="UTC">UTC</option>
+                            <option value="Asia/Dubai">Asia/Dubai</option>
+                            <option value="Europe/London">Europe/London</option>
+                            <option value="America/New_York">America/New_York</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:500;">Protection Mode</label>
+                        <select class="filter-select" id="setMode" style="width:100%;max-width:320px;">
+                            <option value="monitor">👁 Monitor — detect &amp; flag only (safe start)</option>
+                            <option value="protect">🛡️ Protect — auto-pause junk campaigns (Money Shield)</option>
+                        </select>
+                        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Monitor = watch junk rates. Protect = campaigns breaching your junk threshold get auto-paused with alerts.</div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:500;">Alert &amp; Report Emails (max 5, comma-separated)</label>
+                        <input class="filter-input" id="setAlerts" placeholder="boss@company.com, team@company.com" style="width:100%;max-width:420px;">
+                        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Weekly report emails every Monday + shield alerts go to these addresses.</div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Settings</button>
+                    <div id="settingsResult" style="margin-top:10px;font-size:13px;"></div>
                 </div>
             </div>
 
@@ -995,6 +1135,186 @@
                 box.innerHTML = (data.actions || []).length
                     ? data.actions.slice().reverse().map(a => '<div style="padding:2px 0;border-bottom:1px solid var(--color-border);">🛡️ <b>' + escapeHtml(a.action) + '</b> ' + escapeHtml(a.campaign || '') + '<br><span style="color:var(--color-text-muted);">' + escapeHtml(a.detail || '') + '</span></div>').join('')
                     : '<span style="color:var(--color-text-muted);">No shield actions yet.</span>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ---------- Tabs ----------
+        function switchTab(name) {
+            ['dashboard', 'reports', 'connections', 'support', 'settings'].forEach(t => {
+                const el = document.getElementById('tab-' + t);
+                if (el) el.classList.toggle('hidden', t !== name);
+            });
+            document.querySelectorAll('#tabNav .tab-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.tab === name);
+            });
+            if (name === 'reports') loadReports();
+            if (name === 'connections') loadConnections();
+            if (name === 'support') loadTickets();
+            if (name === 'settings') loadSettings();
+        }
+
+        // ---------- Reports ----------
+        async function loadReports() {
+            const days = $('reportRange').value;
+            try {
+                const [camp, flags] = await Promise.all([
+                    api('GET', '/reports/campaigns?days=' + days),
+                    api('GET', '/reports/flags?days=' + days),
+                ]);
+                $('reportCampaignBody').innerHTML = (camp.campaigns || []).map(c =>
+                    '<tr><td style="font-weight:600;">' + escapeHtml(c.campaign) + '</td>' +
+                    '<td>' + c.leads + '</td><td style="color:var(--color-success-text);">' + c.verified + '</td>' +
+                    '<td style="color:var(--color-danger-text);">' + c.flagged + '</td>' +
+                    '<td>' + (c.junk_pct >= 40 ? '<b style="color:var(--color-danger);">' : '') + c.junk_pct + '%' + (c.junk_pct >= 40 ? ' ⚠️' : '') + '</td>' +
+                    '<td style="font-weight:600;">₹' + c.recovered_spend_inr.toLocaleString('en-IN') + '</td></tr>'
+                ).join('') || '<tr><td colspan="6"><div class="empty-state"><h3>No leads in this period</h3></div></td></tr>';
+
+                const fb = flags.breakdown || [];
+                const maxCount = Math.max(1, ...fb.map(f => f.count));
+                $('flagsBreakdown').innerHTML = fb.length ? fb.map(f =>
+                    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                    '<div style="width:220px;font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(f.flag.replace(/_/g, ' ')) + '</div>' +
+                    '<div style="flex:1;background:var(--color-border);border-radius:4px;height:8px;overflow:hidden;"><div style="width:' + Math.round(100 * f.count / maxCount) + '%;height:100%;background:var(--color-danger);border-radius:4px;"></div></div>' +
+                    '<div style="width:40px;text-align:right;font-weight:600;font-size:12px;">' + f.count + '</div></div>'
+                ).join('') : '<div class="empty-state"><h3>Nothing blocked yet</h3><p>Flagged leads and their reasons will appear here.</p></div>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function exportReportCsv() {
+            const days = $('exportRange').value;
+            window.open(API + '/reports/export?days=' + days, '_blank');
+        }
+
+        // ---------- Connections ----------
+        async function loadConnections() {
+            try {
+                const data = await api('GET', '/connections');
+                const c = (data.connections || [])[0];
+                if (!c) { $('connectionsBody').innerHTML = '<div class="empty-state"><h3>No workspace</h3></div>'; return; }
+                const connRow = (label, platform, info) => {
+                    const connected = info.connected;
+                    const lastSync = info.last_sync_at ? info.last_sync_at.replace('T', ' ').slice(0, 16) : 'never';
+                    const accs = (info.accounts || []).filter(a => a.selected !== false);
+                    const accList = accs.length ? accs.map(a => '<div style="font-size:12px;padding:2px 0;">• ' + escapeHtml(a.name || a.id) + (a.formatted ? ' <span style="color:var(--color-text-muted)">(' + escapeHtml(a.formatted) + ')</span>' : '') + '</div>').join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
+                    return '<div style="border:1px solid var(--color-border);border-radius:12px;padding:16px;margin-bottom:12px;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+                        '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +
+                        '<div>' + (connected
+                            ? '<button class="btn btn-secondary btn-sm" onclick="disconnectPlatform(\'' + platform + '\')">Disconnect</button>'
+                            : '<button class="btn btn-primary btn-sm" onclick="' + (platform === 'google' ? 'startConnect()' : 'startMetaConnect()') + '">Connect</button>') + '</div></div>' +
+                        '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Last sync: <b>' + lastSync + '</b>' + (platform === 'meta' && connected ? ' (auto-polls every 5 min)' : '') + '</div>' +
+                        accList + '</div>';
+                };
+                $('connectionsBody').innerHTML = connRow('Google Ads', 'google', c.google) + connRow('Meta Ads', 'meta', c.meta);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function disconnectPlatform(platform) {
+            if (!selectedWorkspaceObj || !confirm('Disconnect ' + platform + ' Ads? Lead history is kept; new leads from this platform stop.')) return;
+            try {
+                await api('POST', '/connections/disconnect', { workspace_id: selectedWorkspaceObj.id, platform });
+                toast(platform + ' disconnected');
+                await loadWorkspaces();
+                loadConnections();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ---------- Support tickets ----------
+        let currentTicketId = null;
+
+        async function loadTickets() {
+            try {
+                const tickets = await api('GET', '/support/tickets');
+                $('ticketsBody').innerHTML = (tickets || []).map(t => {
+                    const statusCls = t.status === 'open' ? 'badge-orange' : t.status === 'answered' ? 'badge-green' : 'badge-gray';
+                    return '<tr style="cursor:pointer;" onclick="openTicket(' + t.id + ')">' +
+                        '<td>#' + t.id + '</td><td style="font-weight:600;">' + escapeHtml(t.subject) + '</td>' +
+                        '<td><span class="badge badge-gray">' + escapeHtml(t.category) + '</span></td>' +
+                        '<td><span class="badge ' + statusCls + '">' + t.status + '</span></td>' +
+                        '<td style="font-size:12px;">' + (t.updated_at || '').replace('T', ' ').slice(0, 16) + '</td>' +
+                        '<td>›</td></tr>';
+                }).join('') || '<tr><td colspan="6"><div class="empty-state"><h3>No tickets yet</h3><p>Need help? Raise a ticket — we respond fast.</p></div></td></tr>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function openNewTicket() {
+            const subject = prompt('Ticket subject:');
+            if (!subject || !subject.trim()) return;
+            const category = prompt('Category? (general / connection / billing / bug / feature)', 'general') || 'general';
+            const body = prompt('Describe the issue:');
+            if (!body || !body.trim()) return;
+            createTicket(subject, category, body);
+        }
+
+        async function createTicket(subject, category, body) {
+            try {
+                const t = await api('POST', '/support/tickets', {
+                    subject, category, body,
+                    workspace_id: selectedWorkspaceObj ? selectedWorkspaceObj.id : null
+                });
+                toast('Ticket #' + t.id + ' created — the team will respond soon');
+                loadTickets();
+                openTicket(t.id);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function openTicket(id) {
+            try {
+                const t = await api('GET', '/support/tickets/' + id);
+                currentTicketId = id;
+                $('ticketThreadCard').classList.remove('hidden');
+                $('ticketThreadTitle').textContent = '#' + t.id + ' — ' + t.subject + ' (' + t.status + ')';
+                $('ticketThread').innerHTML = (t.messages || []).map(m =>
+                    '<div style="margin-bottom:10px;' + (m.sender === 'owner' ? 'background:var(--color-accent-light);border-radius:10px;padding:10px 12px;' : 'background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;') + '">' +
+                    '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' · ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
+                    '<div style="font-size:13px;white-space:pre-wrap;">' + escapeHtml(m.body) + '</div></div>'
+                ).join('');
+                $('ticketThread').scrollTop = $('ticketThread').scrollHeight;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function sendTicketReply() {
+            const body = $('ticketReply').value.trim();
+            if (!body || !currentTicketId) return;
+            try {
+                $('ticketReply').value = '';
+                await api('POST', '/support/tickets/' + currentTicketId + '/reply', { body });
+                openTicket(currentTicketId);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function closeTicket() {
+            if (!currentTicketId || !confirm('Mark this ticket as resolved and close it?')) return;
+            try {
+                await api('POST', '/support/tickets/' + currentTicketId + '/close');
+                toast('Ticket closed');
+                loadTickets();
+                openTicket(currentTicketId);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ---------- Settings ----------
+        async function loadSettings() {
+            try {
+                const s = await api('GET', '/settings' + (selectedWorkspaceObj ? '?workspace_id=' + selectedWorkspaceObj.id : ''));
+                $('setTimezone').value = s.timezone || 'Asia/Kolkata';
+                $('setMode').value = s.protection_mode || 'monitor';
+                $('setAlerts').value = (s.alert_emails || []).join(', ');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function saveSettings() {
+            if (!selectedWorkspaceObj) return;
+            const body = {
+                timezone: $('setTimezone').value,
+                protection_mode: $('setMode').value,
+                alert_emails: $('setAlerts').value.split(',').map(s => s.trim()).filter(Boolean),
+            };
+            try {
+                await api('PUT', '/settings?workspace_id=' + selectedWorkspaceObj.id, body);
+                $('settingsResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">✅ Settings saved.</span>';
+                toast('Settings saved');
+                loadWorkspaces();
             } catch (e) { toast(e.message, 'error'); }
         }
 

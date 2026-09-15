@@ -275,6 +275,7 @@
                     <div class="nav-item active" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
                     <div class="nav-item" id="navGlobalLeads" onclick="showMasterView('global_leads')">🛡️ Global Lead Stream</div>
                     <div class="nav-item" id="navCleanup" onclick="showMasterView('cleanup')">🧹 Test Lead Cleanup</div>
+                    <div class="nav-item" id="navSupport" onclick="showMasterView('support')">💬 Support Inbox <span class="badge badge-red" id="openTicketsBadge" style="display:none;">0</span></div>
                 </div>
             </div>
 
@@ -389,6 +390,37 @@
                     <button class="btn btn-primary btn-sm" onclick="runCleanup()">Delete</button>
                 </div>
                 <div id="cleanupResult" style="font-size:13px;"></div>
+            </div>
+
+            <!-- ADMIN: SUPPORT INBOX -->
+            <div class="card hidden admin-only" id="supportCard">
+                <div class="card-header">
+                    <span class="card-title">💬 Support Inbox</span>
+                    <div class="filters">
+                        <select class="filter-select" id="ticketStatusFilter" onchange="loadSupportInbox()">
+                            <option value="">All</option>
+                            <option value="open">Open</option>
+                            <option value="answered">Answered</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadSupportInbox()">Refresh</button>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>#</th><th>Subscriber</th><th>Subject</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                        <tbody id="adminTicketsBody"></tbody>
+                    </table>
+                </div>
+                <div class="hidden" id="adminTicketThread" style="margin-top:16px;border:1px solid var(--color-border);border-radius:12px;padding:16px;">
+                    <div style="font-weight:600;margin-bottom:10px;" id="adminTicketTitle"></div>
+                    <div id="adminTicketMessages" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
+                    <div style="display:flex;gap:8px;">
+                        <input class="filter-input" id="adminTicketReply" placeholder="Reply to subscriber..." style="flex:1;" onkeydown="if(event.key==='Enter')sendAdminReply()">
+                        <button class="btn btn-primary btn-sm" onclick="sendAdminReply()">Reply</button>
+                        <button class="btn btn-secondary btn-sm" onclick="adminCloseTicket()">Close Ticket</button>
+                    </div>
+                </div>
             </div>
 
             <!-- LIVE LEAD FEED (Admin: only when a specific subscriber selected; Customer: always) -->
@@ -787,16 +819,94 @@
                 $('navAllSubs').classList.add('active');
                 $('adminSubscribersCard').classList.remove('hidden');
                 $('cleanupCard').classList.add('hidden');
+                $('supportCard').classList.add('hidden');
                 loadAdminSubscribers();
             } else if (view === 'global_leads') {
                 $('navGlobalLeads').classList.add('active');
                 $('adminSubscribersCard').classList.add('hidden');
                 $('cleanupCard').classList.add('hidden');
+                $('supportCard').classList.add('hidden');
                 loadLeads();
             } else if (view === 'cleanup') {
                 $('navCleanup').classList.add('active');
+                $('adminSubscribersCard').classList.add('hidden');
                 $('cleanupCard').classList.remove('hidden');
+                $('supportCard').classList.add('hidden');
+            } else if (view === 'support') {
+                $('navSupport').classList.add('active');
+                $('adminSubscribersCard').classList.add('hidden');
+                $('cleanupCard').classList.add('hidden');
+                $('supportCard').classList.remove('hidden');
+                loadSupportInbox();
             }
+        }
+
+        // ---------- Admin: support inbox ----------
+        let adminTicketId = null;
+
+        async function loadSupportInbox() {
+            try {
+                const status = $('ticketStatusFilter').value;
+                const res = await fetch(API + '/support/admin/inbox' + (status ? '?status=' + status : ''), { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
+                const data = await res.json();
+                const badge = $('openTicketsBadge');
+                if (data.open_count > 0) { badge.style.display = ''; badge.textContent = data.open_count; } else { badge.style.display = 'none'; }
+                $('adminTicketsBody').innerHTML = (data.tickets || []).map(t => {
+                    const statusCls = t.status === 'open' ? 'badge-orange' : t.status === 'answered' ? 'badge-green' : 'badge-gray';
+                    return '<tr>' +
+                        '<td>#' + t.id + '</td>' +
+                        '<td style="font-weight:600;">' + escapeHtml(t.workspace_name || t.requester_email) + '<div style="font-size:11px;color:var(--color-text-muted);">' + escapeHtml(t.requester_email) + '</div></td>' +
+                        '<td>' + escapeHtml(t.subject) + '</td>' +
+                        '<td><span class="badge badge-gray">' + escapeHtml(t.category) + '</span></td>' +
+                        '<td><span class="badge ' + statusCls + '">' + t.status + '</span></td>' +
+                        '<td style="font-size:12px;">' + (t.updated_at || '').replace('T', ' ').slice(0, 16) + '</td>' +
+                        '<td><button class="btn btn-secondary btn-sm" onclick="openAdminTicket(' + t.id + ')">Open</button></td></tr>';
+                }).join('') || '<tr><td colspan="7"><div class="empty-state"><h3>No tickets</h3></div></td></tr>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function openAdminTicket(id) {
+            try {
+                const res = await fetch(API + '/support/tickets/' + id, { headers: { 'Authorization': 'Bearer ' + token } });
+                if (!res.ok) throw new Error('Failed');
+                const t = await res.json();
+                adminTicketId = id;
+                $('adminTicketThread').classList.remove('hidden');
+                $('adminTicketTitle').textContent = '#' + t.id + ' — ' + t.subject + ' (' + t.status + ') from ' + (t.workspace_name || t.requester_email);
+                $('adminTicketMessages').innerHTML = (t.messages || []).map(m =>
+                    '<div style="margin-bottom:10px;' + (m.sender === 'owner' ? 'background:var(--color-accent-light);border-radius:10px;padding:10px 12px;' : 'background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;') + '">' +
+                    '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' · ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
+                    '<div style="font-size:13px;white-space:pre-wrap;">' + escapeHtml(m.body) + '</div></div>'
+                ).join('');
+                $('adminTicketMessages').scrollTop = $('adminTicketMessages').scrollHeight;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function sendAdminReply() {
+            const body = $('adminTicketReply').value.trim();
+            if (!body || !adminTicketId) return;
+            try {
+                $('adminTicketReply').value = '';
+                await fetch(API + '/support/tickets/' + adminTicketId + '/reply', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ body })
+                });
+                openAdminTicket(adminTicketId);
+                loadSupportInbox();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function adminCloseTicket() {
+            if (!adminTicketId || !confirm('Close this ticket?')) return;
+            try {
+                await fetch(API + '/support/tickets/' + adminTicketId + '/close', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                toast('Ticket closed');
+                loadSupportInbox();
+                openAdminTicket(adminTicketId);
+            } catch (e) { toast(e.message, 'error'); }
+        }
         }
 
         // ---------- Admin: subscribers ----------
