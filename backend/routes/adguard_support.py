@@ -199,19 +199,24 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
     _require_adguard_access(user)
     out = []
     for ws in _ws_scope(db, user):
+        def _load(raw):
+            try:
+                return json.loads(raw) if raw else []
+            except Exception:
+                return []
         out.append({
             "workspace_id": ws.id,
             "name": ws.display_name or ws.owner_email,
             "google": {
                 "connected": bool(ws.google_is_live),
                 "last_sync_at": ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None,
-                "accounts": (ws.discovered_accounts or [])[:20],
+                "accounts": _load(ws.discovered_accounts)[:20],
             },
             "meta": {
                 "connected": bool(ws.meta_is_live),
                 "last_sync_at": ws.meta_last_sync_at.isoformat() if ws.meta_last_sync_at else None,
-                "accounts": (ws.discovered_meta_accounts or [])[:20],
-                "pages": (ws.discovered_meta_pages or [])[:20],
+                "accounts": _load(ws.discovered_meta_accounts)[:20],
+                "pages": _load(ws.discovered_meta_pages)[:20],
             },
         })
     return {"connections": out}
@@ -279,33 +284,30 @@ def campaign_report(days: int = 7, db: Session = Depends(get_db), user: User = D
     """Per-campaign junk report: totals, verified, flagged, junk %, estimated recovered spend."""
     _require_adguard_access(user)
     start, end = _parse_range(days)
-    q = (
-        db.query(
-            AdGuardLead.campaign_name,
-            func.count(AdGuardLead.id),
-            func.sum(func.case([(AdGuardLead.verdict == "flagged", 1)], else_=0)),
-            func.sum(func.case([(AdGuardLead.verdict == "verified", 1)], else_=0)),
-        )
-        .filter(AdGuardLead.received_at >= start)
-        .group_by(AdGuardLead.campaign_name)
-    )
+    q = db.query(AdGuardLead.campaign_name, AdGuardLead.verdict).filter(AdGuardLead.received_at >= start)
     if user.role not in ("admin", "superadmin"):
         ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
         q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     rows = q.all()
+    per: dict = {}
+    for name, verdict in rows:
+        key = (name or "(unknown)").strip() or "(unknown)"
+        b = per.setdefault(key, {"leads": 0, "verified": 0, "flagged": 0})
+        b["leads"] += 1
+        if verdict == "flagged":
+            b["flagged"] += 1
+        elif verdict == "verified":
+            b["verified"] += 1
     out = []
-    for name, total, flagged, verified in rows:
-        total = total or 0
-        flagged = int(flagged or 0)
-        verified = int(verified or 0)
-        junk_pct = round(100 * flagged / total, 1) if total else 0.0
+    for name, b in per.items():
+        junk_pct = round(100 * b["flagged"] / b["leads"], 1) if b["leads"] else 0.0
         out.append({
-            "campaign": (name or "(unknown)").strip() or "(unknown)",
-            "leads": total,
-            "verified": verified,
-            "flagged": flagged,
+            "campaign": name,
+            "leads": b["leads"],
+            "verified": b["verified"],
+            "flagged": b["flagged"],
             "junk_pct": junk_pct,
-            "recovered_spend_inr": flagged * 350,
+            "recovered_spend_inr": b["flagged"] * 350,
         })
     out.sort(key=lambda r: r["leads"], reverse=True)
     return {"days": days, "campaigns": out}
