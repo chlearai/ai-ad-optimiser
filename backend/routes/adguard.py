@@ -659,7 +659,7 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     except Exception as e:
         logger.warning(f"[AdGuard] Meta discovery failed (token still stored): {e}")
 
-    return RedirectResponse(url="/adguard?oauth_success=meta")
+    return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=meta")
 
 
 @router.get("/oauth/callback")
@@ -716,7 +716,7 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     except Exception as e:
         logger.warning(f"[AdGuard] post-connect discovery failed: {e}")
 
-    return RedirectResponse(url="/adguard?oauth_success=google")
+    return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=google")
 
 
 class SelectAccountsRequest(BaseModel):
