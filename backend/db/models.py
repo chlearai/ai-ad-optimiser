@@ -993,6 +993,15 @@ class AdGuardAccount(Base):
     shield_min_leads = Column(Integer, default=50)  # minimum leads in window before pausing
     shield_actions = Column(Text, nullable=True)  # JSON log: [{time, action, campaign, detail}]
 
+    # Connection health (Connection Manager card)
+    google_last_sync_at = Column(DateTime, nullable=True)
+    meta_last_sync_at = Column(DateTime, nullable=True)
+
+    # Per-workspace settings
+    timezone = Column(String(50), default="Asia/Kolkata")
+    alert_emails = Column(Text, nullable=True)  # JSON list of emails for alerts/reports
+    protection_mode = Column(String(20), default="monitor")  # monitor | protect
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1016,6 +1025,11 @@ class AdGuardAccount(Base):
             "shield_enabled": self.shield_enabled,
             "shield_junk_threshold": self.shield_junk_threshold,
             "shield_min_leads": self.shield_min_leads,
+            "google_last_sync_at": self.google_last_sync_at.isoformat() if self.google_last_sync_at else None,
+            "meta_last_sync_at": self.meta_last_sync_at.isoformat() if self.meta_last_sync_at else None,
+            "timezone": self.timezone,
+            "alert_emails": json.loads(self.alert_emails) if self.alert_emails else [],
+            "protection_mode": self.protection_mode,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -1101,4 +1115,68 @@ class AdGuardLead(Base):
             "lsq_error": self.lsq_error,
             "received_at": self.received_at.isoformat() if self.received_at else None,
             "processed_at": self.processed_at.isoformat() if self.processed_at else None,
+        }
+
+
+class AdGuardSupportTicket(Base):
+    """AdGuard SaaS — customer support tickets.
+
+    Customers raise tickets from their workspace; the owner (admin) answers
+    from the support inbox. Threaded via AdGuardTicketMessage rows.
+    """
+    __tablename__ = "adguard_support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+    requester_email = Column(String, nullable=False, index=True)  # customer login email
+    requester_name = Column(String, nullable=True, default="")
+    subject = Column(String, nullable=False)
+    category = Column(String, default="general")  # general | connection | billing | bug | feature
+    status = Column(String, default="open", index=True)  # open | answered | closed
+    priority = Column(String, default="normal")  # low | normal | high
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    workspace = relationship("AdGuardAccount")
+    messages = relationship("AdGuardTicketMessage", back_populates="ticket", order_by="AdGuardTicketMessage.created_at", cascade="all, delete-orphan")
+
+    def to_dict(self, include_messages: bool = False):
+        d = {
+            "id": self.id,
+            "workspace_id": self.workspace_id,
+            "workspace_name": self.workspace.display_name if self.workspace else None,
+            "requester_email": self.requester_email,
+            "requester_name": self.requester_name,
+            "subject": self.subject,
+            "category": self.category,
+            "status": self.status,
+            "priority": self.priority,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if include_messages:
+            d["messages"] = [m.to_dict() for m in self.messages]
+        return d
+
+
+class AdGuardTicketMessage(Base):
+    """A message inside a support ticket (customer or owner side)."""
+    __tablename__ = "adguard_ticket_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("adguard_support_tickets.id"), nullable=False, index=True)
+    sender = Column(String, nullable=False)  # customer | owner
+    sender_name = Column(String, nullable=True, default="")
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    ticket = relationship("AdGuardSupportTicket", back_populates="messages")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "sender": self.sender,
+            "sender_name": self.sender_name,
+            "body": self.body,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -204,6 +204,12 @@ def init_db():
             run_adguard_crm_creds_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard crm_credentials migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard support tickets + settings + sync health
+        try:
+            from backend.migrations.add_adguard_support_settings import run_migration as run_adguard_support_migration
+            run_adguard_support_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard support/settings migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise

@@ -45,8 +45,100 @@ def start_scheduler():
     # AdGuard Money Shield: junk-rate governor scan every 30 minutes (Layer 1 prevention)
     if os.getenv("ADGUARD_SHIELD_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_shield_scan, 'interval', minutes=30, id='adguard_shield_scan', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=5))
+    # AdGuard weekly report email (every Monday 8:30 AM IST = 3:00 AM UTC)
+    if os.getenv("ADGUARD_WEEKLY_REPORT_ENABLED", "true").lower() in ("true", "1", "yes"):
+        _scheduler.add_job(_run_adguard_weekly_reports, 'cron', day_of_week='mon', hour=3, minute=0, id='adguard_weekly_reports', replace_existing=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
+
+
+def _run_adguard_weekly_reports():
+    """Email the weekly campaign junk report to each workspace's alert emails."""
+    try:
+        from backend.db.models import AdGuardAccount
+        from backend.routes.adguard_support import campaign_report
+        from backend.services.onboarding_email import _smtp_from_env
+        import smtplib
+        import socket
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from email.utils import formataddr
+        import json as _json
+
+        db = SessionLocal()
+        sent = 0
+        try:
+            cfg = _smtp_from_env()
+            for ws in db.query(AdGuardAccount).filter(AdGuardAccount.is_archived == False).all():  # noqa: E712
+                try:
+                    recipients = _json.loads(ws.alert_emails) if ws.alert_emails else []
+                    if not recipients and ws.owner_email:
+                        recipients = [ws.owner_email]
+                    if not recipients:
+                        continue
+                    # Build report data for this workspace (7 days)
+                    from datetime import timedelta as _td
+                    start = datetime.utcnow() - _td(days=7)
+                    from backend.db.models import AdGuardLead
+                    rows = (
+                        db.query(AdGuardLead.campaign_name, AdGuardLead.verdict)
+                        .filter(AdGuardLead.adguard_account_id == ws.id)
+                        .filter(AdGuardLead.received_at >= start)
+                        .all()
+                    )
+                    per: dict = {}
+                    for cname, verdict in rows:
+                        b = per.setdefault((cname or "(unknown)").strip() or "(unknown)", {"total": 0, "flagged": 0})
+                        b["total"] += 1
+                        if verdict == "flagged":
+                            b["flagged"] += 1
+                    if not per:
+                        continue
+                    html_rows = ""
+                    total_leads = total_flagged = 0
+                    for cname, b in sorted(per.items(), key=lambda kv: -kv[1]["total"]):
+                        pct = round(100 * b["flagged"] / b["total"], 1) if b["total"] else 0
+                        total_leads += b["total"]
+                        total_flagged += b["flagged"]
+                        html_rows += f"<tr><td style='padding:6px 10px;border:1px solid #e7e5e4;'>{cname}</td><td style='padding:6px 10px;border:1px solid #e7e5e4;text-align:center;'>{b['total']}</td><td style='padding:6px 10px;border:1px solid #e7e5e4;text-align:center;'>{b['flagged']}</td><td style='padding:6px 10px;border:1px solid #e7e5e4;text-align:center;'><b>{pct}%</b></td><td style='padding:6px 10px;border:1px solid #e7e5e4;text-align:center;'>₹{b['flagged'] * 350:,}</td></tr>"
+                    saved = total_flagged * 350
+                    html = f"""
+                    <html><body style="font-family:Arial,sans-serif;color:#1c1917;">
+                    <div style="max-width:600px;margin:0 auto;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
+                      <div style="background:#d97706;padding:16px 20px;"><span style="color:#fff;font-weight:700;font-size:16px;">🛡️ AdGuard Weekly Report — {ws.display_name or ws.owner_email}</span></div>
+                      <div style="padding:20px;">
+                        <p>Last 7 days: <b>{total_leads}</b> leads audited · <b style="color:#dc2626;">{total_flagged}</b> blocked · <b style="color:#059669;">₹{saved if (saved := total_flagged * 350) else 0} recovered spend</b></p>
+                        <table style="border-collapse:collapse;font-size:13px;">
+                          <tr style="background:#f5f5f4;"><th style="padding:6px 10px;border:1px solid #e7e5e4;text-align:left;">Campaign</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Leads</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Blocked</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Junk %</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Recovered ₹</th></tr>
+                          {html_rows}
+                        </table>
+                        <p style="font-size:11px;color:#a8a29e;margin-top:16px;">Stop paying for garbage leads. — AdGuard</p>
+                      </div>
+                    </div></body></html>"""
+                    if not cfg.get("error"):
+                        addrs = socket.getaddrinfo(cfg["host"], cfg["port"], socket.AF_INET, socket.SOCK_STREAM)
+                        msg = MIMEMultipart("alternative")
+                        msg["From"] = formataddr((cfg["sender_name"], cfg["from"]))
+                        msg["To"] = ", ".join(recipients)
+                        msg["Subject"] = f"AdGuard Weekly Report — {ws.display_name or ws.owner_email}"
+                        msg.attach(MIMEText("Weekly AdGuard report attached as HTML.", "plain"))
+                        msg.attach(MIMEText(html, "html"))
+                        server = smtplib.SMTP(addrs[0][4][0], cfg["port"], timeout=30)
+                        server.ehlo(cfg["host"]); server.starttls(); server.ehlo(cfg["host"])
+                        server.login(cfg["user"], cfg["pass"])
+                        server.sendmail(cfg["from"], recipients, msg.as_string())
+                        server.quit()
+                        sent += 1
+                    else:
+                        logger.warning(f"[AdGuard weekly] SMTP not configured; skipping {ws.owner_email}")
+                except Exception as we:
+                    logger.warning(f"[AdGuard weekly] ws {ws.id} failed: {we}")
+        finally:
+            db.close()
+        if sent:
+            logger.info(f"[AdGuard weekly] {sent} report email(s) sent")
+    except Exception as e:
+        logger.warning(f"AdGuard weekly reports failed: {e}")
 
 
 def _run_adguard_shield_scan():
@@ -92,6 +184,9 @@ def _run_adguard_meta_poll():
                 token = get_meta_token_from_credentials(ws.meta_credentials or "")
                 if not token:
                     continue
+                # Connection Manager: record successful sync time
+                ws.meta_last_sync_at = datetime.utcnow()
+                db.commit()
                 try:
                     pages = _json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
                 except Exception:

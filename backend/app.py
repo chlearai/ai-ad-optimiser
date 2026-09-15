@@ -12,6 +12,7 @@ import traceback
 from backend.routes import config, campaigns, search_terms, negatives, optimizations, logs, chat, auth, reports, accounts, audits, notifications, oauth, crm, revenueops, dsu_report, dsi_report, mantri, voice, categories, activity_log, mis_mantri, salesforce_mantri
 from backend.routes import crashclub
 from backend.routes import adguard
+from backend.routes import adguard_support
 
 from backend.db.database import init_db
 from backend.services.scheduler import start_scheduler, stop_scheduler
@@ -66,6 +67,7 @@ app.include_router(voice.router)
 app.include_router(activity_log.router)
 app.include_router(crashclub.router)
 app.include_router(adguard.router)
+app.include_router(adguard_support.router)
 
 
 # Initialize database tables only at import time; scheduler starts lazily on first request
