@@ -50,19 +50,20 @@ Every rupee of ad spend should buy a real customer — not a bot, duplicate, or 
 
 ## Product Roles & Views
 
-**Customer (subscriber) sees:**
-- Live lead feed (own leads only), scores, verified vs flagged
-- CSV export
-- Their quota with 80% upgrade alert
-- Connectors: Google Ads, Meta Ads (+ LinkedIn, Microsoft/Bing, TikTok, X, Pinterest, Snapchat, Amazon — coming soon)
-- CRM Delivery selector (their own CRM)
+**Customer (subscriber) sees** — tabbed workspace:
+- **Dashboard tab**: quota + 80% upgrade alert, connect banner, KPIs (audited/verified/blocked/recovered ₹/avg score), Live Lead Feed with search + CSV
+- **Reports tab**: Campaign Junk Report (date range: 24h/7/28/30/90d — per campaign: leads, verified, blocked, junk %, recovered ₹), Waste Analysis (named reasons bar chart from lead flags), CSV export with range
+- **Connections tab**: Google/Meta cards — connected status, Last sync timestamp (Meta auto-polls 5 min), discovered accounts list, Connect/Disconnect buttons (disconnect keeps lead history)
+- **Support tab**: raise tickets (subject/category/body), threaded conversation with the owner, resolve & close
+- **Settings tab**: timezone, Protection Mode (Monitor = detect only / Protect = Money Shield auto-pause), alert emails (max 5) for weekly report + alerts
 
 **Admin (app owner) sees:**
-- All subscribers, plans/quotas, storage, connection health
-- Global Lead Stream (per-subscriber on demand, not always-on)
+- All subscribers, plans/quotas, storage, connection health, archive, edit (name/plan/quota/expiry/password reset), delete (typed-email confirm)
+- Global Lead Stream (per-subscriber on demand)
 - Test Lead Cleanup (preview before delete)
-- Create Subscriber (login + workspace + plan in one step)
+- Create Subscriber (login + workspace + plan in one step; **invite email** or instant password modes)
 - View Page (open the exact subscriber experience in one click)
+- **Support Inbox**: all customer tickets, reply threads, open-count badge, close tickets
 
 ---
 
@@ -109,8 +110,10 @@ Payments integration: later. Admin login = same login page, separate role.
 - Tracker: C:\Users\Shekhar Raju\Desktop\LANDMARK_TRACKER.csv
 
 ## Known Open Items
-1. CRM credential capture + per-CRM delivery engine (preference stored; delivery not built)
-2. Multi-account-per-login (agency use case: DSU + crash club under one login)
-3. Sep 14 recovered-spend pitch doc
-4. Meta webhook live delivery — blocked by Meta business verification (row 44); 5-min poller is working path
-5. New ad platform connectors (LinkedIn/Bing/TikTok/X/Pinterest/Snapchat/Amazon) — placeholders only
+1. Platform exclusion API sync (Google Customer Match + Meta Custom Audiences payloads built; API push pending)
+2. Google app verification (Testing mode = 100 test users) + Meta business verification (row 44) — both block public self-serve signups
+3. SMTP vars in Railway (SMTP_USER/SMTP_PASS/SMTP_FROM) — gates invite emails + weekly reports
+4. Competitor comparison table for landing page (drafted, awaiting approval)
+5. Salesforce delivery (preference accepted, OAuth flow pending)
+6. Demo-mode for empty workspaces
+7. Payments → auto-invite (Razorpay/Stripe webhook → create-subscriber invite mode)

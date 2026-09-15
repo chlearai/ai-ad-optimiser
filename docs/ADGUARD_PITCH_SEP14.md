@@ -41,6 +41,8 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 
 - Flagged leads × CPL = recovered spend, per campaign, timestamped, accountant-verifiable
 - Per-campaign junk rates: "YouTube: 62% junk. Search: 8%. Move the budget."
+- **Weekly report email** every Monday: campaign table + recovered ₹, straight to the customer's inbox
+- **Waste Analysis**: named reasons why leads were blocked (disposable email, bad phone, geo mismatch…) — customers understand what hit them
 - AI intent reading: "checking price" vs "admission this month" → sales priority tiers
 
 ---
@@ -71,6 +73,7 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 | "So you filter my loss after I pay for it?" (the CFO kill-shot on filter-only tools) | Layer 1: excluded scammers' impressions are never served — spend prevented at source. Layers 2–3 protect CRM + prove savings. |
 | "Why not build in-house?" | The value is the FraudGraph network data, not the code. In-house = one account's fingerprints. AdGuard = every customer's scammer pre-blocked for you from day one. |
 | "What if it blocks real customers?" | Every block carries reason chips + CSV export + admin review. One-click unarchive. Shield is auditable. |
+| "How are you different from ClickCease/Lunio?" | They block clicks (one layer, USD 250–420/mo). AdGuard does prevention + filtering + proof at Indian pricing, with a transparent 0–100 Integrity Score instead of a black box, delivers to ANY CRM (they deliver to none), and every customer's blocked scammer protects the whole network. |
 
 ---
 
