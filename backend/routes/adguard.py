@@ -704,28 +704,52 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     }
     from backend.services.crypto import encrypt as fernet_encrypt
 
-    # Identify which Google account granted access (for multi-identity list)
+    # Identify which Google account granted access (for multi-identity list).
+    # Primary: id_token JWT (always present when userinfo.email scope granted).
+    # Fallback: userinfo API. Last resort: unique placeholder so multiple
+    # connects never overwrite each other.
     identity_email = None
     try:
-        tok_req = urllib.request.Request(
-            "https://www.googleapis.com/oauth2/v2/userinfo",
-            headers={"Authorization": f"Bearer {token_data.get('access_token', '')}"},
-        )
-        with urllib.request.urlopen(tok_req, timeout=15) as tok_resp:
-            identity_email = (json.loads(tok_req.read().decode()) or {}).get("email")
+        id_token = token_data.get("id_token") or ""
+        if id_token and id_token.count(".") >= 2:
+            import base64 as _b64
+            payload_b64 = id_token.split(".")[1]
+            payload_b64 += "=" * (-len(payload_b64) % 4)
+            identity_email = (json.loads(_b64.urlsafe_b64decode(payload_b64).decode()) or {}).get("email")
     except Exception as e:
-        logger.warning(f"[AdGuard] could not read Google identity email: {e}")
+        logger.warning(f"[AdGuard] id_token decode failed: {e}")
+    if not identity_email:
+        try:
+            tok_req = urllib.request.Request(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {token_data.get('access_token', '')}"},
+            )
+            with urllib.request.urlopen(tok_req, timeout=15) as tok_resp:
+                identity_email = (json.loads(tok_resp.read().decode()) or {}).get("email")
+        except Exception as e:
+            logger.warning(f"[AdGuard] could not read Google identity email: {e}")
 
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
 
-    # Multi-identity: append/replace THIS Google login's entry with its OWN creds + accounts
+    # Multi-identity: append THIS Google login's entry with its OWN creds + accounts.
+    # Same email replaces its own entry. Never let two identities collide on a
+    # generic placeholder name — uniquify instead.
     try:
         identities = json.loads(ws.google_identities) if ws.google_identities else []
-        # replace entry for same email, or the generic legacy 'google-account' placeholder
-        identities = [i for i in identities if (identity_email and i.get("email") != identity_email) and i.get("email") != "google-account"]
+        if identity_email:
+            identities = [i for i in identities if i.get("email") != identity_email]
+        else:
+            base = "google-account"
+            placeholder = base
+            n = 2
+            existing = {i.get("email") for i in identities}
+            while placeholder in existing:
+                placeholder = f"{base}-{n}"
+                n += 1
+            identity_email = placeholder
         identities.append({
-            "email": identity_email or "google-account",
+            "email": identity_email,
             "credentials": fernet_encrypt(json.dumps(creds)),
             "connected_at": datetime.utcnow().isoformat(),
         })
@@ -738,16 +762,26 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     # Accounts are stored PER IDENTITY so multiple Gmails keep separate lists.
     try:
         discovered = oauth_service.discover_google_ads_customers(ws.google_credentials)
-        # stash discovered accounts on the identity entry too
         try:
             identities = json.loads(ws.google_identities) if ws.google_identities else []
             for i in identities:
-                if i.get("email") == (identity_email or "google-account"):
+                if i.get("email") == identity_email:
                     i["discovered"] = discovered
             ws.google_identities = json.dumps(identities)
         except Exception:
             pass
-        ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
+        # merge ALL identities' accounts into the flat list for lead routing
+        try:
+            merged = []
+            seen_ids = set()
+            for i in json.loads(ws.google_identities or "[]"):
+                for a in i.get("discovered") or []:
+                    if a.get("id") not in seen_ids:
+                        merged.append(a)
+                        seen_ids.add(a.get("id"))
+            ws.discovered_accounts = json.dumps(merged) if merged else json.dumps(discovered)
+        except Exception:
+            ws.discovered_accounts = json.dumps(discovered) if discovered else "[]"
         db.commit()
     except Exception as e:
         logger.warning(f"[AdGuard] post-connect discovery failed: {e}")
