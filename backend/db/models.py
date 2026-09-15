@@ -1016,6 +1016,7 @@ class AdGuardAccount(Base):
             "display_name": self.display_name,
             "google_is_live": self.google_is_live,
             "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
+            "google_identities": json.loads(self.google_identities) if self.google_identities else [],
             "meta_is_live": self.meta_is_live,
             "discovered_meta_accounts": json.loads(self.discovered_meta_accounts) if self.discovered_meta_accounts else [],
             "discovered_meta_pages": json.loads(self.discovered_meta_pages) if self.discovered_meta_pages else [],
