@@ -231,7 +231,8 @@ def parse_state(state_b64: str) -> Optional[Dict[str, Any]]:
 
 def get_adguard_auth_url(adguard_account_id: int) -> str:
     """Google OAuth URL for an AdGuard workspace. Same flow as Account connect,
-    state links to adguard_accounts.id instead."""
+    state links to adguard_accounts.id instead. select_account forces Google's
+    account chooser on EVERY connect so users can add multiple Gmail identities."""
     cfg = load_config()
     client_id = _require(cfg, "google_client_id")
     base = _redirect_base(cfg)
@@ -243,9 +244,9 @@ def get_adguard_auth_url(adguard_account_id: int) -> str:
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/adwords",
+        "scope": "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.email",
         "access_type": "offline",
-        "prompt": "consent",
+        "prompt": "consent select_account",
         "state": state_b64,
     }
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
