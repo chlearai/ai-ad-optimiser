@@ -222,6 +222,12 @@ def init_db():
             run_adguard_mid_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard meta_identities migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard commercial metadata and offline payment columns
+        try:
+            from backend.migrations.add_adguard_commercial_columns import run_migration as run_adguard_commercial_migration
+            run_adguard_commercial_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard commercial columns migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
