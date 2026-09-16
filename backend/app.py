@@ -207,6 +207,45 @@ def get_onboard_ui(request: Request):
     return HTMLResponse(content="<h1>Onboarding UI not found.</h1>")
 
 
+@app.get("/terms", response_class=HTMLResponse)
+def get_terms(request: Request):
+    return HTMLResponse(content="""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terms of Service - AdGuard</title>
+    <style>body{font-family:Arial,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#333}</style>
+</head>
+<body>
+    <h1>Terms of Service</h1>
+    <p><strong>AdGuard</strong> (&ldquo;AdGuard&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a lead-quality protection service operated by ChlearSakhaaOps AI. By creating an account or connecting an advertising account, you agree to these terms.</p>
+    <h2>1. The Service</h2>
+    <p>AdGuard connects to your Google Ads and/or Meta Ads accounts (via your authorisation) to audit incoming leads, flag low-quality or fraudulent leads, exclude flagged audiences from future ad delivery, and produce reports on wasted ad spend.</p>
+    <h2>2. Your Account</h2>
+    <p>You are responsible for the accuracy of your registration details and for keeping your credentials secure. Accounts are provided per subscription plan with defined lead-volume limits; exceeding plan limits may result in throttling or upgrade prompts.</p>
+    <h2>3. Platform Authorisations</h2>
+    <p>You grant AdGuard permission to access only the advertising data needed to run the service (campaigns, lead forms, audience lists). You may revoke access at any time, either from AdGuard or directly in Google / Meta account settings. Revocation stops data processing for your workspace.</p>
+    <h2>4. Acceptable Use</h2>
+    <p>You may not use AdGuard to process data you are not legally permitted to process, to attempt unauthorised access to other workspaces, or to reverse-engineer or resell the service.</p>
+    <h2>5. Automated Actions</h2>
+    <p>Where you enable Money Shield automated protections (campaign pausing, exclusion syncing), AdGuard may take actions in your connected ad accounts on your behalf. You can disable automation at any time in Settings.</p>
+    <h2>6. Billing &amp; Plans</h2>
+    <p>Paid plans are billed per the pricing shown at sign-up. Trials convert only with your explicit confirmation. Refunds, where applicable, are handled case-by-case — contact us below.</p>
+    <h2>7. Disclaimer</h2>
+    <p>AdGuard provides lead-scoring based on heuristics and platform data. Scores are informational; we do not guarantee that every flagged lead is junk or that every passed lead is genuine, and we are not liable for advertising spend outcomes.</p>
+    <h2>8. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by law, our aggregate liability is limited to the fees you paid us in the three (3) months preceding the claim.</p>
+    <h2>9. Termination</h2>
+    <p>You may stop using AdGuard and delete your account at any time. We may suspend accounts that violate these terms or applicable law.</p>
+    <h2>10. Governing Law</h2>
+    <p>These terms are governed by the laws of India, with courts in Bengaluru, Karnataka having exclusive jurisdiction.</p>
+    <h2>11. Contact</h2>
+    <p>Questions: <a href="mailto:shekharraju6@gmail.com">shekharraju6@gmail.com</a></p>
+    <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Last updated: September 2026</p>
+</body>
+</html>""")
+
+
 @app.get("/privacy", response_class=HTMLResponse)
 def get_privacy(request: Request):
     return HTMLResponse(content="""<!DOCTYPE html>
@@ -222,7 +261,7 @@ def get_privacy(request: Request):
     <h2>1. Information We Collect</h2>
     <p>We collect information you provide when registering an account, connecting advertising accounts (Google Ads, Meta Ads), and configuring integrations. This may include account IDs, OAuth tokens, campaign metrics, and CRM data.</p>
     <h2>2. How We Use Information</h2>
-    <p>We use the information to provide optimisation recommendations, reports, dashboards, notifications, and to keep connected accounts synchronised.</p>
+    <p>We use the information to provide optimisation recommendations, reports, dashboards, notifications, and to keep connected accounts synchronised. For AdGuard workspaces, this includes scoring incoming leads for quality, flagging suspected junk/fraudulent leads, and pushing flagged audiences to your connected ad platforms (Google Customer Match, Meta Custom Audiences) as exclusions — only within accounts you have authorised.</p>
     <h2>3. Data Sharing</h2>
     <p>We do not sell personal information. Data is shared only with the advertising platforms and CRM systems you authorise (Google, Meta, LeadSquared, Salesforce, HubSpot, Zoho, etc.).</p>
     <h2>4. Data Security</h2>
