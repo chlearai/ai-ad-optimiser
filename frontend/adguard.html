@@ -790,9 +790,10 @@
             maybeShowPickerAfterConnect();
             
             if (isAdmin) {
-                loadAdminSubscribers();
+                showMasterView('subscribers');
+            } else {
+                loadLeads();
             }
-            loadLeads();
         }
 
         function applyRoleLayout(isAdmin) {
@@ -920,31 +921,31 @@
 
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
-            if (isAdmin && wsObj) {
-                // Admin simulating specific customer workspace
-                renderCustomerQuota(wsObj);
-                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount)}</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>`;
-            } else if (isAdmin && !selectedAccount) {
-                $('sidebarQuotaWidget').style.display = 'none';
-                $('quotaAlertBanner').classList.add('hidden');
-                $('pageTitle').innerHTML = `<span>All Subscribers Master</span>`;
-            } else {
-                renderCustomerQuota(wsObj);
-                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount || 'My Workspace')}</span>`;
+            if (isAdmin && !selectedClientId) {
+                // "All Workspaces" clicked — route back to Subscribers & Plans master view
+                showMasterView('subscribers');
+                return;
             }
 
-            // Admin: lead feed hidden unless a specific subscriber is selected
-            const feed = $('leadFeedCard');
-            if (isAdmin) {
-                if (selectedClientId) {
-                    feed.classList.remove('hidden');
-                    $('leadFeedTitle').innerHTML = 'Live Lead Feed — <span style="color:var(--color-purple-text);">' + escapeHtml(selectedAccount) + '</span>';
-                    syncFeedSubscriberDropdown(selectedClientId);
-                } else {
-                    feed.classList.add('hidden');
-                }
-            } else {
-                feed.classList.remove('hidden');
+            if (isAdmin && wsObj) {
+                // Admin simulating specific customer workspace
+                // Deselect all Master Controls nav items
+                document.querySelectorAll('#adminMasterSection .nav-item').forEach(n => n.classList.remove('active'));
+                // Hide ALL admin master cards — show ONLY lead feed
+                $('adminSubscribersCard').classList.add('hidden');
+                $('cleanupCard').classList.add('hidden');
+                $('supportCard').classList.add('hidden');
+                $('leadFeedCard').classList.remove('hidden');
+                $('leadFeedTitle').innerHTML = 'Live Lead Feed — <span style="color:var(--color-purple-text);">' + escapeHtml(selectedAccount) + '</span>';
+                syncFeedSubscriberDropdown(selectedClientId);
+                renderCustomerQuota(wsObj);
+                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount)}</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>`;
+                loadLeads();
+            } else if (!isAdmin) {
+                // Customer view
+                renderCustomerQuota(wsObj);
+                $('pageTitle').innerHTML = `<span>${escapeHtml(selectedAccount || 'My Workspace')}</span>`;
+                $('leadFeedCard').classList.remove('hidden');
                 $('leadFeedTitle').textContent = 'Live Lead Feed';
             }
 
@@ -1005,31 +1006,50 @@
 
         // ---------- Master View Toggles for Admin ----------
         function showMasterView(view) {
+            // Deselect all Master Controls nav items
             document.querySelectorAll('#adminMasterSection .nav-item').forEach(n => n.classList.remove('active'));
+            // Deselect all Workspace Simulator nav items (except "All Workspaces" for subscribers view)
+            document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
+            // Reset selected client state
+            selectedClientId = '';
+            selectedAccount = '';
+            selectedWorkspaceObj = null;
+            // Hide quota widget and alert since we're in master view
+            $('sidebarQuotaWidget').style.display = 'none';
+            $('quotaAlertBanner').classList.add('hidden');
+            // Hide ALL content cards first (mutually exclusive)
+            $('adminSubscribersCard').classList.add('hidden');
+            $('cleanupCard').classList.add('hidden');
+            $('supportCard').classList.add('hidden');
+            $('leadFeedCard').classList.add('hidden');
+
             if (view === 'subscribers') {
                 $('navAllSubs').classList.add('active');
+                // Also highlight "All Workspaces" in sidebar
+                const allWsItem = document.querySelector('#accountList .nav-item[data-account-id=""]');
+                if (allWsItem) allWsItem.classList.add('active');
                 $('adminSubscribersCard').classList.remove('hidden');
-                $('cleanupCard').classList.add('hidden');
-                $('supportCard').classList.add('hidden');
+                $('pageTitle').innerHTML = '<span>All Subscribers Master</span>';
                 loadAdminSubscribers();
             } else if (view === 'global_leads') {
                 $('navGlobalLeads').classList.add('active');
-                $('adminSubscribersCard').classList.add('hidden');
-                $('cleanupCard').classList.add('hidden');
-                $('supportCard').classList.add('hidden');
+                $('leadFeedCard').classList.remove('hidden');
+                $('leadFeedTitle').textContent = 'Global Lead Stream';
+                $('pageTitle').innerHTML = '<span>Global Lead Stream</span>';
+                syncFeedSubscriberDropdown('');
                 loadLeads();
             } else if (view === 'cleanup') {
                 $('navCleanup').classList.add('active');
-                $('adminSubscribersCard').classList.add('hidden');
                 $('cleanupCard').classList.remove('hidden');
-                $('supportCard').classList.add('hidden');
+                $('pageTitle').innerHTML = '<span>Test Lead Cleanup</span>';
             } else if (view === 'support') {
                 $('navSupport').classList.add('active');
-                $('adminSubscribersCard').classList.add('hidden');
-                $('cleanupCard').classList.add('hidden');
                 $('supportCard').classList.remove('hidden');
+                $('pageTitle').innerHTML = '<span>Support Inbox</span>';
                 loadSupportInbox();
             }
+            renderKpis();
+            renderFeed();
         }
 
         // ---------- Admin: support inbox ----------
