@@ -277,6 +277,8 @@ def send_adguard_invite_email(
     logger.warning("No Gmail refresh token; sending AdGuard invite via SMTP fallback")
     cfg = _smtp_from_env()
     if cfg.get("error"):
+        if "required" in cfg["error"]:
+            cfg["error"] = "Email not configured: set SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS (Gmail App Password) in Railway variables, then redeploy."
         return {"sent": False, "error": cfg["error"], "provider": "smtp"}
 
     from email.mime.text import MIMEText
