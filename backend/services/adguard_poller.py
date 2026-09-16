@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 
 from backend.db.database import SessionLocal
-from backend.db.models import AdGuardAccount, AdGuardLead
+from backend.db.models import Account, AdGuardAccount, AdGuardLead
 from backend.services.crypto import decrypt
 
 logger = logging.getLogger("AdOptima")
@@ -81,6 +81,17 @@ def poll_lead_form_submissions(ws: AdGuardAccount, days: int = 2):
 
         count = 0
         db = SessionLocal()
+        # Match to local Account row if present
+        matching_acct = db.query(Account).filter(
+            (Account.external_id == cid) |
+            (Account.external_id == acct.get("formatted", "")) |
+            (Account.name == acct.get("name", ""))
+        ).first()
+        if not matching_acct and acct.get("name"):
+            base_name = acct["name"].split("-")[0].strip()
+            if base_name:
+                matching_acct = db.query(Account).filter(Account.name.ilike(f"%{base_name}%")).first()
+
         try:
             for r in rows:
                 date = str(r.segments.date)
@@ -96,6 +107,7 @@ def poll_lead_form_submissions(ws: AdGuardAccount, days: int = 2):
                 if exists:
                     continue
                 rec = AdGuardLead(
+                    account_id=matching_acct.id if matching_acct else None,
                     adguard_account_id=ws.id,
                     lead_type="poll_summary",
                     campaign_name=f"{r.campaign.name}|{r.segments.conversion_action_name}|{date}",
@@ -104,6 +116,7 @@ def poll_lead_form_submissions(ws: AdGuardAccount, days: int = 2):
                     verdict="verified",
                     lsq_status="not_pushed",
                     flags=json.dumps(["poll_summary_row", "count_only"]),
+                    raw_payload=json.dumps({"customer_id": str(cid), "account_name": acct.get("name", "")}),
                 )
                 db.add(rec)
                 count += 1

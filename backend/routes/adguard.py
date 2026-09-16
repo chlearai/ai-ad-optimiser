@@ -29,7 +29,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
@@ -302,6 +302,8 @@ def _parse_google_native_body(raw: str) -> Optional[Dict[str, Any]]:
 
 @router.get("/leads")
 def list_leads(
+    workspace_id: Optional[int] = None,
+    account_ids: Optional[str] = None,
     verdict: Optional[str] = None,
     search: Optional[str] = None,
     limit: int = 200,
@@ -319,7 +321,35 @@ def list_leads(
             .filter(AdGuardAccount.owner_email == user.email)
             .all()
         ]
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+        if workspace_id and workspace_id in ws_ids:
+            q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+        else:
+            q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    elif workspace_id:
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+
+    if account_ids:
+        raw_ids = [s.strip() for s in account_ids.split(",") if s.strip()]
+        if raw_ids:
+            acct_pk_set = set()
+            for s in raw_ids:
+                if s.isdigit() and len(s) < 8:
+                    acct_pk_set.add(int(s))
+            matched_accs = db.query(Account.id).filter(
+                (Account.external_id.in_(raw_ids)) | (Account.name.in_(raw_ids))
+            ).all()
+            for ma in matched_accs:
+                acct_pk_set.add(ma[0])
+
+            conds = []
+            if acct_pk_set:
+                conds.append(AdGuardLead.account_id.in_(list(acct_pk_set)))
+            for rid in raw_ids:
+                conds.append(AdGuardLead.raw_payload.ilike(f"%{rid}%"))
+                conds.append(AdGuardLead.campaign_name.ilike(f"%{rid}%"))
+            if conds:
+                q = q.filter(or_(*conds))
+
     if verdict in ("verified", "flagged"):
         q = q.filter(AdGuardLead.verdict == verdict)
     if search:
@@ -336,7 +366,12 @@ def list_leads(
 
 
 @router.get("/stats")
-def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+def stats(
+    workspace_id: Optional[int] = None,
+    account_ids: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
     _require_adguard_access(user)
     q = db.query(AdGuardLead)
     if user.role not in ("admin", "superadmin"):
@@ -346,7 +381,35 @@ def stats(db: Session = Depends(get_db), user: User = Depends(get_current_user_r
             .filter(AdGuardAccount.owner_email == user.email)
             .all()
         ]
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+        if workspace_id and workspace_id in ws_ids:
+            q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+        else:
+            q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    elif workspace_id:
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+
+    if account_ids:
+        raw_ids = [s.strip() for s in account_ids.split(",") if s.strip()]
+        if raw_ids:
+            acct_pk_set = set()
+            for s in raw_ids:
+                if s.isdigit() and len(s) < 8:
+                    acct_pk_set.add(int(s))
+            matched_accs = db.query(Account.id).filter(
+                (Account.external_id.in_(raw_ids)) | (Account.name.in_(raw_ids))
+            ).all()
+            for ma in matched_accs:
+                acct_pk_set.add(ma[0])
+
+            conds = []
+            if acct_pk_set:
+                conds.append(AdGuardLead.account_id.in_(list(acct_pk_set)))
+            for rid in raw_ids:
+                conds.append(AdGuardLead.raw_payload.ilike(f"%{rid}%"))
+                conds.append(AdGuardLead.campaign_name.ilike(f"%{rid}%"))
+            if conds:
+                q = q.filter(or_(*conds))
+
     total = q.count()
     verified = q.filter(AdGuardLead.verdict == "verified").count()
     flagged = q.filter(AdGuardLead.verdict == "flagged").count()
@@ -873,8 +936,22 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
     accounts = json.loads(raw) if raw else []
     selected = set(str(s) for s in req.selected_ids)
     for a in accounts:
-        a["selected"] = str(a["id"]) in selected
+        a["selected"] = str(a.get("id")) in selected
     setattr(ws, field, json.dumps(accounts))
+
+    ident_field = "meta_identities" if platform == "meta" else "google_identities"
+    ident_raw = getattr(ws, ident_field)
+    if ident_raw:
+        try:
+            idents = json.loads(ident_raw)
+            for ident in idents:
+                sub_list = (ident.get("discovered_accounts") if platform == "meta" else ident.get("discovered")) or []
+                for sa in sub_list:
+                    sa["selected"] = str(sa.get("id")) in selected
+            setattr(ws, ident_field, json.dumps(idents))
+        except Exception:
+            pass
+
     db.commit()
     return {"status": "ok", "selected": list(selected)}
 

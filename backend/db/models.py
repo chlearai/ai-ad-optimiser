@@ -1115,10 +1115,20 @@ class AdGuardLead(Base):
     adguard_account = relationship("AdGuardAccount")
 
     def to_dict(self):
+        customer_id = self.account.external_id if self.account and self.account.external_id else None
+        if not customer_id and self.raw_payload:
+            try:
+                p = json.loads(self.raw_payload)
+                if isinstance(p, dict):
+                    customer_id = p.get("customer_id") or p.get("account_id")
+            except Exception:
+                pass
         return {
             "id": self.id,
             "account_id": self.account_id,
             "account_name": self.account.name if self.account else None,
+            "customer_id": customer_id,
+            "external_id": self.account.external_id if self.account else None,
             "adguard_account_id": self.adguard_account_id,
             "gclid": self.gclid,
             "form_id": self.form_id,

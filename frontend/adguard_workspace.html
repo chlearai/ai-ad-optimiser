@@ -244,7 +244,7 @@
                 <div class="nav-section-header" onclick="toggleSection(this)">
                     <span class="nav-section-arrow">▶</span><span>Ad Connectors</span>
                 </div>
-                <div class="nav-section-items">
+                <div class="nav-section-items" id="connectorButtons">
                     <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">🔗 Connect Google Ads</button>
                     <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
                 </div>
@@ -639,7 +639,7 @@
 
                 renderQuota(selectedWorkspaceObj);
                 renderWorkspaceSidebar();
-                renderMetaButtonState();
+                renderConnectorButtons();
                 renderConnPills();
                 renderCrmPreference();
                 renderShield(selectedWorkspaceObj);
@@ -705,25 +705,53 @@
             window.location.href = '/adguard-workspace?ws=' + ws.id;
         }
 
-        // ---------- Add workspace (multi-account): triggered from "My Workspace" section ----------
-        function openAddWorkspace() {
-            const name = prompt('Name this account (e.g. "Crash Club", "DSU"):');
-            if (!name || !name.trim()) return;
-            const platform = confirm('Connect META ADS for this account?\n\nOK = Meta Ads\nCancel = Google Ads');
-            createWorkspace(name, platform ? 'meta' : 'google');
-        }
+        // ---------- Ad Connectors in sidebar: Connect / Connected / Disconnect ----------
+        function renderConnectorButtons() {
+            const ws = selectedWorkspaceObj;
+            const container = $('connectorButtons');
+            if (!container) return;
 
-        async function createWorkspace(name, platform) {
-            try {
-                const res = await fetch(API + '/workspaces/create', {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, platform })
-                });
-                if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
-                const data = await res.json();
-                window.location.href = data.authorization_url; // straight to consent, bound to new ws
-            } catch (e) { toast(e.message, 'error'); }
+            let html = '';
+
+            // Google Ads
+            if (ws && ws.google_is_live) {
+                html += `
+                    <div style="margin-bottom:8px;padding:8px 10px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:11px;font-weight:600;color:var(--color-success-text);display:flex;align-items:center;gap:5px;">
+                                <span style="width:7px;height:7px;border-radius:50%;background:var(--color-success);display:inline-block;"></span>
+                                Google Ads Connected
+                            </span>
+                        </div>
+                        <div style="display:flex;gap:5px;margin-top:6px;">
+                            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px;padding:2px 4px;" onclick="startConnect()" title="Connect another Google account">+ Add Login</button>
+                            <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 6px;color:var(--color-danger-text);" onclick="disconnectPlatform('google')" title="Disconnect Google Ads">Disconnect</button>
+                        </div>
+                    </div>`;
+            } else {
+                html += `<button class="add-account-btn" id="addAccountBtn" onclick="startConnect()" style="margin-bottom:6px;width:100%;">🔗 Connect Google Ads</button>`;
+            }
+
+            // Meta Ads
+            if (ws && ws.meta_is_live) {
+                html += `
+                    <div style="margin-bottom:8px;padding:8px 10px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:11px;font-weight:600;color:var(--color-success-text);display:flex;align-items:center;gap:5px;">
+                                <span style="width:7px;height:7px;border-radius:50%;background:var(--color-success);display:inline-block;"></span>
+                                Meta Ads Connected
+                            </span>
+                        </div>
+                        <div style="display:flex;gap:5px;margin-top:6px;">
+                            <button class="btn btn-secondary btn-sm" style="flex:1;font-size:10px;padding:2px 4px;" onclick="startMetaConnect()" title="Connect another Meta account">+ Add Login</button>
+                            <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 6px;color:var(--color-danger-text);" onclick="disconnectPlatform('meta')" title="Disconnect Meta Ads">Disconnect</button>
+                        </div>
+                    </div>`;
+            } else {
+                html += `<button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="width:100%;">🔗 Connect Meta Ads</button>`;
+            }
+
+            container.innerHTML = html;
         }
 
         function makeNavItem(name, id, label, active) {
@@ -743,10 +771,11 @@
             } else {
                 $('connectBanner').classList.add('hidden');
             }
+            renderConnectorButtons();
             renderAccountTree(ws);
         }
 
-        // ---------- Connected Accounts tree (collapsible, grouped by Google identity) ----------
+        // ---------- Connected Accounts tree (collapsible, grouped by identity, with per-client checkboxes) ----------
         function renderAccountTree(ws) {
             const tree = $('acctTree');
             if (!tree) return;
@@ -754,22 +783,27 @@
                 tree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
                 return;
             }
-            const identities = (ws.google_identities || []);
 
-            const accountItem = (a) =>
-                '<div style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 30px;font-size:12px;color:var(--color-text-secondary);">' +
-                '<span class="account-dot" style="width:6px;height:6px;"></span>' +
-                '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
-                (a.formatted ? '<span style="font-size:10px;color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') +
-                '</div>';
+            const accountItem = (a, platform) => {
+                const isChecked = a.selected !== false;
+                const safeId = escapeHtml(String(a.id));
+                const safeName = escapeHtml(a.name || a.id);
+                return `<label style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 20px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;user-select:none;" title="${safeName} (${a.formatted || a.id})">` +
+                    `<input type="checkbox" class="tree-account-cb" data-id="${safeId}" data-platform="${platform}" ${isChecked ? 'checked' : ''} onchange="toggleAccountFilter('${safeId}', this.checked, '${platform}')" style="cursor:pointer;accent-color:var(--color-accent);margin:0;width:13px;height:13px;">` +
+                    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safeName}</span>` +
+                    (a.formatted ? `<span style="font-size:9px;color:var(--color-text-muted);">${escapeHtml(a.formatted)}</span>` : '') +
+                    (a.manager ? `<span class="badge badge-gray" style="font-size:8px;padding:0 3px;">MCC</span>` : '') +
+                    `</label>`;
+            };
 
-            const groupSection = (label, accounts, disconnectHtml) => {
+            const groupSection = (label, accounts, disconnectHtml, platform) => {
                 if (!accounts.length) return '';
+                const checkedCount = accounts.filter(a => a.selected !== false).length;
                 return '<details style="margin-bottom:4px;" open>' +
                     '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:6px;">' +
-                    '<span style="display:inline-block;width:12px;">▸</span><span style="flex:1;">' + escapeHtml(label) + '</span>' +
-                    '<span class="badge badge-green" style="font-size:9px;">' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
-                    accounts.map(accountItem).join('') + '</details>';
+                    '<span style="display:inline-block;width:12px;">▾</span><span style="flex:1;">' + escapeHtml(label) + '</span>' +
+                    '<span class="badge ' + (checkedCount ? 'badge-green' : 'badge-gray') + '" style="font-size:9px;" title="' + checkedCount + ' of ' + accounts.length + ' accounts selected">' + checkedCount + '/' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
+                    accounts.map(a => accountItem(a, platform)).join('') + '</details>';
             };
 
             let html = '';
@@ -781,11 +815,11 @@
                     identities.forEach(ident => {
                         const email = ident.email;
                         const accounts = ident.discovered || [];
-                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" title="Disconnect this Google login" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
-                        html += groupSection('📧 ' + email, accounts, dis);
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;margin-left:4px;" title="Disconnect this Google login" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
+                        html += groupSection('📧 ' + email, accounts, dis, 'google');
                     });
                 } else {
-                    html += groupSection('Google Ads', ws.discovered_accounts || []);
+                    html += groupSection('Google Ads', ws.discovered_accounts || [], '', 'google');
                 }
             }
 
@@ -797,13 +831,13 @@
                         const label = ident.label;
                         const accounts = ident.discovered_accounts || [];
                         const pages = ident.discovered_pages || [];
-                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" title="Disconnect this Meta login" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;margin-left:4px;" title="Disconnect this Meta login" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
                         const both = accounts.concat(pages.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
-                        html += groupSection('📘 ' + label, both, dis);
+                        html += groupSection('📘 ' + label, both, dis, 'meta');
                     });
                 } else {
-                    html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || []);
-                    html += groupSection('Meta Pages', ws.discovered_meta_pages || []);
+                    html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || [], '', 'meta');
+                    html += groupSection('Meta Pages', ws.discovered_meta_pages || [], '', 'meta');
                 }
             }
 
@@ -812,12 +846,57 @@
             }
             tree.innerHTML = html;
             tree.querySelectorAll('summary').forEach(s => {
-                s.addEventListener('click', () => {
+                s.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
                     const arrow = s.querySelector('span');
                     const d = s.parentElement;
-                    setTimeout(() => { arrow.textContent = d.open ? '▾' : '▸'; }, 0);
+                    setTimeout(() => { if (arrow) arrow.textContent = d.open ? '▾' : '▸'; }, 0);
                 });
             });
+        }
+
+        async function toggleAccountFilter(accountId, checked, platform) {
+            if (!selectedWorkspaceObj) return;
+
+            // 1. Update in memory discovered_accounts or discovered_meta_accounts
+            const field = platform === 'meta' ? 'discovered_meta_accounts' : 'discovered_accounts';
+            const list = selectedWorkspaceObj[field] || [];
+            list.forEach(a => {
+                if (String(a.id) === String(accountId)) {
+                    a.selected = checked;
+                }
+            });
+
+            // Also sync within identities if present
+            const identField = platform === 'meta' ? 'meta_identities' : 'google_identities';
+            const idents = selectedWorkspaceObj[identField] || [];
+            idents.forEach(ident => {
+                const sub = (platform === 'meta' ? (ident.discovered_accounts || []) : (ident.discovered || []));
+                sub.forEach(a => {
+                    if (String(a.id) === String(accountId)) {
+                        a.selected = checked;
+                    }
+                });
+            });
+
+            // 2. Persist selection to backend
+            const selectedIds = list.filter(a => a.selected !== false).map(a => String(a.id));
+            try {
+                await api('POST', '/oauth/select', {
+                    workspace_id: selectedWorkspaceObj.id,
+                    selected_ids: selectedIds,
+                    platform: platform
+                });
+            } catch (e) {
+                console.warn('Could not persist account selection:', e);
+            }
+
+            // Update badge counts in tree
+            renderAccountTree(selectedWorkspaceObj);
+
+            // 3. Re-filter leads feed and KPIs
+            renderKpis();
+            renderFeed();
         }
 
         async function disconnectGoogleIdentity(email) {
@@ -1074,10 +1153,79 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
-        // ---------- Leads ----------
+        // ---------- Leads & Account Filtering ----------
+        function getFilteredLeads() {
+            if (!selectedWorkspaceObj) return allLeads;
+
+            const gAccounts = selectedWorkspaceObj.discovered_accounts || [];
+            const mAccounts = selectedWorkspaceObj.discovered_meta_accounts || [];
+            const allKnown = gAccounts.concat(mAccounts);
+
+            // If no discovered accounts configured yet, show all leads
+            if (!allKnown.length) return allLeads;
+
+            // Active / checked accounts
+            const activeAccs = allKnown.filter(a => a.selected !== false);
+            // If user unchecked everything, return empty list
+            if (!activeAccs.length) return [];
+
+            const activeIds = new Set();
+            const activeFormatted = new Set();
+            const activeNames = new Set();
+            activeAccs.forEach(a => {
+                if (a.id) activeIds.add(String(a.id).trim().toLowerCase());
+                if (a.formatted) activeFormatted.add(String(a.formatted).trim().toLowerCase());
+                if (a.name) activeNames.add(String(a.name).trim().toLowerCase());
+            });
+
+            return allLeads.filter(l => {
+                // 1. Direct customer_id or external_id
+                if (l.customer_id) {
+                    const cid = String(l.customer_id).trim().toLowerCase();
+                    if (activeIds.has(cid) || activeFormatted.has(cid)) return true;
+                }
+                if (l.external_id) {
+                    const eid = String(l.external_id).trim().toLowerCase();
+                    if (activeIds.has(eid) || activeFormatted.has(eid)) return true;
+                }
+
+                // 2. Direct account_name match
+                if (l.account_name) {
+                    const aname = String(l.account_name).trim().toLowerCase();
+                    for (const name of activeNames) {
+                        if (name && (aname === name || aname.includes(name) || name.includes(aname))) return true;
+                    }
+                }
+
+                // 3. Campaign name substring (e.g. "DSU", "DSI", "CHLEAR")
+                if (l.campaign_name) {
+                    const camp = l.campaign_name.toLowerCase();
+                    for (const name of activeNames) {
+                        const clean = name.split('-')[0].trim().toLowerCase();
+                        if (clean && clean.length >= 3 && camp.includes(clean)) return true;
+                    }
+                    for (const id of activeIds) {
+                        if (id && camp.includes(id)) return true;
+                    }
+                }
+
+                // 4. Stored raw_payload
+                if (l.raw_payload) {
+                    try {
+                        const p = typeof l.raw_payload === 'string' ? JSON.parse(l.raw_payload) : l.raw_payload;
+                        const cid = p.customer_id || p.account_id;
+                        if (cid && (activeIds.has(String(cid).toLowerCase()) || activeFormatted.has(String(cid).toLowerCase()))) return true;
+                    } catch (e) {}
+                }
+
+                return false;
+            });
+        }
+
         async function loadLeads() {
             try {
                 const params = new URLSearchParams();
+                if (selectedWorkspaceObj) params.set('workspace_id', selectedWorkspaceObj.id);
                 const v = $('verdictFilter').value;
                 const s = $('leadSearch').value.trim();
                 if (v) params.set('verdict', v);
@@ -1091,7 +1239,7 @@
         }
 
         function renderKpis() {
-            const rows = allLeads;
+            const rows = getFilteredLeads();
             const verified = rows.filter(l => l.verdict === 'verified').length;
             const flagged = rows.filter(l => l.verdict === 'flagged').length;
             const scored = rows.filter(l => l.integrity_score != null);
@@ -1114,14 +1262,14 @@
         }
 
         function renderFeed() {
-            const rows = allLeads;
+            const rows = getFilteredLeads();
             if (!rows.length) {
-                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads received yet</h3><p>Google Ads and Meta Ads lead submissions will appear here live once they fire.</p></div></td></tr>';
+                $('feedBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No leads for selected account(s)</h3><p>Select connected accounts from the sidebar or wait for incoming leads.</p></div></td></tr>';
                 return;
             }
             $('feedBody').innerHTML = rows.map(l => `<tr>
                 <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
-                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}${l.account_name ? ' <span class="badge badge-gray" style="font-size:10px;margin-left:4px;">' + escapeHtml(l.account_name) + '</span>' : ''}</td>
                 <td>${contactText(l)}</td>
                 <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score}</span></td>
                 <td>${reasonText(l)}</td>
