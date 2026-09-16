@@ -1038,6 +1038,78 @@ def shield_exclusions(req: ShieldExclusionsRequest, db: Session = Depends(get_db
     return build_fraudgraph_exclusions(db, req.workspace_id, days=max(1, min(req.days, 365)))
 
 
+class ShieldSyncRequest(BaseModel):
+    workspace_id: int
+    days: int = 180
+
+
+@router.post("/shield/exclusions/sync")
+def shield_exclusions_sync(req: ShieldSyncRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Run the Layer 1 exclusion push NOW: flagged leads -> Google Customer Match + Meta Custom Audiences."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == req.workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+
+    from backend.services.adguard_exclusion_sync import (
+        push_google_exclusions, push_meta_exclusions_v2, log_shield_action,
+    )
+    from backend.services.adguard_meta import get_meta_token_from_credentials
+
+    cutoff = datetime.utcnow() - timedelta(days=max(1, min(req.days, 365)))
+    leads = (
+        db.query(AdGuardLead.email, AdGuardLead.phone)
+        .filter(AdGuardLead.adguard_account_id == ws.id)
+        .filter(AdGuardLead.verdict == "flagged")
+        .filter(AdGuardLead.received_at >= cutoff)
+        .all()
+    )
+    lead_items = [{"email": e or "", "phone": p or ""} for e, p in leads if (e or p)]
+    out: Dict[str, Any] = {"workspace_id": ws.id, "flagged_leads": len(lead_items), "window_days": req.days}
+    if not lead_items:
+        out["note"] = "No flagged leads in window — nothing to push."
+        return out
+
+    # Google push (first identity's creds; env-merged inside the service)
+    try:
+        identities = json.loads(ws.google_identities) if ws.google_identities else []
+        if identities and identities[0].get("credentials"):
+            g = push_google_exclusions(identities[0]["credentials"], lead_items)
+            out["google"] = g
+            log_shield_action(db, ws, "google_exclusion_sync" if g.get("ok") else "google_exclusion_sync_failed",
+                              (f"{g.get('added', 0)} pushed (customer {g.get('customer_id')})" if g.get("ok")
+                               else str(g.get("error"))[:200]))
+        else:
+            out["google"] = {"ok": False, "added": 0, "error": "no Google identity connected"}
+    except Exception as e:
+        out["google"] = {"ok": False, "added": 0, "error": str(e)[:200]}
+
+    # Meta push (per identity x ad account)
+    meta_results = []
+    try:
+        meta_idents = json.loads(ws.meta_identities) if ws.meta_identities else []
+        if not meta_idents and ws.meta_credentials:
+            meta_idents = [{"label": "meta-account", "credentials": ws.meta_credentials,
+                            "discovered_accounts": json.loads(ws.discovered_meta_accounts or "[]")}]
+        for ident in meta_idents:
+            from backend.services.adguard_meta import get_meta_token_from_credentials
+            token = get_meta_token_from_credentials(ident.get("credentials") or "")
+            if not token:
+                continue
+            for acc in (ident.get("discovered_accounts") or [])[:10]:
+                r = push_meta_exclusions_v2(token, acc.get("id"), lead_items)
+                r["account"] = acc.get("name") or acc.get("id")
+                meta_results.append(r)
+                log_shield_action(db, ws, "meta_exclusion_sync" if r.get("ok") else "meta_exclusion_failed",
+                                  f"{acc.get('name') or acc.get('id')}: " + (f"{r.get('added', 0)} pushed" if r.get("ok") else str(r.get("error"))[:180]))
+    except Exception as e:
+        logger.warning(f"[Shield] meta sync ws {ws.id}: {e}")
+    out["meta_results"] = meta_results
+    return out
+
+
 @router.get("/shield/actions/{workspace_id}")
 def shield_actions(workspace_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Shield action log for a workspace (pauses, exclusions). Admin or owner."""

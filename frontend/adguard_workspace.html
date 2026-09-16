@@ -310,6 +310,8 @@
                     </div>
                     <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="runShieldScan()">🛡️ Run Shield Scan Now</button>
                     <div id="shieldScanResult" style="font-size:11px;margin-top:6px;"></div>
+                    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;" onclick="syncExclusions()">🚫 Push Exclusions to Platforms</button>
+                    <div id="exclusionSyncResult" style="font-size:11px;margin-top:6px;"></div>
                     <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;" onclick="viewShieldActions()">📜 Shield Action Log</button>
                     <div id="shieldActionsBox" style="font-size:11px;margin-top:6px;display:none;max-height:200px;overflow-y:auto;"></div>
                 </div>
@@ -1219,6 +1221,32 @@
                     box.innerHTML = '<span style="color:var(--color-success-text);">✅ Clean — ' + data.campaigns_scanned + ' campaign(s) scanned, none breached threshold.</span>';
                 }
             } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function syncExclusions() {
+            if (!selectedWorkspaceObj) { toast('No workspace selected', 'error'); return; }
+            const box = $('exclusionSyncResult');
+            box.innerHTML = '<span style="color:var(--color-text-muted);">⏳ Pushing blocked scammers to Google/Meta exclusion lists…</span>';
+            try {
+                const res = await fetch(API + '/shield/exclusions/sync', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workspace_id: selectedWorkspaceObj.id })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { box.innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(data.detail || 'Sync failed') + '</span>'; return; }
+                const parts = [];
+                if (data.google) parts.push('Google: ' + (data.google.ok ? '<span style="color:var(--color-success-text);">✓ ' + (data.google.added || 0) + ' pushed</span>' : '<span style="color:var(--color-danger-text);">✗ ' + escapeHtml(data.google.error || 'failed') + '</span>'));
+                if (data.meta_results && data.meta_results.length) {
+                    const okM = data.meta_results.filter(r => r.ok).length;
+                    const failM = data.meta_results.filter(r => !r.ok);
+                    parts.push('Meta: <span style="color:' + (failM.length ? 'var(--color-warning-text)' : 'var(--color-success-text)') + ';">' + data.meta_results.filter(r => r.ok).length + '/' + data.meta_results.length + ' audiences updated</span>' + (failM.length ? ' (' + escapeHtml(String(failM[0].error || '')) + ')' : ''));
+                }
+                if (!parts.length) box.innerHTML = '<span style="color:var(--color-text-muted);">No platform connections to push to.</span>';
+                else box.innerHTML = parts.join('<br>');
+                toast('Exclusion sync finished');
+                viewShieldActions();
+            } catch (e) { box.innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(e.message) + '</span>'; }
         }
 
         async function viewShieldActions() {
