@@ -264,7 +264,7 @@ def send_adguard_invite_email(
 
     if refresh_token:
         from backend.services.gmail_api import send_email_via_gmail_api
-        return send_email_via_gmail_api(
+        gmail_result = send_email_via_gmail_api(
             recipient_email=recipient_email,
             subject=payloads["subject"],
             plain_body=payloads["text"],
@@ -273,8 +273,11 @@ def send_adguard_invite_email(
             sender_name=sender_name,
             refresh_token=refresh_token,
         )
+        if gmail_result.get("sent"):
+            return gmail_result
+        logger.warning(f"Gmail API send failed ({gmail_result.get('error')}); falling back to SMTP")
 
-    logger.warning("No Gmail refresh token; sending AdGuard invite via SMTP fallback")
+    logger.warning("Sending AdGuard invite via SMTP fallback")
     cfg = _smtp_from_env()
     if cfg.get("error"):
         if "required" in cfg["error"]:
