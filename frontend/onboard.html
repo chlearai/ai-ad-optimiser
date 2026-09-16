@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChlearSakhaaOps AI - Set Password</title>
+    <title>AdGuard - Set Password</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -45,7 +45,7 @@
 </head>
 <body>
     <div class="card">
-        <div class="brand"><div class="logo-icon">CS</div>ChlearSakhaaOps AI</div>
+        <div class="brand"><div class="logo-icon" style="background:linear-gradient(135deg,#fbbf24,#d97706);">AG</div>AdGuard</div>
         <h2>Set Your Password</h2>
         <p class="subtitle">Welcome! Create a secure password to activate your account.</p>
 
@@ -54,7 +54,6 @@
         <div id="formArea" class="hidden">
             <div class="info-row"><span>Email</span><span id="emailDisplay">-</span></div>
             <div class="info-row"><span>Name</span><span id="nameDisplay">-</span></div>
-            <div class="info-row"><span>Role</span><span id="roleDisplay">-</span></div>
 
             <div class="form-group">
                 <label>Password</label>
@@ -111,7 +110,6 @@
             const data = await api('GET', '/auth/onboard/' + encodeURIComponent(token));
             $('emailDisplay').textContent = data.email || '-';
             $('nameDisplay').textContent = data.full_name || '-';
-            $('roleDisplay').textContent = (data.role === 'user' ? 'BM (User)' : data.role) || '-';
             $('loading').classList.add('hidden');
             $('formArea').classList.remove('hidden');
         } catch (e) {
@@ -140,11 +138,13 @@
                 return;
             }
             const data = await api('POST', '/auth/onboard/' + encodeURIComponent(token), { password });
-            msg.textContent = 'Account activated! Redirecting to dashboard...';
+            msg.textContent = 'Account activated! Taking you to AdGuard...';
             msg.className = 'success';
             msg.classList.remove('hidden');
             localStorage.setItem('adoptima_token', data.access_token);
-            setTimeout(() => { window.location.href = '/'; }, 1200);
+            const role = (data.user && data.user.role) || 'user';
+            const dest = (role === 'admin' || role === 'superadmin') ? '/adguard' : '/adguard-workspace';
+            setTimeout(() => { window.location.href = dest; }, 1200);
         } catch (e) {
             const msg = $('message');
             msg.textContent = e.message || 'Failed to activate account.';
