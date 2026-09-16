@@ -617,6 +617,7 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
         build_meta_credentials,
         discover_meta_ad_accounts,
         discover_meta_pages,
+        get_meta_profile_label,
     )
 
     token = exchange_adguard_meta_code(code)
@@ -633,13 +634,49 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     if not ws:
         return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
 
+    # Identify which Meta (Facebook) login granted access
+    identity_label = get_meta_profile_label(token)
+
     ws.meta_credentials = build_meta_credentials(token)
     ws.meta_is_live = True
+
+    # Multi-identity: append THIS Meta login's entry with its OWN creds + accounts
+    try:
+        identities = json.loads(ws.meta_identities) if ws.meta_identities else []
+        if identity_label:
+            identities = [i for i in identities if i.get("label") != identity_label]
+        else:
+            base = "meta-account"
+            placeholder = base
+            n = 2
+            existing = {i.get("label") for i in identities}
+            while placeholder in existing:
+                placeholder = f"{base}-{n}"
+                n += 1
+            identity_label = placeholder
+        identities.append({
+            "label": identity_label,
+            "credentials": build_meta_credentials(token),
+            "connected_at": datetime.utcnow().isoformat(),
+        })
+        ws.meta_identities = json.dumps(identities)
+    except Exception as e:
+        logger.warning(f"[AdGuard] meta_identities update failed: {e}")
     db.commit()
 
     try:
         accounts = discover_meta_ad_accounts(token)
         pages = discover_meta_pages(token)
+        # stash on the identity entry
+        try:
+            identities = json.loads(ws.meta_identities) if ws.meta_identities else []
+            for i in identities:
+                if i.get("label") == (identity_label or ""):
+                    i["discovered_accounts"] = accounts or []
+                    i["discovered_pages"] = pages or []
+            ws.meta_identities = json.dumps(identities)
+        except Exception:
+            pass
         ws.discovered_meta_accounts = json.dumps(accounts) if accounts else "[]"
         ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
         db.commit()

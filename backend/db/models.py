@@ -1001,6 +1001,10 @@ class AdGuardAccount(Base):
     # [{"email": "...", "credentials": "<fernet>", "discovered": [...], "connected_at": ...}]
     google_identities = Column(Text, nullable=True)
 
+    # Multi-identity Meta connections: JSON list of
+    # [{"label": "<fb profile name/email>", "credentials": "<fernet>", "discovered": [...], "connected_at": ...}]
+    meta_identities = Column(Text, nullable=True)
+
     # Per-workspace settings
     timezone = Column(String(50), default="Asia/Kolkata")
     alert_emails = Column(Text, nullable=True)  # JSON list of emails for alerts/reports
@@ -1018,6 +1022,7 @@ class AdGuardAccount(Base):
             "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
             "google_identities": json.loads(self.google_identities) if self.google_identities else [],
             "meta_is_live": self.meta_is_live,
+            "meta_identities": json.loads(self.meta_identities) if self.meta_identities else [],
             "discovered_meta_accounts": json.loads(self.discovered_meta_accounts) if self.discovered_meta_accounts else [],
             "discovered_meta_pages": json.loads(self.discovered_meta_pages) if self.discovered_meta_pages else [],
             "verification_threshold": self.verification_threshold,

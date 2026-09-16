@@ -787,10 +787,22 @@
                 }
             }
 
-            // Meta: accounts + pages
+            // Meta: one collapsible group PER Facebook login identity
             if (ws.meta_is_live) {
-                html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || []);
-                html += groupSection('Meta Pages', ws.discovered_meta_pages || []);
+                const metaIdents = (ws.meta_identities || []).filter(i => i.label);
+                if (metaIdents.length) {
+                    metaIdents.forEach(ident => {
+                        const label = ident.label;
+                        const accounts = ident.discovered_accounts || [];
+                        const pages = ident.discovered_pages || [];
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" title="Disconnect this Meta login" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
+                        const both = accounts.concat(pages.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
+                        html += groupSection('📘 ' + label, both, dis);
+                    });
+                } else {
+                    html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || []);
+                    html += groupSection('Meta Pages', ws.discovered_meta_pages || []);
+                }
             }
 
             if (!html) {
@@ -812,6 +824,16 @@
                 await api('POST', '/connections/disconnect', { workspace_id: selectedWorkspaceObj.id, platform: 'google', identity_email: email });
                 toast(email + ' disconnected');
                 await loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function disconnectMetaIdentity(label) {
+            if (!selectedWorkspaceObj || !confirm('Disconnect ' + label + '? Its lead history is kept.')) return;
+            try {
+                await api('POST', '/connections/disconnect', { workspace_id: selectedWorkspaceObj.id, platform: 'meta', identity_label: label });
+                toast(label + ' disconnected');
+                await loadWorkspaces();
+                loadConnections();
             } catch (e) { toast(e.message, 'error'); }
         }
 
@@ -1002,14 +1024,9 @@
         function renderMetaButtonState() {
             const btn = $('addMetaBtn');
             if (!btn) return;
-            const ws = workspaces.find(w => w.meta_is_live);
-            if (ws && ws.meta_is_live) {
-                btn.textContent = '✅ Meta Ads Connected';
-                btn.onclick = openMetaAccountPicker;
-            } else {
-                btn.textContent = '🔗 Connect Meta Ads';
-                btn.onclick = startMetaConnect;
-            }
+            // Always offer connecting ANOTHER Meta (Facebook) login — multi-identity
+            btn.textContent = '🔗 Connect Meta Ads';
+            btn.onclick = startMetaConnect;
         }
 
         function openMetaAccountPicker() {
@@ -1305,15 +1322,37 @@
                                 (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
                             ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
                         }
+                    } else if (platform === 'meta') {
+                        const metaIdents = (info.identities || []).filter(i => i.label);
+                        if (metaIdents.length && info.identity_accounts) {
+                            bodyHtml = metaIdents.map(i => {
+                                const accs = info.identity_accounts[i.label] || [];
+                                const pgs = info.identity_pages ? (info.identity_pages[i.label] || []) : [];
+                                const all = accs.concat(pgs.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
+                                return '<div style="border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;margin:8px 0;">' +
+                                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                                    '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
+                                    '<b style="font-size:12px;flex:1;">' + escapeHtml(i.label) + '</b>' +
+                                    '<span class="badge badge-green" style="font-size:9px;">' + all.length + '</span>' +
+                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectMetaIdentity(\'' + escapeHtml(i.label) + '\')">✕</button></div>' +
+                                    (all.length ? all.map(a =>
+                                        '<div style="display:flex;align-items:center;gap:8px;padding:3px 0 3px 16px;font-size:12px;">' +
+                                        '<span class="account-dot" style="width:5px;height:5px;"></span>' +
+                                        '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                                        (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered — click Re-scan</div>') +
+                                    '</div>';
+                            }).join('');
+                        } else {
+                            const accs = (info.accounts || []);
+                            bodyHtml = accs.length ? accs.map(a =>
+                                '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
+                                '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                                '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                                (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
+                        }
                     } else {
-                        const accs = (info.accounts || []);
-                        bodyHtml = accs.length ? accs.map(a =>
-                            '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
-                            '<span class="account-dot" style="width:6px;height:6px;"></span>' +
-                            '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
-                            (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                        ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
-                    }
                     return '<div style="border:1px solid var(--color-border);border-radius:12px;padding:16px;margin-bottom:12px;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +

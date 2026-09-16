@@ -12,6 +12,7 @@ business_management (enumerate businesses/ad accounts reliably).
 """
 import json
 import logging
+import secrets
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
@@ -100,9 +101,19 @@ def get_adguard_meta_auth_url(adguard_account_id: int) -> str:
         "scope": ",".join(META_SCOPES),
         # re-prompt for declined permissions so a partial consent can be repaired
         "auth_type": "rerequest",
+        # force Meta's account chooser on EVERY connect (multi-identity support)
+        "auth_nonce": secrets.token_hex(8),
         "state": str(adguard_account_id),
     }
     return f"https://www.facebook.com/{GRAPH_VERSION}/dialog/oauth?" + urllib.parse.urlencode(params)
+
+
+def get_meta_profile_label(token: str) -> Optional[str]:
+    """Best-effort identity label for a Meta login: profile name, else email, else None."""
+    data = _graph_get("me", {"fields": "name,email", "token": token})
+    if not data:
+        return None
+    return data.get("name") or data.get("email")
 
 
 def exchange_adguard_meta_code(code: str) -> Optional[str]:

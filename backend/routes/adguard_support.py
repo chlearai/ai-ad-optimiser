@@ -209,6 +209,13 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
         for i in identities:
             if i.get("email"):
                 identity_accounts[i["email"]] = i.get("discovered") or []
+        meta_identities = _load(ws.meta_identities)
+        meta_identity_accounts = {}
+        meta_identity_pages = {}
+        for i in meta_identities:
+            if i.get("label"):
+                meta_identity_accounts[i["label"]] = i.get("discovered_accounts") or []
+                meta_identity_pages[i["label"]] = i.get("discovered_pages") or []
         out.append({
             "workspace_id": ws.id,
             "name": ws.display_name or ws.owner_email,
@@ -225,8 +232,14 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
             "meta": {
                 "connected": bool(ws.meta_is_live),
                 "last_sync_at": ws.meta_last_sync_at.isoformat() if ws.meta_last_sync_at else None,
-                "accounts": _load(ws.discovered_meta_accounts)[:20],
-                "pages": _load(ws.discovered_meta_pages)[:20],
+                "accounts": _load(ws.discovered_meta_accounts)[:50],
+                "pages": _load(ws.discovered_meta_pages)[:50],
+                "identities": [
+                    {"label": i.get("label"), "connected_at": i.get("connected_at")}
+                    for i in meta_identities
+                ],
+                "identity_accounts": meta_identity_accounts,
+                "identity_pages": meta_identity_pages,
             },
         })
     return {"connections": out}
@@ -246,6 +259,7 @@ class ConnectionActionRequest(BaseModel):
     workspace_id: int
     platform: str  # google | meta
     identity_email: Optional[str] = None  # for google: remove one login identity
+    identity_label: Optional[str] = None  # for meta: remove one Facebook login identity
 
 
 @router.post("/connections/rediscover")
@@ -309,16 +323,47 @@ def rediscover_accounts(req: ConnectionActionRequest, db: Session = Depends(get_
             discover_meta_pages,
             get_meta_token_from_credentials,
         )
-        token = get_meta_token_from_credentials(ws.meta_credentials or "")
-        if not token:
-            raise HTTPException(status_code=400, detail="Meta token unreadable — reconnect Meta")
-        accounts = discover_meta_ad_accounts(token)
-        pages = discover_meta_pages(token)
-        ws.discovered_meta_accounts = json.dumps(accounts) if accounts else "[]"
-        ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
+        identities = []
+        try:
+            identities = json.loads(ws.meta_identities) if ws.meta_identities else []
+        except Exception:
+            identities = []
+        all_accounts, all_pages = [], []
+        warnings = []
+        if not identities:
+            token = get_meta_token_from_credentials(ws.meta_credentials or "")
+            if not token:
+                raise HTTPException(status_code=400, detail="Meta token unreadable — reconnect Meta")
+            accounts = discover_meta_ad_accounts(token)
+            pages = discover_meta_pages(token)
+            ws.discovered_meta_accounts = json.dumps(accounts) if accounts else "[]"
+            ws.discovered_meta_pages = json.dumps(pages) if pages else "[]"
+            ws.meta_last_sync_at = datetime.utcnow()
+            db.commit()
+            return {"status": "ok", "platform": "meta", "accounts_found": len(accounts or []), "pages_found": len(pages or [])}
+        for ident in identities:
+            enc = ident.get("credentials")
+            if not enc:
+                continue
+            token = get_meta_token_from_credentials(enc)
+            if not token:
+                warnings.append(f"{ident.get('label')}: token unreadable")
+                continue
+            accounts = discover_meta_ad_accounts(token)
+            pages = discover_meta_pages(token)
+            ident["discovered_accounts"] = accounts or []
+            ident["discovered_pages"] = pages or []
+            all_accounts.extend(accounts or [])
+            all_pages.extend(pages or [])
+        ws.discovered_meta_accounts = json.dumps(all_accounts) if all_accounts else "[]"
+        ws.discovered_meta_pages = json.dumps(all_pages) if all_pages else "[]"
+        ws.meta_identities = json.dumps(identities)
         ws.meta_last_sync_at = datetime.utcnow()
         db.commit()
-        return {"status": "ok", "platform": "meta", "accounts_found": len(accounts or []), "pages_found": len(pages or [])}
+        out = {"status": "ok", "platform": "meta", "accounts_found": len(all_accounts), "pages_found": len(all_pages)}
+        if warnings:
+            out["warning"] = " | ".join(warnings[:3])
+        return out
 
     raise HTTPException(status_code=400, detail="platform must be google or meta")
 
@@ -356,11 +401,34 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
         return {"status": "disconnected", "platform": "google", "identity": req.identity_email,
                 "google_still_live": ws.google_is_live}
 
+    if platform == "meta" and req.identity_label:
+        # Remove one Meta identity; keep platform live if others remain
+        try:
+            meta_idents = json.loads(ws.meta_identities) if ws.meta_identities else []
+        except Exception:
+            meta_idents = []
+        meta_idents = [i for i in meta_idents if i.get("label") != req.identity_label]
+        ws.meta_identities = json.dumps(meta_idents)
+        if not meta_idents:
+            ws.meta_credentials = None
+            ws.meta_is_live = False
+            ws.discovered_meta_accounts = "[]"
+            ws.discovered_meta_pages = "[]"
+            ws.meta_last_sync_at = None
+        db.commit()
+        log_activity(module="AdGuard", action="Meta Identity Disconnected",
+                     description=f"{req.identity_label} disconnected from {ws.display_name or ws.owner_email}",
+                     user_id=user.id, user_name=user.full_name or user.email,
+                     entity_type="adguard_account", entity_id=str(ws.id), db=db)
+        return {"status": "disconnected", "platform": "meta", "identity": req.identity_label,
+                "meta_still_live": ws.meta_is_live}
+
     if platform == "meta":
         ws.meta_credentials = None
         ws.meta_is_live = False
         ws.discovered_meta_accounts = "[]"
         ws.discovered_meta_pages = "[]"
+        ws.meta_identities = "[]"
         ws.meta_last_sync_at = None
     elif platform == "google":
         ws.google_credentials = None
