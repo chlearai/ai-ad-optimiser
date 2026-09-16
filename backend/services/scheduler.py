@@ -48,8 +48,85 @@ def start_scheduler():
     # AdGuard weekly report email (every Monday 8:30 AM IST = 3:00 AM UTC)
     if os.getenv("ADGUARD_WEEKLY_REPORT_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_weekly_reports, 'cron', day_of_week='mon', hour=3, minute=0, id='adguard_weekly_reports', replace_existing=True)
+    # AdGuard Shield Layer 1: push FraudGraph exclusions to platforms (weekly, Mon 4:00 AM UTC)
+    if os.getenv("ADGUARD_EXCLUSION_SYNC_ENABLED", "true").lower() in ("true", "1", "yes"):
+        _scheduler.add_job(_run_adguard_exclusion_sync, 'cron', day_of_week='mon', hour=4, minute=0, id='adguard_exclusion_sync', replace_existing=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
+
+
+def _run_adguard_exclusion_sync():
+    """Push flagged-lead exclusions (last 180 days) to Google Customer Match + Meta Custom Audiences per workspace."""
+    try:
+        from backend.db.models import AdGuardAccount, AdGuardLead
+        from backend.services.adguard_exclusion_sync import (
+            push_google_exclusions, push_meta_exclusions_v2, log_shield_action,
+        )
+        from backend.services.adguard_meta import get_meta_token_from_credentials
+        import json as _json
+
+        db = SessionLocal()
+        synced = 0
+        try:
+            for ws in db.query(AdGuardAccount).filter(AdGuardAccount.shield_enabled == True).all():  # noqa: E712
+                try:
+                    cutoff = datetime.utcnow() - timedelta(days=180)
+                    leads = (
+                        db.query(AdGuardLead.email, AdGuardLead.phone)
+                        .filter(AdGuardLead.adguard_account_id == ws.id)
+                        .filter(AdGuardLead.verdict == "flagged")
+                        .filter(AdGuardLead.received_at >= cutoff)
+                        .all()
+                    )
+                    lead_items = [{"email": e or "", "phone": p or ""} for e, p in leads if (e or p)]
+                    if not lead_items:
+                        continue
+
+                    # Google: use first identity's creds
+                    g_result = None
+                    try:
+                        identities = _json.loads(ws.google_identities) if ws.google_identities else []
+                        if identities and identities[0].get("credentials"):
+                            g_result = push_google_exclusions(identities[0]["credentials"], lead_items)
+                            if g_result.get("ok"):
+                                log_shield_action(db, ws, "google_exclusion_sync",
+                                                  f"{g_result.get('added', 0)} identifiers pushed to Customer Match (customer {g_result.get('customer_id')})")
+                                synced += 1
+                            else:
+                                log_shield_action(db, ws, "google_exclusion_sync_failed",
+                                                  str(g_result.get("error"))[:200])
+                    except Exception as ge:
+                        logger.warning(f"[Shield sync] ws {ws.id} google: {ge}")
+
+                    # Meta: one audience per ad account per identity
+                    try:
+                        meta_idents = _json.loads(ws.meta_identities) if ws.meta_identities else []
+                        if not meta_idents and ws.meta_credentials:
+                            meta_idents = [{"label": "meta-account", "credentials": ws.meta_credentials,
+                                            "discovered_accounts": _json.loads(ws.discovered_meta_accounts or "[]")}]
+                        for ident in meta_idents:
+                            token = get_meta_token_from_credentials(ident.get("credentials") or "")
+                            if not token:
+                                continue
+                            for acc in (ident.get("discovered_accounts") or [])[:10]:
+                                r = push_meta_exclusions_v2(token, acc.get("id"), lead_items)
+                                if r.get("ok"):
+                                    log_shield_action(db, ws, "meta_exclusion_sync",
+                                                      f"{r.get('added', 0)} identifiers pushed to audience for {acc.get('name') or acc.get('id')}")
+                                    synced += 1
+                                else:
+                                    log_shield_action(db, ws, "meta_exclusion_failed",
+                                                      f"{acc.get('name') or acc.get('id')}: {str(r.get('error'))[:180]}")
+                    except Exception as me:
+                        logger.warning(f"[Shield sync] ws {ws.id} meta: {me}")
+                except Exception as wse:
+                    logger.warning(f"[Shield sync] ws {ws.id} failed: {wse}")
+        finally:
+            db.close()
+        if synced:
+            logger.info(f"[Shield sync] exclusion push completed for {synced} workspace sync(s)")
+    except Exception as e:
+        logger.warning(f"AdGuard exclusion sync failed: {e}")
 
 
 def _run_adguard_weekly_reports():
