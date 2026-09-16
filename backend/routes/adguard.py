@@ -1559,6 +1559,40 @@ def admin_resend_invite(sub_id: int, request: Request, db: Session = Depends(get
     }
 
 
+@router.post("/admin/email-diag")
+def admin_email_diag(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Send a test email to the admin's own address and return the FULL send result + SMTP env state."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    env_state = {
+        "SMTP_HOST": os.getenv("SMTP_HOST", ""),
+        "SMTP_PORT": os.getenv("SMTP_PORT", ""),
+        "SMTP_USER": os.getenv("SMTP_USER", ""),
+        "SMTP_PASS_set": bool(os.getenv("SMTP_PASS", "")),
+        "SMTP_FROM": os.getenv("SMTP_FROM", ""),
+    }
+
+    from backend.services.onboarding_email import _smtp_from_env, send_adguard_invite_email
+    cfg = _smtp_from_env()
+    if cfg.get("error"):
+        return {"env": env_state, "cfg_error": cfg["error"], "sent": False}
+
+    test_to = user.email
+    try:
+        result = send_adguard_invite_email(
+            recipient_email=test_to,
+            full_name=user.full_name or "Admin",
+            setup_link=f"{str(request.base_url).rstrip('/')}/adguard",
+            refresh_token=None,
+            timeout=30,
+        )
+        return {"env": env_state, "cfg": {k: cfg[k] for k in ("host", "port", "user", "from")}, "test_to": test_to, **result}
+    except Exception as e:
+        logger.exception("email-diag crashed")
+        return {"env": env_state, "sent": False, "error": str(e)}
+
+
 @router.post("/oauth/meta/resubscribe")
 def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Ensure app-level leadgen webhook + subscribe all manageable Pages (bulk tokens)."""
