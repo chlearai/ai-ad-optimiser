@@ -1504,6 +1504,61 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
     }
 
 
+@router.post("/admin/subscribers/{sub_id}/resend-invite")
+def admin_resend_invite(sub_id: int, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Re-send the setup invite email to a subscriber whose invite failed/expired. Admin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    u = db.query(User).filter(User.email == ws.owner_email).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="Login user not found for this subscriber")
+    if u.onboarding_completed or (u.is_active and not u.onboarding_token):
+        raise HTTPException(status_code=400, detail="This subscriber already activated their account")
+
+    from backend.routes.auth import ONBOARDING_TOKEN_EXPIRE_HOURS
+    import secrets as _secrets
+    from datetime import timedelta
+
+    # Fresh token (old one may be expired/used)
+    u.onboarding_token = _secrets.token_urlsafe(32)
+    u.onboarding_token_expires_at = datetime.utcnow() + timedelta(hours=ONBOARDING_TOKEN_EXPIRE_HOURS)
+    u.is_active = False
+    db.commit()
+
+    base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
+    setup_link = f"{base_url}/onboard.html?token={u.onboarding_token}"
+    from backend.services.onboarding_email import send_adguard_invite_email
+
+    refresh_token_setting = db.query(AppSetting).filter(AppSetting.key == "gmail_refresh_token").first()
+    gmail_rt = refresh_token_setting.value if refresh_token_setting else None
+
+    send_result = {"sent": False, "error": "pending"}
+    try:
+        send_result = send_adguard_invite_email(
+            recipient_email=u.email,
+            full_name=ws.display_name or u.email,
+            setup_link=setup_link,
+            refresh_token=gmail_rt,
+            timeout=30,
+        )
+    except Exception as e:
+        logger.exception(f"AdGuard invite resend crashed for {u.email}: {e}")
+        send_result = {"sent": False, "error": str(e)}
+
+    return {
+        "status": "ok",
+        "email": u.email,
+        "invite_sent": bool(send_result.get("sent")),
+        "invite_provider": send_result.get("provider"),
+        "invite_error": send_result.get("error"),
+        "setup_link": setup_link if not send_result.get("sent") else None,
+        "message": "Invite re-sent." if send_result.get("sent") else "Email failed again; share the setup link manually.",
+    }
+
+
 @router.post("/oauth/meta/resubscribe")
 def oauth_meta_resubscribe(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Ensure app-level leadgen webhook + subscribe all manageable Pages (bulk tokens)."""

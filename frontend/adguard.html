@@ -943,6 +943,7 @@
                     '<td style="white-space:nowrap;">' +
                         '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace page exactly as the customer sees it">👁</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openEditSubscriber(' + s.id + ')" title="Edit name / plan / quota / reset password">✏️</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="resendInvite(' + s.id + ')" title="Re-send the setup invite email">📧</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="deleteSubscriber(' + s.id + ', \'' + escapeHtml(s.owner_email) + '\')" title="Delete permanently" style="color:var(--color-danger);">🗑</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button>' +
                     '</td>' +
@@ -961,6 +962,25 @@
                 toast('Plan set to ' + plan.toUpperCase() + ' (quota auto-updated)');
                 loadAdminSubscribers();
                 loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function resendInvite(subId) {
+            try {
+                const res = await fetch(API + '/admin/subscribers/' + subId + '/resend-invite', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.detail || 'Failed');
+                if (data.invite_sent) {
+                    toast('📧 Invite re-sent to ' + data.email);
+                } else {
+                    const link = data.setup_link || '';
+                    if (link && navigator.clipboard) { try { await navigator.clipboard.writeText(link); } catch (e) {} }
+                    alert('Email failed: ' + (data.invite_error || 'unknown') + '\n\nSetup link copied to clipboard — share it manually:\n' + link);
+                }
+                loadAdminSubscribers();
             } catch (e) { toast(e.message, 'error'); }
         }
 
