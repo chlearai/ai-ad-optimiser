@@ -1353,6 +1353,14 @@
                             ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
                         }
                     } else {
+                        const accs = (info.accounts || []);
+                        bodyHtml = accs.length ? accs.map(a =>
+                            '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">' +
+                            '<span class="account-dot" style="width:6px;height:6px;"></span>' +
+                            '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
+                            (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
+                        ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered</div>';
+                    }
                     return '<div style="border:1px solid var(--color-border);border-radius:12px;padding:16px;margin-bottom:12px;">' +
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +
