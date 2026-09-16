@@ -12,6 +12,7 @@ business_management (enumerate businesses/ad accounts reliably).
 """
 import json
 import logging
+import os
 import secrets
 import urllib.parse
 import urllib.request
@@ -34,6 +35,17 @@ META_SCOPES = [
     "pages_manage_metadata",
     "business_management",
 ]
+
+# Scopes can be overridden via env (comma-separated). This lets the owner start
+# with minimal scopes (e.g. "email,public_profile") on a brand-new app and add
+# the full list as permissions/assets are configured — without code deploys.
+# Invalid scopes make Meta's consent screen hard-fail, so the app must never
+# request more than what's registered on the app.
+def _meta_scopes() -> List[str]:
+    raw = os.getenv("ADGUARD_META_SCOPES", "").strip()
+    if raw:
+        return [s.strip() for s in raw.split(",") if s.strip()]
+    return META_SCOPES
 
 
 def _meta_oauth_cfg() -> Dict[str, Any]:
@@ -98,7 +110,7 @@ def get_adguard_meta_auth_url(adguard_account_id: int) -> str:
         "client_id": app_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": ",".join(META_SCOPES),
+        "scope": ",".join(_meta_scopes()),
         # re-prompt for declined permissions so a partial consent can be repaired
         "auth_type": "rerequest",
         # force Meta's account chooser on EVERY connect (multi-identity support)
