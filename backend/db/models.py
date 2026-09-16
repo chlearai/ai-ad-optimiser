@@ -976,11 +976,21 @@ class AdGuardAccount(Base):
     verification_threshold = Column(Integer, default=70)
     auto_push_enabled = Column(Boolean, default=False)  # Module 3 CAPI later; LSQ edge toggled off by default
 
-    # SaaS subscription (set by admin)
-    plan = Column(String(20), default="trial")  # trial | starter | pro | agency
+    # SaaS subscription & Commercial Metadata (set by admin / offline onboarding)
+    plan = Column(String(20), default="trial")  # trial | starter | pro | agency | custom
     plan_expires_at = Column(DateTime, nullable=True)
     lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
     is_archived = Column(Boolean, default=False)
+    phone = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    industry = Column(String, nullable=True)
+    overage_policy = Column(String(30), default="block")  # block | alert | charge
+    payment_mode = Column(String(50), nullable=True)  # bank_transfer | upi | cheque | cash | contract | online
+    payment_ref = Column(String(100), nullable=True)  # UTR / Transaction ID
+    amount_paid = Column(Float, default=0.0)
+    gst_invoice_no = Column(String(50), nullable=True)
+    payment_status = Column(String(30), default="paid")  # paid | partial | pending | complimentary
+    account_status = Column(String(30), default="active")  # active | paused | suspended | expired
 
     # Per-subscriber CRM delivery target (leadsquared | zoho | salesforce | hubspot | webhook | none)
     crm_preference = Column(String(30), nullable=True)
@@ -1018,6 +1028,16 @@ class AdGuardAccount(Base):
             "id": self.id,
             "owner_email": self.owner_email,
             "display_name": self.display_name,
+            "phone": self.phone or "",
+            "company_name": self.company_name or "",
+            "industry": self.industry or "",
+            "overage_policy": self.overage_policy or "block",
+            "payment_mode": self.payment_mode or "",
+            "payment_ref": self.payment_ref or "",
+            "amount_paid": self.amount_paid or 0.0,
+            "gst_invoice_no": self.gst_invoice_no or "",
+            "payment_status": self.payment_status or "paid",
+            "account_status": self.account_status or "active",
             "google_is_live": self.google_is_live,
             "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
             "google_identities": json.loads(self.google_identities) if self.google_identities else [],

@@ -1165,6 +1165,7 @@ PLAN_LIMITS = {
     "starter": {"lead_quota": 1000, "workspaces": 1},
     "pro": {"lead_quota": 5000, "workspaces": 3},
     "agency": {"lead_quota": -1, "workspaces": 10},
+    "custom": {"lead_quota": 1000, "workspaces": 1},
 }
 
 
@@ -1177,11 +1178,11 @@ class PlanUpdateRequest(BaseModel):
 
 @router.get("/admin/subscribers")
 def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """All AdGuard subscribers with storage + connection health. Admin/superadmin only."""
+    """All AdGuard subscribers with storage + connection health + commercial info. Admin/superadmin only."""
     if user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     subs = []
-    for ws in db.query(AdGuardAccount).order_by(AdGuardAccount.created_at).all():
+    for ws in db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.desc()).all():
         lead_count = (
             db.query(func.count(AdGuardLead.id))
             .filter(AdGuardLead.adguard_account_id == ws.id)
@@ -1207,10 +1208,20 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
         subs.append({
             "id": ws.id,
             "owner_email": ws.owner_email,
-            "display_name": ws.display_name,
+            "display_name": ws.display_name or ws.company_name or ws.owner_email,
+            "phone": ws.phone or "",
+            "company_name": ws.company_name or "",
+            "industry": ws.industry or "",
             "plan": ws.plan or "trial",
             "plan_expires_at": ws.plan_expires_at.isoformat() if ws.plan_expires_at else None,
             "lead_quota": quota,
+            "overage_policy": ws.overage_policy or "block",
+            "payment_mode": ws.payment_mode or "",
+            "payment_ref": ws.payment_ref or "",
+            "amount_paid": float(ws.amount_paid or 0.0),
+            "gst_invoice_no": ws.gst_invoice_no or "",
+            "payment_status": ws.payment_status or "paid",
+            "account_status": ws.account_status or ("archived" if ws.is_archived else "active"),
             "lead_count": lead_count,
             "flagged_count": flagged_count,
             "storage_bytes": int(raw_bytes),
@@ -1273,16 +1284,26 @@ def admin_update_subscriber(sub_id: int, req: PlanUpdateRequest, db: Session = D
 
 class EditSubscriberRequest(BaseModel):
     full_name: Optional[str] = None
+    company_name: Optional[str] = None
+    phone: Optional[str] = None
+    industry: Optional[str] = None
     plan: Optional[str] = None
     lead_quota: Optional[int] = None
+    overage_policy: Optional[str] = None
     plan_expires_at: Optional[str] = None
+    payment_mode: Optional[str] = None
+    payment_ref: Optional[str] = None
+    amount_paid: Optional[float] = None
+    gst_invoice_no: Optional[str] = None
+    payment_status: Optional[str] = None
+    account_status: Optional[str] = None
     is_archived: Optional[bool] = None
     reset_password: Optional[bool] = None  # generates a new password, returned once
 
 
 @router.put("/admin/subscribers/{sub_id}/edit")
 def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Edit a subscriber: name, plan, quota, expiry, archive, password reset. Admin only."""
+    """Edit a subscriber: name, company, phone, plan, quota, offline payment, expiry, archive, password reset. Admin only."""
     if user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
@@ -1295,20 +1316,45 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
         if ws_user:
             ws_user.full_name = req.full_name.strip()
 
+    if req.company_name is not None:
+        ws.company_name = req.company_name.strip()
+    if req.phone is not None:
+        ws.phone = req.phone.strip()
+    if req.industry is not None:
+        ws.industry = req.industry.strip()
+    if req.overage_policy is not None:
+        ws.overage_policy = req.overage_policy.strip()
+    if req.payment_mode is not None:
+        ws.payment_mode = req.payment_mode.strip()
+    if req.payment_ref is not None:
+        ws.payment_ref = req.payment_ref.strip()
+    if req.amount_paid is not None:
+        ws.amount_paid = req.amount_paid
+    if req.gst_invoice_no is not None:
+        ws.gst_invoice_no = req.gst_invoice_no.strip()
+    if req.payment_status is not None:
+        ws.payment_status = req.payment_status.strip()
+    if req.account_status is not None:
+        ws.account_status = req.account_status.strip()
+
     if req.plan is not None:
         if req.plan not in PLAN_LIMITS:
             raise HTTPException(status_code=400, detail="Invalid plan")
         ws.plan = req.plan
-        ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
+        if req.lead_quota is None:
+            ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
 
     if req.lead_quota is not None:
         ws.lead_quota = req.lead_quota
 
     if req.plan_expires_at is not None:
-        try:
-            ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
+        if req.plan_expires_at.strip():
+            try:
+                ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at.strip())
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
+        else:
+            ws.plan_expires_at = None
 
     if req.is_archived is not None:
         ws.is_archived = req.is_archived
@@ -1339,6 +1385,43 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
         "new_password": new_password,
         "message": "New password generated — share it securely (shown only once)." if new_password else None,
     }
+
+
+class BonusQuotaRequest(BaseModel):
+    bonus_leads: int
+
+
+@router.post("/admin/subscribers/{sub_id}/bonus-quota")
+def admin_add_bonus_quota(sub_id: int, req: BonusQuotaRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Inject emergency bonus quota to a subscriber. Admin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    if ws.lead_quota >= 0:
+        ws.lead_quota += max(0, req.bonus_leads)
+        db.commit()
+    return {"status": "ok", "new_quota": ws.lead_quota}
+
+
+class StatusToggleRequest(BaseModel):
+    status: str  # active | paused | suspended | expired
+
+
+@router.post("/admin/subscribers/{sub_id}/toggle-status")
+def admin_toggle_subscriber_status(sub_id: int, req: StatusToggleRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Toggle subscriber account status (active, paused, suspended, expired). Admin only."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    ws.account_status = req.status
+    if req.status in ("suspended", "paused"):
+        ws.is_archived = False
+    db.commit()
+    return {"status": "ok", "account_status": ws.account_status}
 
 
 class DeleteSubscriberRequest(BaseModel):
@@ -1381,17 +1464,28 @@ def admin_delete_subscriber(sub_id: int, req: DeleteSubscriberRequest, db: Sessi
 class CreateSubscriberRequest(BaseModel):
     email: str
     full_name: str
+    company_name: Optional[str] = None
+    phone: Optional[str] = None
+    industry: Optional[str] = None
     plan: str = "trial"
+    lead_quota: Optional[int] = None
+    overage_policy: Optional[str] = "block"
+    plan_expires_at: Optional[str] = None
+    payment_mode: Optional[str] = None
+    payment_ref: Optional[str] = None
+    amount_paid: Optional[float] = 0.0
+    gst_invoice_no: Optional[str] = None
+    payment_status: Optional[str] = "paid"
     password: Optional[str] = None  # auto-generated if blank (instant mode)
     mode: str = "instant"  # instant = show password now | invite = email setup link
 
 
 @router.post("/admin/create-subscriber")
 def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Create a customer: user login + AdGuard workspace + plan in one call. Admin/superadmin only.
+    """Create a customer: user login + AdGuard workspace + commercial/payment ledger in one call. Admin/superadmin only.
 
     mode=invite: sends AdGuard-branded setup email; user sets own password via link.
-    mode=instant: returns a one-time password for manual sharing (testing).
+    mode=instant: returns a one-time password and ready-to-share WhatsApp card.
     """
     if user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -1437,11 +1531,31 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         )
     db.add(new_user)
 
+    # Quota logic: use explicit quota if passed, else fallback to plan default
+    assigned_quota = req.lead_quota if req.lead_quota is not None else PLAN_LIMITS[req.plan]["lead_quota"]
+    parsed_expiry = None
+    if req.plan_expires_at and req.plan_expires_at.strip():
+        try:
+            parsed_expiry = datetime.fromisoformat(req.plan_expires_at.strip())
+        except ValueError:
+            parsed_expiry = None
+
     ws = AdGuardAccount(
         owner_email=email,
-        display_name=req.full_name or email,
+        display_name=req.full_name or req.company_name or email,
+        company_name=req.company_name or req.full_name or "",
+        phone=req.phone or "",
+        industry=req.industry or "",
         plan=req.plan,
-        lead_quota=PLAN_LIMITS[req.plan]["lead_quota"],
+        lead_quota=assigned_quota,
+        overage_policy=req.overage_policy or "block",
+        plan_expires_at=parsed_expiry,
+        payment_mode=req.payment_mode or "",
+        payment_ref=req.payment_ref or "",
+        amount_paid=req.amount_paid or 0.0,
+        gst_invoice_no=req.gst_invoice_no or "",
+        payment_status=req.payment_status or "paid",
+        account_status="active",
     )
     db.add(ws)
     db.commit()
@@ -1450,7 +1564,7 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
     log_activity(
         module="AdGuard",
         action="Subscriber Created",
-        description=f"Created subscriber {email} (plan={req.plan}, mode={req.mode})",
+        description=f"Created subscriber {email} ({req.company_name or req.full_name}, plan={req.plan}, mode={req.mode})",
         user_id=user.id,
         user_name=user.full_name or user.email,
         entity_type="adguard_account",
@@ -1458,19 +1572,38 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         db=db,
     )
 
+    base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
+    login_url = f"{base_url}/adguard-landing"
+
     if not invite_mode:
+        # Pre-format a friendly WhatsApp greeting message
+        company_label = req.company_name or req.full_name or "your team"
+        quota_display = "Unlimited" if assigned_quota < 0 else f"{assigned_quota:,} leads/month"
+        wa_text = (
+            f"🎉 Welcome to LeadShield AI!\n\n"
+            f"Your account for *{company_label}* is now active.\n\n"
+            f"🔑 *Login Credentials:*\n"
+            f"• Portal URL: {login_url}\n"
+            f"• Username/Email: {email}\n"
+            f"• Password: {password}\n"
+            f"• Plan: {req.plan.upper()} ({quota_display})\n\n"
+            f"👉 Step 1: Login and click 'Connect Google Ads' or 'Connect Meta Ads' to start protecting your campaigns.\n\n"
+            f"Need help? Reply directly to this message."
+        )
         return {
             "status": "ok",
             "workspace_id": ws.id,
             "login_email": email,
             "login_password": password,
+            "login_url": login_url,
+            "company_name": req.company_name or req.full_name,
             "plan": req.plan,
             "lead_quota": ws.lead_quota,
-            "message": "Share the password with the customer securely. They can change it later.",
+            "whatsapp_message": wa_text,
+            "message": "Subscriber created successfully. Copy credentials or the WhatsApp card below.",
         }
 
     # Invite mode: build setup link + send AdGuard-branded email in background
-    base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
     setup_link = f"{base_url}/onboard.html?token={setup_token}"
     from backend.services.onboarding_email import send_adguard_invite_email
 
@@ -1494,6 +1627,7 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         "status": "ok",
         "workspace_id": ws.id,
         "login_email": email,
+        "login_url": login_url,
         "plan": req.plan,
         "lead_quota": ws.lead_quota,
         "invite_sent": bool(send_result.get("sent")),
