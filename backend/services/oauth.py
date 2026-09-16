@@ -229,7 +229,7 @@ def parse_state(state_b64: str) -> Optional[Dict[str, Any]]:
 # AdGuard SaaS OAuth (self-serve, Ryze-style)
 # ---------------------------------------------------------------------------
 
-def get_adguard_auth_url(adguard_account_id: int) -> str:
+def get_adguard_auth_url(adguard_account_id: int, admin_initiated: bool = False) -> str:
     """Google OAuth URL for an AdGuard workspace. Same flow as Account connect,
     state links to adguard_accounts.id instead. select_account forces Google's
     account chooser on EVERY connect so users can add multiple Gmail identities."""
@@ -238,6 +238,8 @@ def get_adguard_auth_url(adguard_account_id: int) -> str:
     base = _redirect_base(cfg)
     redirect_uri = f"{base}/api/adguard/oauth/callback"
     payload = {"adguard_account_id": adguard_account_id, "platform": "adguard_google", "token": secrets.token_urlsafe(16)}
+    if admin_initiated:
+        payload["admin_initiated"] = True
     from base64 import urlsafe_b64encode
     state_b64 = urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
     params = {

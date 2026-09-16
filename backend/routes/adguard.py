@@ -574,28 +574,44 @@ def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db),
 
 
 @router.get("/oauth/connect")
-def oauth_connect(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Create/reuse the user's AdGuard workspace and return the Google OAuth URL."""
+def oauth_connect(workspace_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Create/reuse the user's AdGuard workspace and return the Google OAuth URL.
+    Admins can pass workspace_id to connect on behalf of a subscriber."""
     _require_adguard_access(user)
-    ws = _get_or_create_workspace(db, user)
+    admin_initiated = False
+    if workspace_id and user.role in ("admin", "superadmin"):
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+        if not ws:
+            raise HTTPException(status_code=404, detail="Subscriber workspace not found")
+        admin_initiated = True
+    else:
+        ws = _get_or_create_workspace(db, user)
     try:
         from backend.services.oauth import get_adguard_auth_url
 
-        url = get_adguard_auth_url(ws.id)
+        url = get_adguard_auth_url(ws.id, admin_initiated=admin_initiated)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"authorization_url": url, "workspace_id": ws.id}
 
 
 @router.get("/oauth/meta/connect")
-def oauth_meta_connect(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Ryze-style Connect Meta Ads: return Meta's OAuth dialog URL."""
+def oauth_meta_connect(workspace_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Ryze-style Connect Meta Ads: return Meta's OAuth dialog URL.
+    Admins can pass workspace_id to connect on behalf of a subscriber."""
     _require_adguard_access(user)
-    ws = _get_or_create_workspace(db, user)
+    admin_initiated = False
+    if workspace_id and user.role in ("admin", "superadmin"):
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+        if not ws:
+            raise HTTPException(status_code=404, detail="Subscriber workspace not found")
+        admin_initiated = True
+    else:
+        ws = _get_or_create_workspace(db, user)
     try:
         from backend.services.adguard_meta import get_adguard_meta_auth_url
 
-        url = get_adguard_meta_auth_url(ws.id)
+        url = get_adguard_meta_auth_url(ws.id, admin_initiated=admin_initiated)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"authorization_url": url, "workspace_id": ws.id}
@@ -626,9 +642,15 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
 
     # The OAuth `state` carries the workspace id that started the flow (SaaS-safe:
     # each customer's token lands in their own workspace).
+    # Admin-initiated flows encode state as "<id>_admin".
     ws = None
-    if state and state.isdigit():
-        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == int(state)).first()
+    meta_admin_initiated = False
+    state_clean = state or ""
+    if state_clean.endswith("_admin"):
+        meta_admin_initiated = True
+        state_clean = state_clean[:-6]  # strip "_admin"
+    if state_clean and state_clean.isdigit():
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == int(state_clean)).first()
     if ws is None:
         ws = db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.asc()).first()
     if not ws:
@@ -696,7 +718,8 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     except Exception as e:
         logger.warning(f"[AdGuard] Meta discovery failed (token still stored): {e}")
 
-    return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=meta")
+    redirect_target = "/adguard" if meta_admin_initiated else f"/adguard-workspace?ws={ws.id}"
+    return RedirectResponse(url=f"{redirect_target}?oauth_success=meta" if not meta_admin_initiated else f"{redirect_target}?oauth_success=meta&ws={ws.id}")
 
 
 @router.get("/oauth/callback")
@@ -710,6 +733,7 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
         payload = parse_state(state)
     except Exception:
         payload = None
+    google_admin_initiated = payload.get("admin_initiated", False) if payload else False
     if not payload or payload.get("platform") != "adguard_google":
         return RedirectResponse(url="/adguard?oauth_error=invalid_state")
     ws_id = payload.get("adguard_account_id")
@@ -823,6 +847,8 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     except Exception as e:
         logger.warning(f"[AdGuard] post-connect discovery failed: {e}")
 
+    if google_admin_initiated:
+        return RedirectResponse(url=f"/adguard?oauth_success=google&ws={ws.id}")
     return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=google")
 
 

@@ -1182,6 +1182,8 @@
                         '<div style="color:var(--color-text-muted);">Last: ' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</div>' +
                     '</td>' +
                     '<td style="white-space:nowrap;">' +
+                        '<button class="btn btn-secondary btn-sm" onclick="adminConnectFor(' + s.id + ', \'google\')" title="Connect Google Ads on behalf of this subscriber">' + (s.google_is_live ? '🔄G' : '🔗G') + '</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="adminConnectFor(' + s.id + ', \'meta\')" title="Connect Meta Ads on behalf of this subscriber">' + (s.meta_is_live ? '🔄M' : '🔗M') + '</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace exactly as the customer sees it">👁 View</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openEditSubscriber(' + s.id + ')" title="Edit profile / plan / offline payment">✏️ Edit</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="addBonusQuotaPrompt(' + s.id + ')" title="Add emergency bonus leads">+ Bonus</button> ' +
@@ -1587,6 +1589,14 @@
         async function startMetaConnect() {
             try {
                 const res = await api('GET', '/oauth/meta/connect');
+                window.location.href = res.authorization_url;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function adminConnectFor(wsId, platform) {
+            try {
+                const endpoint = platform === 'meta' ? '/oauth/meta/connect' : '/oauth/connect';
+                const res = await api('GET', endpoint + '?workspace_id=' + wsId);
                 window.location.href = res.authorization_url;
             } catch (e) { toast(e.message, 'error'); }
         }
