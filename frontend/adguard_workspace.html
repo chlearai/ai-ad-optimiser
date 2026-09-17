@@ -271,34 +271,7 @@
             </div>
             <div id="acctTree" style="display:none;"></div>
 
-            <!-- CRM INTEGRATION (each subscriber connects their own CRM) -->
-            <div class="nav-section open" id="crmSection">
-                <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>CRM Delivery</span>
-                </div>
-                <div class="nav-section-items" style="padding:0 12px 8px;">
-                    <select class="filter-select" id="crmSelect" onchange="onCrmSelect(this.value)" style="width:100%;font-size:12px;padding:6px 8px;">
-                        <option value="">Choose your CRM…</option>
-                        <option value="leadsquared">LeadSquared</option>
-                        <option value="zoho">Zoho CRM</option>
-                        <option value="hubspot">HubSpot</option>
-                        <option value="webhook">Custom Webhook</option>
-                        <option value="none">None — keep in AdGuard only</option>
-                    </select>
-                    <div id="crmStatus" style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Verified leads held in AdGuard until a CRM is connected.</div>
 
-                    <!-- Credential form (shown per CRM choice) -->
-                    <div id="crmCredsForm" style="display:none;margin-top:8px;">
-                        <div id="crmCredsFields"></div>
-                        <div style="display:flex;gap:6px;margin-top:8px;">
-                            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveCrmCreds()">Connect CRM</button>
-                            <button class="btn btn-secondary btn-sm" onclick="testCrm()">Test</button>
-                            <button class="btn btn-secondary btn-sm" onclick="disconnectCrm()" title="Remove CRM connection">✕</button>
-                        </div>
-                        <div id="crmTestResult" style="font-size:11px;margin-top:6px;"></div>
-                    </div>
-                </div>
-            </div>
 
             <!-- MONEY SHIELD (Layer 1 prevention) -->
             <div class="nav-section open" id="shieldSection">
@@ -546,6 +519,37 @@
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Settings</button>
                     <div id="settingsResult" style="margin-top:10px;font-size:13px;"></div>
+                </div>
+
+                <!-- CRM DELIVERY SETTINGS (relocated from sidebar) -->
+                <div class="card" style="margin-top:20px;">
+                    <div class="card-header"><span class="card-title">🔄 CRM Delivery &amp; Webhooks (Optional)</span></div>
+                    <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.5;">
+                        Configure automated downstream push of verified, clean leads. If your leads already route directly from Google Ads or Meta into your CRM (e.g. LeadSquared, Zoho, HubSpot), leave this set to <b>None</b>.
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:500;">Downstream CRM Target</label>
+                        <select class="filter-select" id="crmSelect" onchange="onCrmSelect(this.value)" style="width:100%;max-width:360px;">
+                            <option value="">None — keep verified leads in AdGuard only</option>
+                            <option value="leadsquared">LeadSquared</option>
+                            <option value="zoho">Zoho CRM</option>
+                            <option value="hubspot">HubSpot</option>
+                            <option value="webhook">Custom Webhook</option>
+                            <option value="none">None — keep in AdGuard only</option>
+                        </select>
+                        <div id="crmStatus" style="font-size:12px;color:var(--color-text-muted);margin-top:6px;">Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.</div>
+                    </div>
+
+                    <!-- Credential form (shown per CRM choice) -->
+                    <div id="crmCredsForm" style="display:none;margin-top:12px;padding:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-subtle, #f9fafb);max-width:440px;">
+                        <div id="crmCredsFields"></div>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <button class="btn btn-primary btn-sm" onclick="saveCrmCreds()">Connect CRM</button>
+                            <button class="btn btn-secondary btn-sm" onclick="testCrm()">Test Connection</button>
+                            <button class="btn btn-secondary btn-sm" onclick="disconnectCrm()" title="Remove CRM connection">Disconnect</button>
+                        </div>
+                        <div id="crmTestResult" style="font-size:12px;margin-top:8px;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1205,7 +1209,7 @@
                 st.textContent = 'Leads stay in AdGuard only. Export anytime via CSV.';
                 st.style.color = 'var(--color-text-muted)';
             } else {
-                st.textContent = 'Verified leads held in AdGuard until a CRM is connected.';
+                st.textContent = 'Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.';
                 st.style.color = 'var(--color-text-muted)';
             }
         }
