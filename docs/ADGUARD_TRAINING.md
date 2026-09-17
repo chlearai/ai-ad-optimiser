@@ -71,23 +71,26 @@ Every rupee of ad spend should buy a real customer — not a bot, duplicate, or 
 
 | Page | URL | Who |
 |---|---|---|
-| Public landing | /adguard-landing | Everyone (motto, pipeline, ROI calculator, pricing) |
-| Admin dashboard | /adguard | Admin/superadmin login |
+| Public landing | /adguard-landing | Everyone (motto, pipeline, comparison, ROI calculator, pricing) |
+| Admin portal login | /adguard-admin-login | Admin/superadmin login exclusively |
+| Admin dashboard | /adguard | Admin/superadmin cockpit & tenant management |
 | Subscriber workspace | /adguard-workspace | Customers (admin can simulate with ?ws=<id>) |
 | Hub home card | / (landing.html) | Card routes: guest → landing, admin → /adguard, customer → workspace |
 
 ---
 
-## Pricing Plans
+## Pricing Plans & Tier Architecture
 
-| Plan | Price (INR/mo) | Lead quota |
-|---|---|---|
-| Trial | Free, 14 days | 100 |
-| Starter | ₹4,999 | 1,000 |
-| Pro | ₹14,999 | 5,000 |
-| Agency | ₹39,999 | Unlimited (−1) |
+Detailed operational and sales enablement guide available at: [`ADGUARD_PLANS_AND_PRICING_GUIDE.md`](./ADGUARD_PLANS_AND_PRICING_GUIDE.md).
 
-Payments integration: later. Admin login = same login page, separate role.
+| Plan | Price (INR/mo) | Lead Quota | Target Customer & Value Prop |
+|---|---|---|---|
+| **Trial** | **Free (14 days)** | **100 Leads** | Zero-friction evaluation; proves fraud interception on active campaigns within 48h. |
+| **Starter** | **₹4,999 / mo** | **1,000 Leads / mo** | Single-brand businesses spending up to ₹2.5L/mo; phone carrier + 3.5K disposable email blacklist. |
+| **Pro** *(Popular)* | **₹14,999 / mo** | **5,000 Leads / mo** | High-growth marketing teams; Gemini AI intent scoring, 5-min poller, FraudGraph threat network. |
+| **Agency** | **₹39,999 / mo** | **Unlimited (−1)** | Digital agencies; unlimited client workspaces, multi-tenant BM, multi-CRM routing, dedicated SLA. |
+
+> **Payment Gateway Status**: Integrated with **Razorpay Test/Sandbox Mode** supporting both Cards (`4111 •••• 1111`) and simulated UPI / QR Code scan approvals. Upgrading instantly expands database quota and clears UI alert banners.
 
 ---
 
@@ -105,7 +108,14 @@ Payments integration: later. Admin login = same login page, separate role.
 - Repo: `C:\Users\Shekhar Raju\Downloads\Clients\Shekhar_AI_Agents\AI_The_Optimiser`
 - Remotes: `origin` (shekharraju6-droid) + `chlearai` — Railway watches **chlearai**; push BOTH
 - Production: https://ai-ad-optimiser-production-dd12.up.railway.app (health: /health)
-- Key files: backend/routes/adguard.py · backend/services/adguard.py (process_incoming_lead) · backend/services/adguard_meta.py · backend/services/scheduler.py (5-min Meta poller) · frontend/adguard.html · frontend/adguard_workspace.html · frontend/adguard_landing.html
+- Key files:
+  - `backend/routes/auth.py` (subscriber registration + admin guard)
+  - `backend/routes/billing.py` & `backend/services/billing.py` (Razorpay orders, verification & sandbox simulation)
+  - `backend/routes/adguard.py` & `backend/services/adguard.py` (process_incoming_lead & quota enforcement)
+  - `backend/services/scheduler.py` (5-min Meta poller)
+  - `frontend/adguard_landing.html` (landing, competitor comparison, plan-specific auth modal, checkout)
+  - `frontend/adguard_admin_login.html` (dedicated admin login)
+  - `frontend/adguard_workspace.html` (customer workspace, sidebar quota widget, in-app upgrade modal)
 - Plans auto-set quota: trial 100 / starter 1000 / pro 5000 / agency −1 (unlimited)
 - Tracker: C:\Users\Shekhar Raju\Desktop\LANDMARK_TRACKER.csv
 
@@ -113,7 +123,5 @@ Payments integration: later. Admin login = same login page, separate role.
 1. Platform exclusion API sync (Google Customer Match + Meta Custom Audiences payloads built; API push pending)
 2. Google app verification (Testing mode = 100 test users) + Meta business verification (row 44) — both block public self-serve signups
 3. SMTP vars in Railway (SMTP_USER/SMTP_PASS/SMTP_FROM) — gates invite emails + weekly reports
-4. Competitor comparison table for landing page (drafted, awaiting approval)
-5. Salesforce delivery (preference accepted, OAuth flow pending)
-6. Demo-mode for empty workspaces
-7. Payments → auto-invite (Razorpay/Stripe webhook → create-subscriber invite mode)
+4. Salesforce delivery (preference accepted, OAuth flow pending)
+5. Demo-mode for empty workspaces
