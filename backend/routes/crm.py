@@ -26,6 +26,18 @@ def crm_summary(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     data = fetch_all_crm_data(account, start_date=start_date, end_date=end_date)
+
+    # Crash Club: inject Meta lead-ads leads stored locally so the
+    # Source-wise Breakdown "Meta Ads" row counts real leads.
+    try:
+        from backend.services.crashclub_db import get_leads_for_account
+
+        meta_leads = get_leads_for_account(account.id, start_date=start_date, end_date=end_date)
+        if meta_leads:
+            existing = data.get("salesforce", {}).get("leads", [])
+            data["salesforce"]["leads"] = existing + meta_leads
+    except Exception:
+        pass
     # Also include account platform flags and ad metrics
     data["account"] = {
         "id": account.id,

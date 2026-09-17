@@ -100,6 +100,7 @@ def get_db():
 def init_db():
     import backend.db.models  # noqa: F401
     import backend.db.revenueops_models  # noqa: F401
+    import backend.services.crashclub_db  # noqa: F401  (registers crashclub_leads table)
     try:
         Base.metadata.create_all(bind=engine)
         logger.info(f"Database initialized ({active_db})")

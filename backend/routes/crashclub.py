@@ -82,12 +82,13 @@ async def webhook_receive(
 
 
 def _process_single_lead(lead_id: str, created_time_unix=None) -> Dict[str, Any]:
-    """Fetch details for one lead and push to sheet (webhook path)."""
+    """Fetch details for one lead and push to sheet + app DB (webhook path)."""
     from backend.services.crashclub_leads import (
         fetch_lead_details,
         normalize_lead,
     )
     from backend.services.crashclub_sheets import append_leads, already_synced, _ledger_conn
+    from backend.services.crashclub_db import save_leads
 
     lead = fetch_lead_details(str(lead_id))
     if not lead:
@@ -99,6 +100,19 @@ def _process_single_lead(lead_id: str, created_time_unix=None) -> Dict[str, Any]
         is_new = not already_synced(conn, str(lead_id))
     finally:
         conn.close()
+
+    # persist to app DB for MIS reporting (idempotent)
+    try:
+        camp = ""
+        try:
+            names = resolve_names(lead)
+            camp = names.get("campaign", "")
+        except Exception:
+            pass
+        save_leads([{ "lead": lead, "campaign": camp }])
+    except Exception as e:
+        logger.warning(f"[CrashClub] DB save failed for {lead_id}: {e}")
+
     if not is_new:
         return {"lead_id": str(lead_id), "written": False, "reason": "dedup"}
 
@@ -205,24 +219,47 @@ def status():
 
 # ---------- scheduler hook ----------
 
+def resolve_names(lead: Dict[str, Any]) -> Dict[str, str]:
+    """Best-effort resolve campaign/adset/ad names for a single lead (webhook path)."""
+    from backend.services.crashclub_leads import resolve_ad_object_names
+
+    return resolve_ad_object_names(
+        ad_id=lead.get("ad_id"),
+        campaign_id=lead.get("campaign_id"),
+        adset_id=lead.get("adset_id"),
+    )
+
+
 def run_scheduled_sync():
     """Called by APScheduler every 5 minutes."""
     try:
-        leads = None
-        from backend.services.crashclub_leads import fetch_account_leads, normalize_lead
+        from backend.services.crashclub_leads import fetch_account_leads
         from backend.services.crashclub_sheets import append_leads
+        from backend.services.crashclub_db import save_leads
+        from backend.services.crashclub_leads import SHEET_HEADERS, build_sheet_row, normalize_lead
 
         import time
 
         since = int(time.time() - 24 * 3600)
         leads = fetch_account_leads(since_unix=since)
+        items = [{"lead": l, "campaign": l.get("_campaign_name", "")} for l in leads]
+
+        # 1) app DB (MIS reporting)
+        db_result = {"added": 0, "skipped": 0}
+        try:
+            db_result = save_leads(items)
+        except Exception as e:
+            logger.warning(f"[CrashClub] DB save failed: {e}")
+
+        # 2) Google Sheet (client-facing)
         rows = [normalize_lead(l) for l in leads]
-        res = append_leads(rows)
+        res = append_leads(rows, build_sheet_row, SHEET_HEADERS)
         logger.info(
-            f"[CrashClub] scheduled sync: found={len(leads)} written={res.get('written')} "
-            f"skipped={res.get('skipped_dedup')}"
+            f"[CrashClub] scheduled sync: found={len(leads)} sheet_written={res.get('written')} "
+            f"sheet_skipped={res.get('skipped_dedup')} db_added={db_result.get('added')} "
+            f"db_skipped={db_result.get('skipped')}"
         )
-        return res
+        return {"sheet": res, "db": db_result}
     except Exception as e:
         logger.warning(f"[CrashClub] scheduled sync failed: {e}")
         return {"status": "error", "detail": str(e)}
