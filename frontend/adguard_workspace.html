@@ -250,15 +250,26 @@
                 </div>
             </div>
 
-            <!-- CONNECTED ACCOUNTS TREE (collapsible per platform, like competitor UX) -->
-            <div class="nav-section open" id="acctTreeSection">
+            <!-- GOOGLE AD ACCOUNTS TREE -->
+            <div class="nav-section open" id="googleAcctTreeSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Connected Accounts</span>
+                    <span class="nav-section-arrow">▶</span><span>Google Ad Accounts</span>
                 </div>
-                <div class="nav-section-items" id="acctTree" style="padding:0 8px 8px;">
-                    <div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>
+                <div class="nav-section-items" id="googleAcctTree" style="padding:0 8px 8px;">
+                    <div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Google Ad accounts connected.</div>
                 </div>
             </div>
+
+            <!-- META AD ACCOUNTS TREE -->
+            <div class="nav-section open" id="metaAcctTreeSection">
+                <div class="nav-section-header" onclick="toggleSection(this)">
+                    <span class="nav-section-arrow">▶</span><span>Meta Ad Accounts</span>
+                </div>
+                <div class="nav-section-items" id="metaAcctTree" style="padding:0 8px 8px;">
+                    <div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Meta Ad accounts connected.</div>
+                </div>
+            </div>
+            <div id="acctTree" style="display:none;"></div>
 
             <!-- CRM INTEGRATION (each subscriber connects their own CRM) -->
             <div class="nav-section open" id="crmSection">
@@ -775,14 +786,11 @@
             renderAccountTree(ws);
         }
 
-        // ---------- Connected Accounts tree (collapsible, grouped by identity, with per-client checkboxes) ----------
+        // ---------- Account trees (Google Ad Accounts & Meta Ad Accounts) ----------
         function renderAccountTree(ws) {
-            const tree = $('acctTree');
-            if (!tree) return;
-            if (!ws) {
-                tree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
-                return;
-            }
+            const gTree = $('googleAcctTree') || $('acctTree');
+            const mTree = $('metaAcctTree');
+            if (!gTree && !mTree) return;
 
             const accountItem = (a, platform) => {
                 const isChecked = a.selected !== false;
@@ -807,9 +815,14 @@
                     accounts.map(a => accountItem(a, platform)).join('') + '</details>';
             };
 
-            let html = '';
+            if (!ws) {
+                if (gTree) gTree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Google Ad accounts connected.</div>';
+                if (mTree) mTree.innerHTML = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Meta Ad accounts connected.</div>';
+                return;
+            }
 
-            // Google: one collapsible group PER Gmail identity, accounts from identity.discovered
+            // 1. Google Ad Accounts: one collapsible group per connected Gmail account
+            let gHtml = '';
             if (ws.google_is_live) {
                 const identities = (ws.google_identities || []).filter(i => i.email && i.email !== 'google-account' && !i.email.startsWith('google-account'));
                 if (identities.length) {
@@ -817,41 +830,63 @@
                         const email = ident.email;
                         const accounts = ident.discovered || [];
                         const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(email) + '" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
-                        html += groupSection('📧 ' + email, accounts, dis, 'google');
+                        gHtml += groupSection('📧 ' + email, accounts, dis, 'google');
                     });
-                } else {
-                    html += groupSection('Google Ads', ws.discovered_accounts || [], '', 'google');
+                } else if ((ws.discovered_accounts || []).length) {
+                    const fallbackEmail = (ws.owner_email && ws.owner_email.includes('@')) ? ws.owner_email : 'Google Account';
+                    gHtml += groupSection('📧 ' + fallbackEmail, ws.discovered_accounts || [], '', 'google');
                 }
             }
+            if (!gHtml) {
+                gHtml = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Google Ad accounts connected.</div>';
+            }
+            if (gTree) gTree.innerHTML = gHtml;
 
-            // Meta: one collapsible group PER Facebook login identity
+            // 2. Meta Ad Accounts: one collapsible group per connected Meta identity showing email ID
+            let mHtml = '';
             if (ws.meta_is_live) {
-                const metaIdents = (ws.meta_identities || []).filter(i => i.label);
+                const metaIdents = (ws.meta_identities || []).filter(i => i && (i.label || i.email));
                 if (metaIdents.length) {
                     metaIdents.forEach(ident => {
-                        const label = ident.label;
+                        let email = ident.email;
+                        if (!email && ident.label) {
+                            const match = String(ident.label).match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                            if (match) email = match[1];
+                        }
+                        if (!email) {
+                            email = (ws.owner_email && ws.owner_email.includes('@')) ? ws.owner_email : (ident.label || 'Meta Account');
+                        }
+                        const disKey = ident.label || email;
                         const accounts = ident.discovered_accounts || [];
                         const pages = ident.discovered_pages || [];
-                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(label) + '" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(disKey) + '" onclick="disconnectMetaIdentity(\'' + escapeHtml(disKey) + '\')">✕</button>';
                         const both = accounts.concat(pages.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
-                        html += groupSection('📘 ' + label, both, dis, 'meta');
+                        mHtml += groupSection('📧 ' + email, both, dis, 'meta');
                     });
-                } else {
-                    html += groupSection('Meta Ad Accounts', ws.discovered_meta_accounts || [], '', 'meta');
-                    html += groupSection('Meta Pages', ws.discovered_meta_pages || [], '', 'meta');
+                } else if ((ws.discovered_meta_accounts || []).length || (ws.discovered_meta_pages || []).length) {
+                    const email = (ws.owner_email && ws.owner_email.includes('@')) ? ws.owner_email : 'Meta Account';
+                    const both = (ws.discovered_meta_accounts || []).concat((ws.discovered_meta_pages || []).map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
+                    mHtml += groupSection('📧 ' + email, both, '', 'meta');
                 }
             }
-
-            if (!html) {
-                html = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">Connect an ad platform to see its accounts here.</div>';
+            if (!mHtml) {
+                mHtml = '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px;">No Meta Ad accounts connected.</div>';
             }
-            tree.innerHTML = html;
-            tree.querySelectorAll('summary').forEach(s => {
-                s.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'BUTTON') return;
-                    const arrow = s.querySelector('span');
-                    const d = s.parentElement;
-                    setTimeout(() => { if (arrow) arrow.textContent = d.open ? '▾' : '▸'; }, 0);
+            if (mTree) {
+                mTree.innerHTML = mHtml;
+            } else if (gTree && !mTree) {
+                if (ws.meta_is_live) gTree.innerHTML += mHtml;
+            }
+
+            // Expand/collapse arrow indicator listener
+            [gTree, mTree].filter(Boolean).forEach(t => {
+                t.querySelectorAll('summary').forEach(s => {
+                    s.addEventListener('click', (e) => {
+                        if (e.target.tagName === 'BUTTON') return;
+                        const arrow = s.querySelector('span');
+                        const d = s.parentElement;
+                        setTimeout(() => { if (arrow) arrow.textContent = d.open ? '▾' : '▸'; }, 0);
+                    });
                 });
             });
         }
@@ -859,7 +894,7 @@
         async function toggleAccountFilter(accountId, checked, platform) {
             if (!selectedWorkspaceObj) return;
 
-            // 1. Update in memory discovered_accounts or discovered_meta_accounts
+            // 1. Update in memory discovered_accounts or discovered_meta_accounts / pages
             const field = platform === 'meta' ? 'discovered_meta_accounts' : 'discovered_accounts';
             const list = selectedWorkspaceObj[field] || [];
             list.forEach(a => {
@@ -867,6 +902,13 @@
                     a.selected = checked;
                 }
             });
+            if (platform === 'meta') {
+                (selectedWorkspaceObj.discovered_meta_pages || []).forEach(p => {
+                    if (String(p.id) === String(accountId)) {
+                        p.selected = checked;
+                    }
+                });
+            }
 
             // Also sync within identities if present
             const identField = platform === 'meta' ? 'meta_identities' : 'google_identities';
@@ -878,6 +920,13 @@
                         a.selected = checked;
                     }
                 });
+                if (platform === 'meta' && ident.discovered_pages) {
+                    ident.discovered_pages.forEach(p => {
+                        if (String(p.id) === String(accountId)) {
+                            p.selected = checked;
+                        }
+                    });
+                }
             });
 
             // 2. Persist selection to backend

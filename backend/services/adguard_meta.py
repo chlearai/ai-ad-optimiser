@@ -122,16 +122,21 @@ def get_adguard_meta_auth_url(adguard_account_id: int, admin_initiated: bool = F
     return f"https://www.facebook.com/{GRAPH_VERSION}/dialog/oauth?" + urllib.parse.urlencode(params)
 
 
-def get_meta_profile_label(token: str) -> Optional[str]:
-    """Best-effort identity label for a Meta login: email if available, else profile name."""
-    data = _graph_get("me", {"fields": "email,name", "token": token})
+def get_meta_profile_info(token: str) -> Dict[str, Optional[str]]:
+    """Fetch profile information for a Meta login (email and name)."""
+    data = _graph_get("me", {"fields": "email,name,id", "token": token})
     if not data:
-        return None
+        return {"email": None, "name": None, "label": None}
     email = data.get("email")
     name = data.get("name")
-    if email and name and email != name:
-        return f"{email} ({name})"
-    return email or name or None
+    label = email or name or None
+    return {"email": email, "name": name, "label": label}
+
+
+def get_meta_profile_label(token: str) -> Optional[str]:
+    """Best-effort identity label for a Meta login: email if available, else profile name."""
+    info = get_meta_profile_info(token)
+    return info.get("label")
 
 
 def exchange_adguard_meta_code(code: str) -> Optional[str]:

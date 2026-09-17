@@ -351,6 +351,16 @@ def rediscover_accounts(req: ConnectionActionRequest, db: Session = Depends(get_
                 continue
             accounts = discover_meta_ad_accounts(token)
             pages = discover_meta_pages(token)
+            if not ident.get("email"):
+                try:
+                    from backend.services.adguard_meta import get_meta_profile_info
+                    info = get_meta_profile_info(token)
+                    if info.get("email"):
+                        ident["email"] = info["email"]
+                        if not ident.get("label") or ident.get("label").startswith("meta-account"):
+                            ident["label"] = info["email"]
+                except Exception:
+                    pass
             ident["discovered_accounts"] = accounts or []
             ident["discovered_pages"] = pages or []
             all_accounts.extend(accounts or [])

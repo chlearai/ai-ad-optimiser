@@ -697,6 +697,7 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
         discover_meta_ad_accounts,
         discover_meta_pages,
         get_meta_profile_label,
+        get_meta_profile_info,
     )
 
     token = exchange_adguard_meta_code(code)
@@ -720,7 +721,9 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
         return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
 
     # Identify which Meta (Facebook) login granted access
-    identity_label = get_meta_profile_label(token)
+    profile_info = get_meta_profile_info(token)
+    meta_email = profile_info.get("email")
+    identity_label = meta_email or profile_info.get("name") or get_meta_profile_label(token)
 
     ws.meta_credentials = build_meta_credentials(token)
     ws.meta_is_live = True
@@ -729,18 +732,21 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     try:
         identities = json.loads(ws.meta_identities) if ws.meta_identities else []
         if identity_label:
-            identities = [i for i in identities if i.get("label") != identity_label]
+            identities = [i for i in identities if i.get("label") != identity_label and i.get("email") != identity_label]
         else:
-            base = "meta-account"
+            fallback = ws.owner_email if (ws.owner_email and "@" in ws.owner_email) else "meta-account"
+            base = fallback
             placeholder = base
             n = 2
-            existing = {i.get("label") for i in identities}
+            existing = {i.get("label") for i in identities} | {i.get("email") for i in identities}
             while placeholder in existing:
                 placeholder = f"{base}-{n}"
                 n += 1
             identity_label = placeholder
         identities.append({
             "label": identity_label,
+            "email": meta_email or (ws.owner_email if (ws.owner_email and "@" in ws.owner_email) else identity_label),
+            "name": profile_info.get("name") or "",
             "credentials": build_meta_credentials(token),
             "connected_at": datetime.utcnow().isoformat(),
         })
@@ -756,7 +762,7 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
         try:
             identities = json.loads(ws.meta_identities) if ws.meta_identities else []
             for i in identities:
-                if i.get("label") == (identity_label or ""):
+                if i.get("label") == (identity_label or "") or i.get("email") == (identity_label or ""):
                     i["discovered_accounts"] = accounts or []
                     i["discovered_pages"] = pages or []
             ws.meta_identities = json.dumps(identities)
