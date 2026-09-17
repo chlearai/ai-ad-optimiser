@@ -1015,6 +1015,9 @@ class AdGuardAccount(Base):
     # [{"label": "<fb profile name/email>", "credentials": "<fernet>", "discovered": [...], "connected_at": ...}]
     meta_identities = Column(Text, nullable=True)
 
+    # Cached discovered campaigns and pages map: { "<account_id>": [ { id, name, type, platform, status } ] }
+    cached_campaigns = Column(Text, nullable=True)
+
     # Per-workspace settings
     timezone = Column(String(50), default="Asia/Kolkata")
     alert_emails = Column(Text, nullable=True)  # JSON list of emails for alerts/reports
@@ -1045,6 +1048,7 @@ class AdGuardAccount(Base):
             "meta_identities": json.loads(self.meta_identities) if self.meta_identities else [],
             "discovered_meta_accounts": json.loads(self.discovered_meta_accounts) if self.discovered_meta_accounts else [],
             "discovered_meta_pages": json.loads(self.discovered_meta_pages) if self.discovered_meta_pages else [],
+            "cached_campaigns": json.loads(self.cached_campaigns) if self.cached_campaigns else {},
             "verification_threshold": self.verification_threshold,
             "auto_push_enabled": self.auto_push_enabled,
             "plan": self.plan,

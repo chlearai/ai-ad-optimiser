@@ -1251,6 +1251,49 @@ def shield_actions(workspace_id: int, db: Session = Depends(get_db), user: User 
     }
 
 
+@router.get("/workspace/{workspace_id}/campaigns")
+def get_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Fetch campaigns and pages map for all accounts in workspace."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+
+    from backend.services.adguard_campaigns import build_workspace_campaigns_map
+    cmap = build_workspace_campaigns_map(ws, db)
+    return {
+        "workspace_id": workspace_id,
+        "campaigns_by_account": cmap,
+    }
+
+
+@router.post("/workspace/{workspace_id}/sync-campaigns")
+def sync_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Re-scan and cache live campaigns and pages for all accounts in workspace."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+
+    from backend.services.adguard_campaigns import build_workspace_campaigns_map
+    cmap = build_workspace_campaigns_map(ws, db)
+    try:
+        ws.cached_campaigns = json.dumps(cmap)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Failed caching campaigns for ws {ws.id}: {e}")
+
+    return {
+        "ok": True,
+        "workspace_id": workspace_id,
+        "campaigns_by_account": cmap,
+    }
+
+
 @router.get("/oauth/accounts")
 def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     _require_adguard_access(user)
