@@ -1116,11 +1116,22 @@ class AdGuardLead(Base):
 
     def to_dict(self):
         customer_id = self.account.external_id if self.account and self.account.external_id else None
-        if not customer_id and self.raw_payload:
+        page_id = None
+        page_name = None
+        ad_id = None
+        ad_name = None
+        campaign_id = None
+        if self.raw_payload:
             try:
                 p = json.loads(self.raw_payload)
                 if isinstance(p, dict):
-                    customer_id = p.get("customer_id") or p.get("account_id")
+                    if not customer_id:
+                        customer_id = p.get("customer_id") or p.get("account_id")
+                    page_id = str(p.get("page_id") or "") or None
+                    page_name = p.get("page_name") or p.get("form_name") or None
+                    ad_id = str(p.get("ad_id") or "") or None
+                    ad_name = p.get("ad_name") or None
+                    campaign_id = str(p.get("campaign_id") or "") or None
             except Exception:
                 pass
         return {
@@ -1133,6 +1144,11 @@ class AdGuardLead(Base):
             "gclid": self.gclid,
             "form_id": self.form_id,
             "campaign_name": self.campaign_name,
+            "campaign_id": campaign_id,
+            "ad_id": ad_id,
+            "ad_name": ad_name,
+            "page_id": page_id,
+            "page_name": page_name,
             "lead_type": self.lead_type,
             "full_name": self.full_name,
             "email": self.email,

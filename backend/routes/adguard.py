@@ -947,6 +947,9 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
     selected = set(str(s) for s in req.selected_ids)
     for a in accounts:
         a["selected"] = str(a.get("id")) in selected
+        if "children" in a and isinstance(a["children"], list):
+            for c in a["children"]:
+                c["selected"] = str(c.get("id")) in selected or a["selected"]
     setattr(ws, field, json.dumps(accounts))
 
     ident_field = "meta_identities" if platform == "meta" else "google_identities"
@@ -958,6 +961,9 @@ def oauth_select(req: SelectAccountsRequest, db: Session = Depends(get_db), user
                 sub_list = (ident.get("discovered_accounts") if platform == "meta" else ident.get("discovered")) or []
                 for sa in sub_list:
                     sa["selected"] = str(sa.get("id")) in selected
+                    if "children" in sa and isinstance(sa["children"], list):
+                        for c in sa["children"]:
+                            c["selected"] = str(c.get("id")) in selected or sa["selected"]
             setattr(ws, ident_field, json.dumps(idents))
         except Exception:
             pass

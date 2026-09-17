@@ -786,33 +786,191 @@
             renderAccountTree(ws);
         }
 
-        // ---------- Account trees (Google Ad Accounts & Meta Ad Accounts) ----------
+        // ---------- Account trees (Google Ad Accounts & Meta Ad Accounts) with collapsible child drilldowns ----------
+        function getAccountChildren(a, platform, ws) {
+            if (a._children && a._children.length) return a._children;
+
+            const children = [];
+            const seen = new Set();
+            const aid = String(a.id || '').trim().toLowerCase();
+            const aname = String(a.name || '').trim().toLowerCase();
+            const aform = String(a.formatted || '').trim().toLowerCase();
+
+            // 1. Check pre-configured children if present
+            if (Array.isArray(a.children) && a.children.length) {
+                a.children.forEach(c => {
+                    const cName = String(c.name || c.id || '').trim();
+                    if (cName && !seen.has(cName.toLowerCase())) {
+                        seen.add(cName.toLowerCase());
+                        children.push({
+                            id: String(c.id || cName),
+                            name: cName,
+                            type: platform === 'meta' ? 'page' : 'ad',
+                            selected: c.selected !== undefined ? c.selected : (a.selected !== false)
+                        });
+                    }
+                });
+            }
+
+            // 2. Discover children dynamically from in-memory allLeads
+            if (Array.isArray(allLeads) && allLeads.length) {
+                allLeads.forEach(l => {
+                    let matchesAccount = false;
+                    const lcid = String(l.customer_id || '').trim().toLowerCase();
+                    const leid = String(l.external_id || '').trim().toLowerCase();
+                    const lname = String(l.account_name || '').trim().toLowerCase();
+
+                    if ((lcid && (lcid === aid || lcid === aform)) || (leid && (leid === aid || leid === aform))) {
+                        matchesAccount = true;
+                    } else if (lname && aname && (lname === aname || lname.includes(aname) || aname.includes(lname))) {
+                        matchesAccount = true;
+                    } else if (l.raw_payload) {
+                        try {
+                            const rawStr = typeof l.raw_payload === 'string' ? l.raw_payload.toLowerCase() : JSON.stringify(l.raw_payload).toLowerCase();
+                            if (aid && rawStr.includes(aid)) matchesAccount = true;
+                        } catch (e) {}
+                    } else if (l.campaign_name && aname) {
+                        const clean = aname.split('-')[0].trim().toLowerCase();
+                        if (clean && clean.length >= 3 && l.campaign_name.toLowerCase().includes(clean)) matchesAccount = true;
+                    }
+
+                    if (matchesAccount) {
+                        if (platform === 'meta') {
+                            const pName = l.page_name || (l.form_id ? 'Page for Form ' + l.form_id : null);
+                            const pId = l.page_id || pName;
+                            if (pName && !seen.has(pName.toLowerCase())) {
+                                seen.add(pName.toLowerCase());
+                                children.push({
+                                    id: String(pId),
+                                    name: pName,
+                                    type: 'page',
+                                    selected: a.selected !== false
+                                });
+                            }
+                        } else {
+                            const adName = l.ad_name || l.campaign_name;
+                            const adId = l.ad_id || l.campaign_id || adName;
+                            if (adName && !seen.has(adName.toLowerCase())) {
+                                seen.add(adName.toLowerCase());
+                                children.push({
+                                    id: String(adId),
+                                    name: adName,
+                                    type: 'ad',
+                                    selected: a.selected !== false
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. For Meta: match pages from ws.discovered_meta_pages
+            if (platform === 'meta' && ws && Array.isArray(ws.discovered_meta_pages)) {
+                ws.discovered_meta_pages.forEach(p => {
+                    if (p && p.name) {
+                        const pname = String(p.name).trim();
+                        const pclean = pname.toLowerCase();
+                        const isMatch = (aname && (pclean.includes(aname) || aname.includes(pclean))) ||
+                                        (aname.split(' ')[0].length >= 3 && pclean.includes(aname.split(' ')[0]));
+                        if (isMatch && !seen.has(pclean)) {
+                            seen.add(pclean);
+                            children.push({
+                                id: String(p.id || pname),
+                                name: pname,
+                                type: 'page',
+                                selected: a.selected !== false
+                            });
+                        }
+                    }
+                });
+            }
+
+            // 4. Standard default items so every account ALWAYS has a collapsible dropdown of pages or ads
+            if (!children.length) {
+                if (platform === 'meta') {
+                    const defaultPage = (a.name || a.id) + ' Page';
+                    children.push({
+                        id: 'page_' + a.id + '_1',
+                        name: defaultPage,
+                        type: 'page',
+                        selected: a.selected !== false
+                    });
+                } else {
+                    const defaultAd1 = (a.name || a.id) + ' - Search Ad';
+                    const defaultAd2 = (a.name || a.id) + ' - Lead Form Ad';
+                    children.push({
+                        id: 'ad_' + a.id + '_1',
+                        name: defaultAd1,
+                        type: 'ad',
+                        selected: a.selected !== false
+                    });
+                    children.push({
+                        id: 'ad_' + a.id + '_2',
+                        name: defaultAd2,
+                        type: 'ad',
+                        selected: a.selected !== false
+                    });
+                }
+            }
+
+            a._children = children;
+            return children;
+        }
+
+        function renderAccountDetails(a, platform, ws) {
+            const children = getAccountChildren(a, platform, ws);
+            const checkedChildren = children.filter(c => c.selected !== false);
+            const isMasterChecked = a.selected !== false && checkedChildren.length > 0;
+            const safeId = escapeHtml(String(a.id));
+            const safeName = escapeHtml(a.name || a.id);
+            const childTypeLabel = platform === 'meta' ? 'pages' : 'ads';
+            const badgeCls = checkedChildren.length ? 'badge-green' : 'badge-gray';
+
+            let childHtml = '';
+            children.forEach(c => {
+                const cChecked = c.selected !== false;
+                const cSafeId = escapeHtml(String(c.id));
+                const cSafeName = escapeHtml(c.name);
+                const icon = platform === 'meta' ? '📄' : '📢';
+                childHtml += `
+                    <label style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 22px;font-size:11px;color:var(--color-text-secondary);cursor:pointer;user-select:none;" title="${cSafeName}">
+                        <input type="checkbox" class="tree-child-cb" data-account-id="${safeId}" data-child-id="${cSafeId}" data-platform="${platform}" ${cChecked ? 'checked' : ''} onchange="toggleChildFilter('${safeId}', '${cSafeId}', this.checked, '${platform}')" style="cursor:pointer;accent-color:var(--color-accent);margin:0;width:12px;height:12px;">
+                        <span style="font-size:10px;line-height:1;">${icon}</span>
+                        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cSafeName}</span>
+                    </label>
+                `;
+            });
+
+            return `
+                <details style="margin-bottom:3px;margin-left:4px;" open>
+                    <summary style="cursor:pointer;font-size:11px;font-weight:600;padding:3px 6px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:5px;box-sizing:border-box;width:100%;">
+                        <span style="display:inline-block;width:8px;flex-shrink:0;font-size:9px;color:var(--color-text-muted);">▾</span>
+                        <input type="checkbox" class="tree-account-cb" data-id="${safeId}" data-platform="${platform}" ${isMasterChecked ? 'checked' : ''} onchange="toggleAccountFilter('${safeId}', this.checked, '${platform}')" onclick="event.stopPropagation()" style="cursor:pointer;accent-color:var(--color-accent);margin:0;width:13px;height:13px;">
+                        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${safeName} (${a.formatted || a.id})">${safeName}</span>
+                        ${a.formatted ? `<span style="font-size:9px;color:var(--color-text-muted);">${escapeHtml(a.formatted)}</span>` : ''}
+                        <span class="badge ${badgeCls}" style="font-size:8px;padding:0 4px;flex-shrink:0;">${checkedChildren.length}/${children.length} ${childTypeLabel}</span>
+                    </summary>
+                    <div style="padding-top:2px;padding-bottom:2px;">
+                        ${childHtml}
+                    </div>
+                </details>
+            `;
+        }
+
         function renderAccountTree(ws) {
             const gTree = $('googleAcctTree') || $('acctTree');
             const mTree = $('metaAcctTree');
             if (!gTree && !mTree) return;
 
-            const accountItem = (a, platform) => {
-                const isChecked = a.selected !== false;
-                const safeId = escapeHtml(String(a.id));
-                const safeName = escapeHtml(a.name || a.id);
-                return `<label style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 20px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;user-select:none;" title="${safeName} (${a.formatted || a.id})">` +
-                    `<input type="checkbox" class="tree-account-cb" data-id="${safeId}" data-platform="${platform}" ${isChecked ? 'checked' : ''} onchange="toggleAccountFilter('${safeId}', this.checked, '${platform}')" style="cursor:pointer;accent-color:var(--color-accent);margin:0;width:13px;height:13px;">` +
-                    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safeName}</span>` +
-                    (a.formatted ? `<span style="font-size:9px;color:var(--color-text-muted);">${escapeHtml(a.formatted)}</span>` : '') +
-                    (a.manager ? `<span class="badge badge-gray" style="font-size:8px;padding:0 3px;">MCC</span>` : '') +
-                    `</label>`;
-            };
-
             const groupSection = (label, accounts, disconnectHtml, platform) => {
                 if (!accounts.length) return '';
                 const checkedCount = accounts.filter(a => a.selected !== false).length;
-                return '<details style="margin-bottom:4px;" open>' +
+                return '<details style="margin-bottom:6px;" open>' +
                     '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 6px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:4px;box-sizing:border-box;width:100%;">' +
                     '<span style="display:inline-block;width:10px;flex-shrink:0;">▾</span>' +
                     '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;" title="' + escapeHtml(label) + '">' + escapeHtml(label) + '</span>' +
                     '<span class="badge ' + (checkedCount ? 'badge-green' : 'badge-gray') + '" style="font-size:9px;padding:1px 4px;flex-shrink:0;" title="' + checkedCount + ' of ' + accounts.length + ' accounts selected">' + checkedCount + '/' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
-                    accounts.map(a => accountItem(a, platform)).join('') + '</details>';
+                    accounts.map(a => renderAccountDetails(a, platform, ws)).join('') + '</details>';
             };
 
             if (!ws) {
@@ -853,21 +1011,17 @@
                             const match = String(ident.label).match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
                             if (match) email = match[1];
                         }
-                        // Default to the actual connected Meta account email, never confusing with workspace owner_email
                         if (!email || email === ws.owner_email) {
                             email = 'vishnuprasadekm2@gmail.com';
                         }
                         const disKey = ident.label || email;
                         const accounts = ident.discovered_accounts || [];
-                        const pages = ident.discovered_pages || [];
                         const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(disKey) + '" onclick="disconnectMetaIdentity(\'' + escapeHtml(disKey) + '\')">✕</button>';
-                        const both = accounts.concat(pages.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
-                        mHtml += groupSection('📧 ' + email, both, dis, 'meta');
+                        mHtml += groupSection('📧 ' + email, accounts, dis, 'meta');
                     });
-                } else if ((ws.discovered_meta_accounts || []).length || (ws.discovered_meta_pages || []).length) {
+                } else if ((ws.discovered_meta_accounts || []).length) {
                     const email = 'vishnuprasadekm2@gmail.com';
-                    const both = (ws.discovered_meta_accounts || []).concat((ws.discovered_meta_pages || []).map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
-                    mHtml += groupSection('📧 ' + email, both, '', 'meta');
+                    mHtml += groupSection('📧 ' + email, ws.discovered_meta_accounts || [], '', 'meta');
                 }
             }
             if (!mHtml) {
@@ -883,7 +1037,7 @@
             [gTree, mTree].filter(Boolean).forEach(t => {
                 t.querySelectorAll('summary').forEach(s => {
                     s.addEventListener('click', (e) => {
-                        if (e.target.tagName === 'BUTTON') return;
+                        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
                         const arrow = s.querySelector('span');
                         const d = s.parentElement;
                         setTimeout(() => { if (arrow) arrow.textContent = d.open ? '▾' : '▸'; }, 0);
@@ -895,21 +1049,16 @@
         async function toggleAccountFilter(accountId, checked, platform) {
             if (!selectedWorkspaceObj) return;
 
-            // 1. Update in memory discovered_accounts or discovered_meta_accounts / pages
             const field = platform === 'meta' ? 'discovered_meta_accounts' : 'discovered_accounts';
             const list = selectedWorkspaceObj[field] || [];
             list.forEach(a => {
                 if (String(a.id) === String(accountId)) {
                     a.selected = checked;
+                    if (a._children) {
+                        a._children.forEach(c => { c.selected = checked; });
+                    }
                 }
             });
-            if (platform === 'meta') {
-                (selectedWorkspaceObj.discovered_meta_pages || []).forEach(p => {
-                    if (String(p.id) === String(accountId)) {
-                        p.selected = checked;
-                    }
-                });
-            }
 
             // Also sync within identities if present
             const identField = platform === 'meta' ? 'meta_identities' : 'google_identities';
@@ -919,18 +1068,14 @@
                 sub.forEach(a => {
                     if (String(a.id) === String(accountId)) {
                         a.selected = checked;
+                        if (a._children) {
+                            a._children.forEach(c => { c.selected = checked; });
+                        }
                     }
                 });
-                if (platform === 'meta' && ident.discovered_pages) {
-                    ident.discovered_pages.forEach(p => {
-                        if (String(p.id) === String(accountId)) {
-                            p.selected = checked;
-                        }
-                    });
-                }
             });
 
-            // 2. Persist selection to backend
+            // Persist selection to backend
             const selectedIds = list.filter(a => a.selected !== false).map(a => String(a.id));
             try {
                 await api('POST', '/oauth/select', {
@@ -942,10 +1087,38 @@
                 console.warn('Could not persist account selection:', e);
             }
 
-            // Update badge counts in tree
             renderAccountTree(selectedWorkspaceObj);
+            renderKpis();
+            renderFeed();
+        }
 
-            // 3. Re-filter leads feed and KPIs
+        async function toggleChildFilter(accountId, childId, checked, platform) {
+            if (!selectedWorkspaceObj) return;
+
+            const field = platform === 'meta' ? 'discovered_meta_accounts' : 'discovered_accounts';
+            const list = selectedWorkspaceObj[field] || [];
+            const acc = list.find(a => String(a.id) === String(accountId));
+            if (acc && acc._children) {
+                const child = acc._children.find(c => String(c.id) === String(childId));
+                if (child) child.selected = checked;
+                const activeChildren = acc._children.filter(c => c.selected !== false);
+                acc.selected = activeChildren.length > 0;
+            }
+
+            // Sync with identities
+            const identField = platform === 'meta' ? 'meta_identities' : 'google_identities';
+            const idents = selectedWorkspaceObj[identField] || [];
+            idents.forEach(ident => {
+                const sub = (platform === 'meta' ? (ident.discovered_accounts || []) : (ident.discovered || []));
+                const sa = sub.find(a => String(a.id) === String(accountId));
+                if (sa && sa._children) {
+                    const c = sa._children.find(x => String(x.id) === String(childId));
+                    if (c) c.selected = checked;
+                    sa.selected = sa._children.some(x => x.selected !== false);
+                }
+            });
+
+            renderAccountTree(selectedWorkspaceObj);
             renderKpis();
             renderFeed();
         }
@@ -1204,7 +1377,7 @@
             } catch (e) { toast(e.message, 'error'); }
         }
 
-        // ---------- Leads & Account Filtering ----------
+        // ---------- Leads & Account/Page/Ad Filtering ----------
         function getFilteredLeads() {
             if (!selectedWorkspaceObj) return allLeads;
 
@@ -1215,57 +1388,110 @@
             // If no discovered accounts configured yet, show all leads
             if (!allKnown.length) return allLeads;
 
-            // Active / checked accounts
-            const activeAccs = allKnown.filter(a => a.selected !== false);
-            // If user unchecked everything, return empty list
-            if (!activeAccs.length) return [];
-
-            const activeIds = new Set();
-            const activeFormatted = new Set();
-            const activeNames = new Set();
-            activeAccs.forEach(a => {
-                if (a.id) activeIds.add(String(a.id).trim().toLowerCase());
-                if (a.formatted) activeFormatted.add(String(a.formatted).trim().toLowerCase());
-                if (a.name) activeNames.add(String(a.name).trim().toLowerCase());
-            });
+            // Check if any account has active selection
+            const anyActive = allKnown.some(a => a.selected !== false);
+            if (!anyActive) return [];
 
             return allLeads.filter(l => {
-                // 1. Direct customer_id or external_id
-                if (l.customer_id) {
-                    const cid = String(l.customer_id).trim().toLowerCase();
-                    if (activeIds.has(cid) || activeFormatted.has(cid)) return true;
-                }
-                if (l.external_id) {
-                    const eid = String(l.external_id).trim().toLowerCase();
-                    if (activeIds.has(eid) || activeFormatted.has(eid)) return true;
-                }
+                // 1. Identify which account this lead belongs to
+                let matchedAccount = null;
+                for (const a of allKnown) {
+                    const aid = String(a.id || '').trim().toLowerCase();
+                    const aname = String(a.name || '').trim().toLowerCase();
+                    const aform = String(a.formatted || '').trim().toLowerCase();
 
-                // 2. Direct account_name match
-                if (l.account_name) {
-                    const aname = String(l.account_name).trim().toLowerCase();
-                    for (const name of activeNames) {
-                        if (name && (aname === name || aname.includes(name) || name.includes(aname))) return true;
+                    // Match by customer_id or external_id
+                    const lcid = String(l.customer_id || '').trim().toLowerCase();
+                    const leid = String(l.external_id || '').trim().toLowerCase();
+                    if ((lcid && (lcid === aid || lcid === aform)) || (leid && (leid === aid || leid === aform))) {
+                        matchedAccount = a;
+                        break;
+                    }
+
+                    // Match by direct account_name
+                    const lname = String(l.account_name || '').trim().toLowerCase();
+                    if (lname && aname && (lname === aname || lname.includes(aname) || aname.includes(lname))) {
+                        matchedAccount = a;
+                        break;
+                    }
+
+                    // Match by raw_payload content
+                    if (l.raw_payload) {
+                        try {
+                            const rawStr = typeof l.raw_payload === 'string' ? l.raw_payload.toLowerCase() : JSON.stringify(l.raw_payload).toLowerCase();
+                            if (aid && rawStr.includes(aid)) {
+                                matchedAccount = a;
+                                break;
+                            }
+                        } catch (e) {}
+                    }
+
+                    // Match by campaign_name prefix
+                    if (l.campaign_name && aname) {
+                        const clean = aname.split('-')[0].trim().toLowerCase();
+                        if (clean && clean.length >= 3 && l.campaign_name.toLowerCase().includes(clean)) {
+                            matchedAccount = a;
+                            break;
+                        }
                     }
                 }
 
-                // 3. Campaign name substring (e.g. "DSU", "DSI", "CHLEAR")
+                // If lead doesn't match any known account, keep if all accounts are selected
+                if (!matchedAccount) {
+                    return allKnown.every(a => a.selected !== false);
+                }
+
+                // If matched parent account is unselected, exclude
+                if (matchedAccount.selected === false) {
+                    return false;
+                }
+
+                // Check granular child pages or ads
+                const children = matchedAccount._children || [];
+                if (!children.length) {
+                    return true;
+                }
+
+                const activeChildren = children.filter(c => c.selected !== false);
+                if (!activeChildren.length) {
+                    return false;
+                }
+                if (activeChildren.length === children.length) {
+                    // All pages/ads under account selected -> full account performance
+                    return true;
+                }
+
+                // Specific child items selected -> match against active children
+                const activeChildIds = new Set(activeChildren.map(c => String(c.id).toLowerCase()));
+                const activeChildNames = new Set(activeChildren.map(c => String(c.name).toLowerCase()));
+
+                // Check page match (for Meta)
+                if (l.page_id && activeChildIds.has(String(l.page_id).toLowerCase())) return true;
+                if (l.page_name) {
+                    const lpName = String(l.page_name).toLowerCase();
+                    for (const acName of activeChildNames) {
+                        if (lpName.includes(acName) || acName.includes(lpName)) return true;
+                    }
+                }
+
+                // Check ad or campaign match (for Google & Meta)
+                if (l.ad_id && activeChildIds.has(String(l.ad_id).toLowerCase())) return true;
+                if (l.ad_name && activeChildNames.has(String(l.ad_name).toLowerCase())) return true;
+                if (l.campaign_id && activeChildIds.has(String(l.campaign_id).toLowerCase())) return true;
                 if (l.campaign_name) {
-                    const camp = l.campaign_name.toLowerCase();
-                    for (const name of activeNames) {
-                        const clean = name.split('-')[0].trim().toLowerCase();
-                        if (clean && clean.length >= 3 && camp.includes(clean)) return true;
-                    }
-                    for (const id of activeIds) {
-                        if (id && camp.includes(id)) return true;
+                    const lcName = String(l.campaign_name).toLowerCase();
+                    for (const acName of activeChildNames) {
+                        if (lcName.includes(acName) || acName.includes(lcName)) return true;
                     }
                 }
 
-                // 4. Stored raw_payload
+                // Check raw payload for child id matches
                 if (l.raw_payload) {
                     try {
-                        const p = typeof l.raw_payload === 'string' ? JSON.parse(l.raw_payload) : l.raw_payload;
-                        const cid = p.customer_id || p.account_id;
-                        if (cid && (activeIds.has(String(cid).toLowerCase()) || activeFormatted.has(String(cid).toLowerCase()))) return true;
+                        const rawStr = typeof l.raw_payload === 'string' ? l.raw_payload.toLowerCase() : JSON.stringify(l.raw_payload).toLowerCase();
+                        for (const cid of activeChildIds) {
+                            if (cid && rawStr.includes(cid)) return true;
+                        }
                     } catch (e) {}
                 }
 
@@ -1284,6 +1510,7 @@
                 params.set('limit', '500');
                 const data = await api('GET', '/leads?' + params.toString());
                 allLeads = data.leads || [];
+                renderAccountTree(selectedWorkspaceObj);
                 renderKpis();
                 renderFeed();
             } catch (e) { toast(e.message, 'error'); }
