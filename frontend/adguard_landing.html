@@ -1307,11 +1307,14 @@
 
             <!-- TAB 1: SIGN UP / REGISTER -->
             <div id="authPanelSignup">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                    <div class="logo-shield" style="width:26px; height:26px; font-size:13px;">🛡️</div>
-                    <h3 style="font-size:17px; color:#fff;">Start 14-Day Free Trial</h3>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div class="logo-shield" style="width:26px; height:26px; font-size:13px;" id="regModalIcon">🛡️</div>
+                        <h3 style="font-size:17px; color:#fff; margin:0;" id="regModalTitle">Start 14-Day Free Trial</h3>
+                    </div>
+                    <span id="regPlanBadge" style="font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">100 Free Leads Quota</span>
                 </div>
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;" id="regModalDesc">
                     100 free leads quota. Instant Google &amp; Meta lead form protection. No credit card required.
                 </p>
 
@@ -1530,16 +1533,78 @@
             document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
         }
 
+        const REG_PLAN_CONFIG = {
+            trial: {
+                tabLabel: "Start Free Trial",
+                title: "Start 14-Day Free Trial",
+                badge: "100 Free Leads",
+                badgeBg: "rgba(16, 185, 129, 0.15)",
+                badgeColor: "#34d399",
+                desc: "100 free leads quota. Instant Google & Meta lead form protection. No credit card required.",
+                submitText: "Create Account & Start Trial →"
+            },
+            starter: {
+                tabLabel: "Register: Starter",
+                title: "Subscribe to Starter Plan",
+                badge: "₹4,999 / mo · 1,000 Leads",
+                badgeBg: "rgba(56, 189, 248, 0.15)",
+                badgeColor: "#38bdf8",
+                desc: "Create your account to activate Starter Plan with 1,000 leads/mo protection & carrier validation.",
+                submitText: "Create Account & Continue to Payment →"
+            },
+            pro: {
+                tabLabel: "Register: Pro",
+                title: "Subscribe to Pro Plan",
+                badge: "₹14,999 / mo · 5,000 Leads",
+                badgeBg: "rgba(16, 185, 129, 0.2)",
+                badgeColor: "#34d399",
+                desc: "Create your account to activate Pro Plan with 5,000 leads/mo, Gemini AI scoring & FraudGraph.",
+                submitText: "Create Account & Continue to Payment →"
+            },
+            agency: {
+                tabLabel: "Register: Agency",
+                title: "Subscribe to Agency Plan",
+                badge: "₹39,999 / mo · Unlimited Leads",
+                badgeBg: "rgba(245, 158, 11, 0.2)",
+                badgeColor: "#fbbf24",
+                desc: "Create your account to activate Agency Plan with unlimited leads & multi-client workspaces.",
+                submitText: "Create Account & Continue to Payment →"
+            }
+        };
+
+        function updateRegModalForPlan(plan) {
+            const p = (plan || 'trial').toLowerCase();
+            const cfg = REG_PLAN_CONFIG[p] || REG_PLAN_CONFIG.trial;
+
+            const tabBtn = document.getElementById('tabBtnSignup');
+            const titleEl = document.getElementById('regModalTitle');
+            const descEl = document.getElementById('regModalDesc');
+            const badgeEl = document.getElementById('regPlanBadge');
+            const btnEl = document.getElementById('signupSubmitBtn');
+            const planInput = document.getElementById('regPlan');
+
+            if (tabBtn) tabBtn.textContent = cfg.tabLabel;
+            if (titleEl) titleEl.textContent = cfg.title;
+            if (descEl) descEl.textContent = cfg.desc;
+            if (btnEl) btnEl.textContent = cfg.submitText;
+            if (planInput) planInput.value = p;
+
+            if (badgeEl) {
+                badgeEl.textContent = cfg.badge;
+                badgeEl.style.background = cfg.badgeBg;
+                badgeEl.style.color = cfg.badgeColor;
+                badgeEl.style.borderColor = cfg.badgeColor;
+            }
+        }
+
         // Customer Auth Modal (Tab Switcher: 'signup' or 'signin')
         function openAuthModal(tab, plan) {
             const modal = document.getElementById('authModal');
             if (!modal) return;
             modal.style.display = 'flex';
-            if (plan) {
-                const planInput = document.getElementById('regPlan');
-                if (planInput) planInput.value = plan;
-                pendingCheckoutPlan = plan;
-            }
+            const chosenPlan = plan || (tab === 'signup' ? (pendingCheckoutPlan || 'trial') : (pendingCheckoutPlan || 'trial'));
+            pendingCheckoutPlan = chosenPlan;
+            updateRegModalForPlan(chosenPlan);
             switchAuthTab(tab || 'signup');
         }
 
