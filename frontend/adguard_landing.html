@@ -1379,11 +1379,6 @@
                         Sign In to Workspace →
                     </button>
                 </form>
-
-                <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
-                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:8px;">Fast Evaluation Access:</span>
-                    <button type="button" class="btn btn-ghost" style="padding:4px 12px; font-size:11px;" onclick="fillCustomerDemo()">Fill Customer Demo Account</button>
-                </div>
             </div>
 
         </div>
@@ -1579,11 +1574,6 @@
             if (modal) modal.style.display = 'none';
             document.getElementById('signupError').style.display = 'none';
             document.getElementById('loginError').style.display = 'none';
-        }
-
-        function fillCustomerDemo() {
-            document.getElementById('loginEmail').value = 'tester@adguard.ai';
-            document.getElementById('loginPassword').value = 'Test@1234';
         }
 
         // Plan Selection and Checkout Flow
