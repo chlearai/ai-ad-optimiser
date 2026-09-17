@@ -718,8 +718,8 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: var(--radius-lg);
             width: 100%;
-            max-width: 420px;
-            padding: 32px;
+            max-width: 480px;
+            padding: 30px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             position: relative;
         }
@@ -735,16 +735,51 @@
             cursor: pointer;
         }
 
+        /* --- MODAL TABS --- */
+        .modal-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .modal-tab-btn {
+            flex: 1;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-tab-btn.active {
+            background: #10b981;
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+        }
+
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .form-label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-sub);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -756,7 +791,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: var(--radius-md);
             color: #fff;
-            font-size: 14px;
+            font-size: 13px;
             outline: none;
             transition: border-color 0.2s;
         }
@@ -764,6 +799,64 @@
         .form-input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+
+        /* --- COMPARISON TABLE --- */
+        .comparison-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            margin-top: 36px;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 680px;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            line-height: 1.45;
+        }
+        .comparison-table th {
+            font-weight: 600;
+            color: var(--text-sub);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .comparison-table th.col-adguard, .comparison-table td.col-adguard {
+            background: rgba(16, 185, 129, 0.07);
+            border-left: 1px solid rgba(16, 185, 129, 0.25);
+            border-right: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        .comparison-table th.col-adguard {
+            color: #34d399;
+            font-size: 14px;
+        }
+        .comparison-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .comparison-table tr:hover td.col-adguard {
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .comp-badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 12px;
+            margin-left: 6px;
         }
 
         /* Responsive */
@@ -778,6 +871,7 @@
             .hero h1 { font-size: 32px; }
             .steps-grid, .features-grid, .pricing-grid { grid-template-columns: 1fr; }
             .nav-links { display: none; }
+            .form-row-2 { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -793,13 +887,13 @@
             <ul class="nav-links">
                 <li><a href="#how-it-works">How It Works</a></li>
                 <li><a href="#features">Capabilities</a></li>
+                <li><a href="#comparison">Why AdGuard</a></li>
                 <li><a href="#calculator">ROI Calculator</a></li>
                 <li><a href="#pricing">Pricing</a></li>
             </ul>
             <div class="nav-actions">
-                <button class="btn btn-ghost" onclick="openLogin('customer')">Customer Login</button>
-                <button class="btn btn-ghost" onclick="openLogin('admin')" title="Admin & Superadmin access" style="border-color:rgba(139,92,246,0.3); color:#c4b5fd;">Admin Login</button>
-                <button class="btn btn-primary" onclick="openLogin('customer')">Get Started</button>
+                <button class="btn btn-ghost" onclick="openAuthModal('signin')">Sign In</button>
+                <button class="btn btn-primary" onclick="openAuthModal('signup', 'trial')">Start Free Trial →</button>
             </div>
         </div>
     </nav>
@@ -818,7 +912,7 @@
                 Capture every lead from Google Ads & Meta Ads forms. Instantly score 0–100 for legitimacy, block bots, disposable emails, and fake numbers, and push only verified leads to your CRM.
             </p>
             <div class="hero-cta">
-                <button class="btn btn-primary" style="padding:14px 28px; font-size:16px;" onclick="openLogin('customer')">
+                <button class="btn btn-primary" style="padding:14px 28px; font-size:16px;" onclick="openAuthModal('signup', 'trial')">
                     🛡️ Start 14-Day Free Trial (100 Free Leads)
                 </button>
                 <button class="btn btn-ghost" style="padding:14px 24px; font-size:15px;" onclick="scrollToSection('calculator')">
@@ -1024,10 +1118,78 @@
                     <h4>Projected Monthly Ad Spend Saved</h4>
                     <div class="savings-amount" id="calcSavings">₹42,000</div>
                     <p class="calc-subtext" id="calcLeads">Blocking ~168 junk leads &amp; saving 35+ wasted sales hours</p>
-                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openLogin('customer')">
+                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'trial')">
                         Stop This Waste Now →
                     </button>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPETITOR COMPARISON TABLE -->
+    <section class="section" id="comparison">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">Competitive Edge</div>
+                <h2>Why High-Growth Marketers Choose AdGuard</h2>
+                <p>Click-fraud software only monitors IP addresses. Basic captchas only challenge simple bots. AdGuard is the only dedicated Lead Integrity Gatekeeper that audits full lead payloads before they reach your CRM.</p>
+            </div>
+
+            <div class="comparison-table-wrap">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th style="width:28%;">Capability / Advantage</th>
+                            <th class="col-adguard" style="width:26%;">AdGuard <span class="comp-badge">Leader</span></th>
+                            <th style="width:23%;">Click Fraud Tools<br><span style="font-size:10px;text-transform:none;color:var(--text-muted);">(ClickCease / CHEQ)</span></th>
+                            <th style="width:23%;">Basic Captchas<br><span style="font-size:10px;text-transform:none;color:var(--text-muted);">(reCAPTCHA / Form checks)</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Primary Focus</strong></td>
+                            <td class="col-adguard"><strong style="color:#34d399;">Lead Quality &amp; Budget Recovery</strong></td>
+                            <td>Ad Click Fraud &amp; IP Logs</td>
+                            <td>Spam Bot Form Challenge</td>
+                        </tr>
+                        <tr>
+                            <td><strong>14-Point Lead Integrity Scoring</strong></td>
+                            <td class="col-adguard"><span style="color:#10b981;font-weight:700;">✓ Yes</span> — Carrier, Disposable Email, Geo-Match, Gemini AI</td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ None</span> (only inspects click IP)</td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ None</span> (only puzzle challenge)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fake Phone &amp; Bot Lead Blocker</strong></td>
+                            <td class="col-adguard"><span style="color:#10b981;font-weight:700;">✓ Blocks junk before CRM</span></td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ Cannot inspect form content</span></td>
+                            <td><span style="color:#f59e0b;font-weight:700;">⚠ Easily bypassed by fake humans</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Automated Campaign Shield</strong></td>
+                            <td class="col-adguard"><span style="color:#10b981;font-weight:700;">✓ Auto-pauses high-junk ads</span></td>
+                            <td><span style="color:#f59e0b;font-weight:700;">⚠ Limited to 500 IP exclusions</span></td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ No ad account control</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Direct CRM Delivery Gatekeeper</strong></td>
+                            <td class="col-adguard"><span style="color:#10b981;font-weight:700;">✓ Delivers ONLY verified (≥70)</span></td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ Dumps all leads into CRM</span></td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ Dumps all leads into CRM</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Proof of Recovered Spend in ₹</strong></td>
+                            <td class="col-adguard"><span style="color:#10b981;font-weight:700;">✓ Real-time audit log in ₹</span></td>
+                            <td><span style="color:#f59e0b;font-weight:700;">⚠ Estimated click counts only</span></td>
+                            <td><span style="color:#ef4444;font-weight:700;">✗ None</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pricing for Indian &amp; Global Marketers</strong></td>
+                            <td class="col-adguard"><strong style="color:#34d399;">Transparent INR tiers (₹4,999/mo)</strong></td>
+                            <td>Expensive USD ($80–$300+/mo)</td>
+                            <td>Free / Plugin-only</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
@@ -1056,7 +1218,7 @@
                         <li>Direct CRM Push</li>
                         <li>CSV Export</li>
                     </ul>
-                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="openLogin('customer')">Start Free Trial</button>
+                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'trial')">Start Free Trial</button>
                 </div>
 
                 <!-- Starter -->
@@ -1073,7 +1235,7 @@
                         <li>Quota Usage Alerts (80%)</li>
                         <li>Standard Email Support</li>
                     </ul>
-                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="openLogin('customer')">Select Starter</button>
+                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'starter')">Select Starter</button>
                 </div>
 
                 <!-- Pro -->
@@ -1092,7 +1254,7 @@
                         <li>Priority CRM Push Retries</li>
                         <li>Priority Support</li>
                     </ul>
-                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openLogin('customer')">Select Pro</button>
+                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'pro')">Select Pro</button>
                 </div>
 
                 <!-- Agency -->
@@ -1109,7 +1271,7 @@
                         <li>Dedicated Account Manager</li>
                         <li>SLA &amp; Custom Rules</li>
                     </ul>
-                    <button class="btn btn-amber" style="width:100%; justify-content:center;" onclick="openLogin('customer')">Select Agency</button>
+                    <button class="btn btn-amber" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'agency')">Select Agency</button>
                 </div>
 
             </div>
@@ -1122,51 +1284,107 @@
             <div class="footer-links">
                 <a href="#how-it-works">How It Works</a>
                 <a href="#features">Features</a>
+                <a href="#comparison">Why AdGuard</a>
                 <a href="#pricing">Pricing</a>
                 <a href="/privacy">Privacy Policy</a>
                 <a href="/terms">Terms of Service</a>
-                <a href="javascript:void(0)" onclick="openLogin('admin')">Admin Portal</a>
+                <a href="/adguard-admin-login">Admin Portal</a>
             </div>
             <p>© 2026 AdGuard by ChlearSakhaaOps AI. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- UNIFIED LOGIN MODAL -->
-    <div class="modal-overlay" id="loginModal" onclick="if(event.target===this)closeLogin()">
+    <!-- CUSTOMER AUTH MODAL (2 TABS: SIGN UP & SIGN IN) -->
+    <div class="modal-overlay" id="authModal" onclick="if(event.target===this)closeAuthModal()">
         <div class="modal-box">
-            <button class="modal-close" onclick="closeLogin()">✕</button>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                <div class="logo-shield" style="width:28px; height:28px; font-size:14px;">🛡️</div>
-                <h3 style="font-size:18px; color:#fff;" id="modalTitle">Customer Sign In</h3>
-            </div>
-            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" id="modalDesc">
-                Sign in to your AdGuard workspace to manage leads and connected ad accounts.
-            </p>
-
-            <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <input type="email" id="loginEmail" class="form-input" placeholder="name@company.com">
+            <button class="modal-close" onclick="closeAuthModal()">✕</button>
+            
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" id="tabBtnSignup" onclick="switchAuthTab('signup')">Start Free Trial</button>
+                <button type="button" class="modal-tab-btn" id="tabBtnSignin" onclick="switchAuthTab('signin')">Customer Sign In</button>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+            <!-- TAB 1: SIGN UP / REGISTER -->
+            <div id="authPanelSignup">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <div class="logo-shield" style="width:26px; height:26px; font-size:13px;">🛡️</div>
+                    <h3 style="font-size:17px; color:#fff;">Start 14-Day Free Trial</h3>
+                </div>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                    100 free leads quota. Instant Google &amp; Meta lead form protection. No credit card required.
+                </p>
+
+                <div id="signupError" style="display:none; background:var(--danger-bg); border:1px solid rgba(220,38,38,0.3); color:#fca5a5; font-size:12px; padding:8px 12px; border-radius:6px; margin-bottom:12px;"></div>
+
+                <form id="signupForm" onsubmit="event.preventDefault(); doRegister();">
+                    <input type="hidden" id="regPlan" value="trial">
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="regFullName" class="form-input" placeholder="e.g. Shekhar Raju" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Work Phone</label>
+                            <input type="tel" id="regPhone" class="form-input" placeholder="+91 98451 22849" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Work Email Address</label>
+                        <input type="email" id="regEmail" class="form-input" placeholder="name@company.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Company / Agency Name</label>
+                        <input type="text" id="regCompany" class="form-input" placeholder="e.g. Acme Media or Mantri Developers" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="regPassword" class="form-input" placeholder="Min. 6 characters" minlength="6" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:6px;" id="signupSubmitBtn">
+                        Create Account &amp; Start Trial →
+                    </button>
+                </form>
             </div>
 
-            <div id="loginError" style="display:none; background:var(--danger-bg); color:#fca5a5; font-size:12px; padding:8px 12px; border-radius:6px; margin-bottom:14px;"></div>
+            <!-- TAB 2: SIGN IN / LOGIN -->
+            <div id="authPanelSignin" style="display:none;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <div class="logo-shield" style="width:26px; height:26px; font-size:13px;">🛡️</div>
+                    <h3 style="font-size:17px; color:#fff;">Customer Sign In</h3>
+                </div>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+                    Access your lead integrity dashboard, connected ad accounts, and audit log.
+                </p>
 
-            <button class="btn btn-primary" style="width:100%; justify-content:center; margin-bottom:12px;" id="loginSubmitBtn" onclick="doLogin()">
-                Sign In →
-            </button>
+                <div id="loginError" style="display:none; background:var(--danger-bg); border:1px solid rgba(220,38,38,0.3); color:#fca5a5; font-size:12px; padding:8px 12px; border-radius:6px; margin-bottom:12px;"></div>
 
-            <!-- Quick Demo Credentials for Fast Evaluation -->
-            <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
-                <p style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Fast Testing Access:</p>
-                <div style="display:flex; gap:8px; justify-content:center;">
-                    <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="fillDemo('customer')">Fill Customer Demo</button>
-                    <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="fillDemo('admin')">Fill Admin Demo</button>
+                <form id="loginForm" onsubmit="event.preventDefault(); doLogin();">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="loginEmail" class="form-input" placeholder="name@company.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:6px;" id="loginSubmitBtn">
+                        Sign In to Workspace →
+                    </button>
+                </form>
+
+                <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
+                    <span style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:8px;">Fast Evaluation Access:</span>
+                    <button type="button" class="btn btn-ghost" style="padding:4px 12px; font-size:11px;" onclick="fillCustomerDemo()">Fill Customer Demo Account</button>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -1193,35 +1411,109 @@
             document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
         }
 
-        function openLogin(role) {
-            const modal = document.getElementById('loginModal');
+        // Customer Auth Modal (Tab Switcher: 'signup' or 'signin')
+        function openAuthModal(tab, plan) {
+            const modal = document.getElementById('authModal');
+            if (!modal) return;
             modal.style.display = 'flex';
-            const title = document.getElementById('modalTitle');
-            const desc = document.getElementById('modalDesc');
-            if (role === 'admin') {
-                title.textContent = 'AdGuard Admin Portal';
-                desc.textContent = 'Platform Owner & Super Admin login. Manage subscribers and global rules.';
+            if (plan) {
+                const planInput = document.getElementById('regPlan');
+                if (planInput) planInput.value = plan;
+            }
+            switchAuthTab(tab || 'signup');
+        }
+
+        function switchAuthTab(tab) {
+            const btnSignup = document.getElementById('tabBtnSignup');
+            const btnSignin = document.getElementById('tabBtnSignin');
+            const panelSignup = document.getElementById('authPanelSignup');
+            const panelSignin = document.getElementById('authPanelSignin');
+
+            document.getElementById('signupError').style.display = 'none';
+            document.getElementById('loginError').style.display = 'none';
+
+            if (tab === 'signin') {
+                btnSignup.classList.remove('active');
+                btnSignin.classList.add('active');
+                panelSignup.style.display = 'none';
+                panelSignin.style.display = 'block';
+                const el = document.getElementById('loginEmail');
+                if (el) el.focus();
             } else {
-                title.textContent = 'Customer Sign In';
-                desc.textContent = 'Access your dedicated lead integrity workspace and connected campaigns.';
+                btnSignin.classList.remove('active');
+                btnSignup.classList.add('active');
+                panelSignin.style.display = 'none';
+                panelSignup.style.display = 'block';
+                const el = document.getElementById('regFullName');
+                if (el) el.focus();
             }
         }
 
-        function closeLogin() {
-            document.getElementById('loginModal').style.display = 'none';
+        function closeAuthModal() {
+            const modal = document.getElementById('authModal');
+            if (modal) modal.style.display = 'none';
+            document.getElementById('signupError').style.display = 'none';
             document.getElementById('loginError').style.display = 'none';
         }
 
-        function fillDemo(type) {
-            if (type === 'admin') {
-                document.getElementById('loginEmail').value = 'admin@adoptima.ai';
-                document.getElementById('loginPassword').value = 'Admin@123';
-            } else {
-                document.getElementById('loginEmail').value = 'tester@adguard.ai';
-                document.getElementById('loginPassword').value = 'Test@1234';
+        function fillCustomerDemo() {
+            document.getElementById('loginEmail').value = 'tester@adguard.ai';
+            document.getElementById('loginPassword').value = 'Test@1234';
+        }
+
+        // Register new subscriber + auto-provision workspace
+        async function doRegister() {
+            const fullName = document.getElementById('regFullName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const company = document.getElementById('regCompany').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const plan = (document.getElementById('regPlan') && document.getElementById('regPlan').value) || 'trial';
+            const errBox = document.getElementById('signupError');
+            const btn = document.getElementById('signupSubmitBtn');
+
+            errBox.style.display = 'none';
+
+            if (!fullName || !email || !password) {
+                errBox.textContent = 'Please fill in all required fields.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Setting Up Your Workspace...';
+
+            try {
+                const res = await fetch('/api/auth/register-subscriber', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        email: email,
+                        phone: phone,
+                        company_name: company,
+                        password: password,
+                        plan: plan
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Registration failed. Please try again.');
+                }
+
+                localStorage.setItem('adoptima_token', data.access_token);
+                window.location.href = data.redirect_url || '/adguard-workspace';
+            } catch (err) {
+                errBox.textContent = err.message;
+                errBox.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Account & Start Trial →';
             }
         }
 
+        // Subscriber login
         async function doLogin() {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -1247,11 +1539,10 @@
 
                 const data = await res.json();
                 if (!res.ok) {
-                    throw new Error(data.detail || 'Login failed');
+                    throw new Error(data.detail || 'Invalid email or password.');
                 }
 
                 localStorage.setItem('adoptima_token', data.access_token);
-                // Route by role: admin -> master dashboard, customer -> their workspace
                 const role = (data.user && data.user.role) || 'user';
                 if (role === 'admin' || role === 'superadmin') {
                     window.location.href = '/adguard';
@@ -1263,7 +1554,7 @@
                 errBox.style.display = 'block';
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Sign In →';
+                btn.textContent = 'Sign In to Workspace →';
             }
         }
 

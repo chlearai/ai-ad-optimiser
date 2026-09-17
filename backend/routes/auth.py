@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from backend.services.activity_log import log_activity
 from backend.db.database import get_db
-from backend.db.models import User, UserAccountAssignment, Account, AppSetting
+from backend.db.models import User, UserAccountAssignment, Account, AppSetting, AdGuardAccount
 from backend.services.onboarding_email import send_onboarding_email
 from backend.services.gmail_api import build_authorization_url, exchange_code_for_token
 
@@ -37,6 +37,15 @@ ONBOARDING_TOKEN_EXPIRE_HOURS = 72
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+class SubscriberRegisterRequest(BaseModel):
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    password: str
+    plan: Optional[str] = "trial"
 
 
 class OnboardRequest(BaseModel):
@@ -172,6 +181,83 @@ def onboard_first_user(req: OnboardRequest, db: Session = Depends(get_db)):
     db.refresh(user)
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "user": user.to_dict()}
+
+
+# ============================================================
+# SUBSCRIBER SELF-REGISTRATION (AdGuard)
+# ============================================================
+@router.post("/register-subscriber")
+def register_subscriber(req: SubscriberRegisterRequest, db: Session = Depends(get_db)):
+    """Public self-serve registration for AdGuard subscribers."""
+    clean_email = req.email.strip().lower()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="A valid email address is required")
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if not req.full_name or not req.full_name.strip():
+        raise HTTPException(status_code=400, detail="Full name is required")
+
+    existing_user = db.query(User).filter(User.email == clean_email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="An account with this email already exists. Please sign in.")
+
+    # 1. Create User
+    user = User(
+        email=clean_email,
+        hashed_password=get_password_hash(req.password),
+        full_name=req.full_name.strip(),
+        mobile=(req.phone or "").strip(),
+        role="user",
+        access_adpulse=False,
+        access_insightdesk=False,
+        access_revenueops=False,
+        access_audit_review=False,
+        access_adguard=True,
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # 2. Provision or find AdGuardAccount workspace
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == clean_email).first()
+    display_title = (req.company_name or "").strip() or f"{user.full_name}'s Workspace"
+    if not ws:
+        plan_name = req.plan or "trial"
+        quota = 100 if plan_name == "trial" else (1000 if plan_name == "starter" else (5000 if plan_name == "pro" else -1))
+        ws = AdGuardAccount(
+            owner_email=clean_email,
+            display_name=display_title,
+            plan=plan_name,
+            lead_quota=quota,
+            lead_count=0,
+            verification_threshold=70,
+            auto_push_enabled=True,
+            shield_enabled=True,
+            shield_junk_threshold=40,
+            shield_min_leads=50,
+        )
+        db.add(ws)
+        db.commit()
+        db.refresh(ws)
+
+    # 3. Issue Token
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    log_activity(
+        module="AdGuard",
+        action="Subscriber Signup",
+        description=f"New subscriber {user.full_name} ({user.email}) registered workspace '{display_title}'",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        db=db,
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user.to_dict(),
+        "workspace_id": ws.id,
+        "redirect_url": "/adguard-workspace",
+    }
 
 
 # ============================================================
