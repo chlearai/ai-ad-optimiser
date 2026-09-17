@@ -968,6 +968,11 @@
             renderMantriReport();
             return;
         }
+        if (a && a.name === 'Crash Club') {
+            computeDateRange(reportDateRange.preset || 'last30');
+            await renderCrashClubReport(a);
+            return;
+        }
         computeDateRange(reportDateRange.preset || 'last30');
         await renderReport(a);
     }
@@ -2338,6 +2343,125 @@
         } catch (e) {
             toast(e.message, true);
         }
+    }
+
+    /* ============ Crash Club: two lead tables (Goa + MW) ============ */
+    async function renderCrashClubReport(account) {
+        const wrap = (id, title, rowsBody, count) => `
+            <div class="card">
+                <div class="card-header" style="cursor:pointer;" onclick="toggleCcTable('${id}')">
+                    <div class="report-title">${title} <span class="status-badge live" style="margin-left:8px;">${count} leads</span></div>
+                    <div id="${id}_chev" style="font-size:1.1rem;">▾</div>
+                </div>
+                <div id="${id}_body" style="max-height:420px; overflow:auto;">
+                    <table>
+                        <thead><tr>
+                            <th>Lead Created</th><th>Date &amp; Time</th><th>Source</th>
+                            <th id="${id}_th4"></th><th id="${id}_th5"></th><th id="${id}_th6"></th>
+                            <th>Email</th><th>Full Name</th><th>Phone</th>
+                        </tr></thead>
+                        <tbody>${rowsBody}</tbody>
+                    </table>
+                </div>
+            </div>`;
+
+        try {
+            const params = getReportParams();
+            const [goa, mw] = await Promise.all([
+                api('GET', '/accounts/' + account.id + '/crashclub-leads?form=goa' + params),
+                api('GET', '/accounts/' + account.id + '/crashclub-leads?form=mw' + params)
+            ]);
+
+            const goaRows = (goa.leads || []).map(l => `<tr>
+                <td>${escapeHtml(l.lead_created || '-')}</td>
+                <td>${escapeHtml(l.date_time || '-')}</td>
+                <td><span class="badge badge-meta">${escapeHtml((l.source || 'Meta').toUpperCase())}</span></td>
+                <td>${escapeHtml(l.col_d || '-')}</td>
+                <td>${escapeHtml(l.col_e || '-')}</td>
+                <td>${escapeHtml(l.col_f || '-')}</td>
+                <td>${escapeHtml(l.email || '-')}</td>
+                <td>${escapeHtml(l.name || '-')}</td>
+                <td>${escapeHtml(l.phone || '-')}</td>
+            </tr>`).join('');
+
+            const mwRows = (mw.leads || []).map(l => `<tr>
+                <td>${escapeHtml(l.lead_created || '-')}</td>
+                <td>${escapeHtml(l.date_time || '-')}</td>
+                <td><span class="badge badge-meta">${escapeHtml((l.source || 'Meta').toUpperCase())}</span></td>
+                <td>${escapeHtml(l.col_d || '-')}</td>
+                <td>${escapeHtml(l.col_e || '-')}</td>
+                <td>${escapeHtml(l.col_f || '-')}</td>
+                <td>${escapeHtml(l.email || '-')}</td>
+                <td>${escapeHtml(l.name || '-')}</td>
+                <td>${escapeHtml(l.phone || '-')}</td>
+            </tr>`).join('');
+
+            let html = `
+            <div class="card">
+                <div class="card-header">
+                    <div class="report-title">Report Controls</div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
+                        <button class="btn btn-primary" onclick="exportPDF()">Export PDF</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Period</label>
+                        <select id="misPeriod" onchange="onPeriodChange(this.value)">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="fortnightly">Fortnightly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date Range</label>
+                        <select id="misDatePreset" onchange="onDatePresetChange(this.value)">
+                            <option value="last30">Last 30 Days</option>
+                            <option value="last7">Last 7 Days</option>
+                            <option value="last15">Last 15 Days</option>
+                            <option value="thisMonth">This Month</option>
+                            <option value="lastMonth">Last Month</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:0; min-width:auto;">
+                        <button class="btn btn-primary" onclick="reloadReport()">Refresh</button>
+                    </div>
+                </div>
+            </div>`;
+
+            // Goa table (columns D-F: Occasion / Budget / Purchase Timeline)
+            html += wrap('ccGoa', 'Goa Leads', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length);
+            // MW table (columns D-F: Plans to purchase / Purchased before? / Tentative Date)
+            html += wrap('ccMw', 'Magnificent Wedding Leads', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length);
+
+            $('reportContent').innerHTML = html;
+
+            // set per-form column headers for D, E, F
+            const goaHead = ['Occasion', 'Budget', 'Purchase Timeline'];
+            const mwHead = ['Plans to purchase before March 2027?', 'Purchase made on cc/CKC before?', 'Tentative Date of Event'];
+            goaHead.forEach((h, i) => { const el = $('ccGoa_th' + (4 + i)); if (el) el.textContent = h; });
+            mwHead.forEach((h, i) => { const el = $('ccMw_th' + (4 + i)); if (el) el.textContent = h; });
+
+            // keep dropdowns in sync with current state
+            const periodSel = $('misPeriod'); const dateSel = $('misDatePreset');
+            if (periodSel && reportDateRange.preset) periodSel.value = ['daily','weekly','fortnightly','monthly'].includes(reportDateRange.preset) ? reportDateRange.preset : 'daily';
+            if (dateSel && reportDateRange.preset) dateSel.value = reportDateRange.preset;
+        } catch (e) {
+            toast(e.message, true);
+            $('reportContent').innerHTML = '<div class="empty-state">Failed to load Crash Club leads: ' + escapeHtml(e.message) + '</div>';
+        }
+    }
+
+    function toggleCcTable(id) {
+        const body = $(id + '_body');
+        const chev = $(id + '_chev');
+        if (!body) return;
+        const hidden = body.style.display === 'none';
+        body.style.display = hidden ? '' : 'none';
+        if (chev) chev.textContent = hidden ? '▾' : '▸';
     }
 
     async function renderReport(account) {

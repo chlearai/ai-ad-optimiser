@@ -150,8 +150,31 @@ def get_leads_for_account(account_id: int, start_date: Optional[str] = None, end
             except Exception:
                 pass
         rows = q.order_by(CrashClubLead.created_time.desc()).all()
-        return [
-            {
+        out = []
+        for r in rows:
+            fields = {}
+            try:
+                fields = json.loads(r.raw_json or "{}").get("field_data", [])
+                fields = {f.get("name"): "; ".join(f.get("values") or []) for f in fields}
+            except Exception:
+                fields = {}
+
+            def pick(*keys: str) -> str:
+                for k in keys:
+                    if fields.get(k):
+                        return fields[k]
+                return ""
+
+            if (r.form_type or "") == "mw":
+                col_d = pick("do_you_plan_to_make_a_purchase_in_the_near_future_or_before_march_31st,_2027?")
+                col_e = pick("have_you_made_a_purchase_from_c._krishniah_chetty_group_of_jewellers_or_crash.club_at_any_time_before_?")
+                col_f = pick("tentative_wedding/special_moment/corporate_events_date._*")
+            else:
+                col_d = pick("what's_the_occasion?")
+                col_e = pick("what's_your_jewellery_budget?")
+                col_f = pick("when_are_you_planning_to_purchase?")
+
+            out.append({
                 "id": r.lead_id,
                 "first_name": r.name or "",
                 "last_name": "",
@@ -164,9 +187,12 @@ def get_leads_for_account(account_id: int, start_date: Optional[str] = None, end
                 "created_at": r.created_time.strftime("%Y-%m-%d %H:%M:%S") if r.created_time else "",
                 "owner": "",
                 "platform": "meta",
-            }
-            for r in rows
-        ]
+                "form_type": r.form_type or "",
+                "col_d": col_d,
+                "col_e": col_e,
+                "col_f": col_f,
+            })
+        return out
     finally:
         if own:
             own.close()

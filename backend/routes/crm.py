@@ -61,6 +61,57 @@ def crm_summary(
     return data
 
 
+@router.get("/accounts/{account_id}/crashclub-leads")
+def crashclub_leads(
+    account_id: int,
+    form: Optional[str] = None,  # goa | mw | all
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Crash Club lead tables for the InsightDesk page (Goa / Magnificent Wedding)."""
+    from backend.services.crashclub_db import get_leads_for_account
+
+    account = db.query(Account).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    rows = get_leads_for_account(account.id, start_date=start_date, end_date=end_date)
+    if form and form in ("goa", "mw"):
+        rows = [r for r in rows if r.get("form_type") == form]
+
+    def dt_ist(iso_utc):
+        try:
+            from datetime import datetime, timedelta
+            d = datetime.fromisoformat(iso_utc).replace(tzinfo=__import__("datetime").timezone.utc)
+            return d + timedelta(hours=5, minutes=30)
+        except Exception:
+            return None
+
+    leads = []
+    for r in rows:
+        created_iso = r.get("created_at") or ""
+        ist = dt_ist(created_iso.replace(" ", "T") + "+00:00") if created_iso else None
+        leads.append({
+            "lead_id": r.get("id"),
+            # A: raw lead created (ISO, IST offset like the sheet)
+            "lead_created": ist.strftime("%Y-%m-%dT%H:%M:%S+05:30") if ist else created_iso,
+            # B: dd-MMM-yyyy hh:mm:ss AM (IST)
+            "date_time": ist.strftime("%d-%b-%Y %I:%M:%S %p") if ist else "",
+            "source": r.get("platform") or "Meta",
+            "name": r.get("first_name") or "",
+            "email": r.get("email") or "",
+            "phone": r.get("phone") or "",
+            "form_type": r.get("form_type") or "",
+            # per-form D/E/F come from raw answers stored per form_type
+            "col_d": r.get("col_d", ""),
+            "col_e": r.get("col_e", ""),
+            "col_f": r.get("col_f", ""),
+        })
+    return {"leads": leads, "count": len(leads)}
+
+
 @router.get("/accounts/{account_id}/crm/{platform}")
 def crm_platform_data(
     account_id: int,
