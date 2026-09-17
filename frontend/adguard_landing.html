@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         :root {
             --bg-dark: #090d16;
@@ -1235,7 +1236,7 @@
                         <li>Quota Usage Alerts (80%)</li>
                         <li>Standard Email Support</li>
                     </ul>
-                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'starter')">Select Starter</button>
+                    <button class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="selectPlanAndCheckout('starter')">Select Starter</button>
                 </div>
 
                 <!-- Pro -->
@@ -1254,7 +1255,7 @@
                         <li>Priority CRM Push Retries</li>
                         <li>Priority Support</li>
                     </ul>
-                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'pro')">Select Pro</button>
+                    <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="selectPlanAndCheckout('pro')">Select Pro</button>
                 </div>
 
                 <!-- Agency -->
@@ -1271,7 +1272,7 @@
                         <li>Dedicated Account Manager</li>
                         <li>SLA &amp; Custom Rules</li>
                     </ul>
-                    <button class="btn btn-amber" style="width:100%; justify-content:center;" onclick="openAuthModal('signup', 'agency')">Select Agency</button>
+                    <button class="btn btn-amber" style="width:100%; justify-content:center;" onclick="selectPlanAndCheckout('agency')">Select Agency</button>
                 </div>
 
             </div>
@@ -1388,7 +1389,130 @@
         </div>
     </div>
 
+    <!-- RAZORPAY TEST / SANDBOX PAYMENT SIMULATOR MODAL -->
+    <div class="modal-overlay" id="sandboxModal" onclick="if(event.target===this)closeSandboxModal()">
+        <div class="modal-box" style="max-width: 520px;">
+            <button class="modal-close" onclick="closeSandboxModal()">✕</button>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="logo-shield" style="width:28px; height:28px; font-size:14px; background:#0284c7;">💳</div>
+                    <div>
+                        <h3 style="font-size:17px; color:#fff; margin:0;" id="sbxModalTitle">Razorpay Test Gateway</h3>
+                        <span style="font-size:11px; color:#38bdf8; font-weight:600;">Sandbox Mode · No Real Money Charged</span>
+                    </div>
+                </div>
+                <span style="background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.3); color:#38bdf8; font-size:11px; font-weight:700; padding:3px 8px; border-radius:12px;">TEST MODE</span>
+            </div>
+
+            <!-- ORDER SUMMARY BANNER -->
+            <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Selected Subscription</div>
+                    <div style="font-size:15px; font-weight:700; color:#fff;" id="sbxPlanLabel">Starter Plan (1,000 Leads/mo)</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Amount Payable</div>
+                    <div style="font-size:18px; font-weight:800; color:#34d399;" id="sbxAmountLabel">₹4,999</div>
+                </div>
+            </div>
+
+            <!-- PAYMENT METHOD TABS -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" id="tabBtnSbxCard" onclick="switchSandboxTab('card')">💳 Test Card</button>
+                <button type="button" class="modal-tab-btn" id="tabBtnSbxUpi" onclick="switchSandboxTab('upi')">📱 UPI / QR Code</button>
+            </div>
+
+            <!-- TAB A: CARD PAYMENT -->
+            <div id="sbxPanelCard">
+                <div class="form-group">
+                    <label class="form-label">Test Card Number</label>
+                    <input type="text" id="sbxCardNum" class="form-input" value="4111 1111 1111 1111" readonly style="font-family:monospace; letter-spacing:1px; color:#34d399; font-weight:600;">
+                    <span style="font-size:10px; color:var(--text-muted); margin-top:3px; display:block;">Standard Razorpay Test Visa Card</span>
+                </div>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label">Expiry (MM/YY)</label>
+                        <input type="text" id="sbxCardExp" class="form-input" value="12/28" readonly style="font-family:monospace;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CVV</label>
+                        <input type="text" id="sbxCardCvv" class="form-input" value="123" readonly style="font-family:monospace;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cardholder Name</label>
+                    <input type="text" id="sbxCardHolder" class="form-input" value="AdGuard Tester">
+                </div>
+                <button type="button" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px; padding:12px;" id="sbxPayCardBtn" onclick="confirmSandboxPayment('card')">
+                    ⚡ Pay with Test Card &amp; Upgrade →
+                </button>
+            </div>
+
+            <!-- TAB B: UPI / QR CODE -->
+            <div id="sbxPanelUpi" style="display:none; text-align:center;">
+                <div style="display:inline-block; background:#fff; padding:14px; border-radius:12px; margin-bottom:12px; box-shadow:0 8px 20px rgba(0,0,0,0.4);">
+                    <svg width="140" height="140" viewBox="0 0 100 100" style="display:block;">
+                        <rect width="100" height="100" fill="#ffffff"/>
+                        <!-- QR finder corners -->
+                        <rect x="6" y="6" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="10" y="10" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="14" y="14" width="10" height="10" fill="#0f172a" rx="1"/>
+                        
+                        <rect x="68" y="6" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="72" y="10" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="76" y="14" width="10" height="10" fill="#0f172a" rx="1"/>
+                        
+                        <rect x="6" y="68" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="10" y="72" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="14" y="76" width="10" height="10" fill="#0f172a" rx="1"/>
+                        
+                        <!-- Simulated QR data cells -->
+                        <rect x="36" y="8" width="6" height="6" fill="#0f172a"/>
+                        <rect x="46" y="14" width="6" height="6" fill="#0f172a"/>
+                        <rect x="56" y="8" width="6" height="6" fill="#0f172a"/>
+                        <rect x="36" y="24" width="6" height="6" fill="#0f172a"/>
+                        <rect x="46" y="32" width="6" height="6" fill="#0f172a"/>
+                        <rect x="12" y="40" width="6" height="6" fill="#0f172a"/>
+                        <rect x="22" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="32" y="42" width="6" height="6" fill="#0f172a"/>
+                        <rect x="42" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="52" y="44" width="6" height="6" fill="#0f172a"/>
+                        <rect x="62" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="72" y="40" width="6" height="6" fill="#0f172a"/>
+                        <rect x="82" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="42" y="60" width="6" height="6" fill="#0f172a"/>
+                        <rect x="52" y="68" width="6" height="6" fill="#0f172a"/>
+                        <rect x="62" y="62" width="6" height="6" fill="#0f172a"/>
+                        <rect x="72" y="70" width="6" height="6" fill="#0f172a"/>
+                        <rect x="82" y="78" width="6" height="6" fill="#0f172a"/>
+                        <rect x="42" y="80" width="6" height="6" fill="#0f172a"/>
+                        <rect x="52" y="86" width="6" height="6" fill="#0f172a"/>
+                        <rect x="62" y="82" width="6" height="6" fill="#0f172a"/>
+                        <rect x="72" y="88" width="6" height="6" fill="#0f172a"/>
+                    </svg>
+                </div>
+                <div style="font-size:12px; color:var(--text-sub); margin-bottom:12px;">
+                    Scan with any UPI App (GPay, PhonePe, Paytm, BHIM) in Sandbox
+                </div>
+                <div class="form-group" style="text-align:left;">
+                    <label class="form-label">Simulated UPI ID</label>
+                    <input type="text" id="sbxUpiId" class="form-input" value="tester@razorpay" placeholder="yourname@upi">
+                </div>
+                <button type="button" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px; padding:12px;" id="sbxPayUpiBtn" onclick="confirmSandboxPayment('upi')">
+                    📲 Simulate UPI Payment &amp; Upgrade →
+                </button>
+            </div>
+
+            <!-- RESULT MESSAGE BANNER -->
+            <div id="sbxResultBanner" style="display:none; margin-top:14px; padding:12px; border-radius:8px; font-size:13px; text-align:center;"></div>
+        </div>
+    </div>
+
     <script>
+        let currentOrderData = null;
+        let pendingCheckoutPlan = null;
+
         function updateCalc() {
             const spend = parseInt(document.getElementById('rngSpend').value);
             const cpl = parseInt(document.getElementById('rngCpl').value);
@@ -1419,6 +1543,7 @@
             if (plan) {
                 const planInput = document.getElementById('regPlan');
                 if (planInput) planInput.value = plan;
+                pendingCheckoutPlan = plan;
             }
             switchAuthTab(tab || 'signup');
         }
@@ -1461,6 +1586,199 @@
             document.getElementById('loginPassword').value = 'Test@1234';
         }
 
+        // Plan Selection and Checkout Flow
+        async function selectPlanAndCheckout(plan) {
+            const token = localStorage.getItem('adoptima_token');
+            pendingCheckoutPlan = plan;
+
+            if (!token) {
+                // Prompt customer to register/sign-in first, then proceed to checkout
+                openAuthModal('signup', plan);
+                return;
+            }
+
+            await launchCheckout(plan);
+        }
+
+        async function launchCheckout(plan) {
+            const token = localStorage.getItem('adoptima_token');
+            try {
+                const res = await fetch('/api/billing/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ plan: plan })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Could not initiate subscription order.');
+                }
+
+                currentOrderData = data;
+
+                // Check if live Razorpay key is configured and valid
+                const keyId = (data.order && data.order.key_id) || '';
+                const isRealKey = keyId.startsWith('rzp_live_') || (keyId.startsWith('rzp_test_') && !keyId.includes('placeholder'));
+
+                if (isRealKey && typeof window.Razorpay !== 'undefined') {
+                    // Launch Razorpay standard checkout popup
+                    const rzp = new window.Razorpay({
+                        key: keyId,
+                        amount: data.order.amount,
+                        currency: data.order.currency || 'INR',
+                        name: 'AdGuard AI',
+                        description: `${plan.toUpperCase()} Plan Subscription`,
+                        order_id: data.order.id,
+                        handler: async function(resp) {
+                            await verifyPaidOrder(data.workspace_id, plan, resp.razorpay_payment_id, resp.razorpay_order_id, resp.razorpay_signature);
+                        },
+                        prefill: {
+                            name: data.order.customer_name || '',
+                            email: data.order.customer_email || ''
+                        },
+                        theme: { color: '#10b981' }
+                    });
+                    rzp.open();
+                } else {
+                    // Open our Interactive Sandbox Simulator Modal (Supports Card & UPI QR)
+                    openSandboxModal(data, plan);
+                }
+            } catch (err) {
+                alert('Checkout error: ' + err.message);
+            }
+        }
+
+        function openSandboxModal(data, plan) {
+            const modal = document.getElementById('sandboxModal');
+            const planNames = {
+                starter: 'Starter Plan (1,000 Leads/mo)',
+                pro: 'Pro Plan (5,000 Leads/mo)',
+                agency: 'Agency Plan (Unlimited Leads)'
+            };
+            const planAmounts = {
+                starter: '₹4,999 / mo',
+                pro: '₹14,999 / mo',
+                agency: '₹39,999 / mo'
+            };
+
+            document.getElementById('sbxPlanLabel').textContent = planNames[plan] || plan.toUpperCase();
+            document.getElementById('sbxAmountLabel').textContent = planAmounts[plan] || '₹0';
+            document.getElementById('sbxResultBanner').style.display = 'none';
+            switchSandboxTab('card');
+
+            modal.style.display = 'flex';
+        }
+
+        function closeSandboxModal() {
+            const modal = document.getElementById('sandboxModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function switchSandboxTab(tab) {
+            const btnCard = document.getElementById('tabBtnSbxCard');
+            const btnUpi = document.getElementById('tabBtnSbxUpi');
+            const panelCard = document.getElementById('sbxPanelCard');
+            const panelUpi = document.getElementById('sbxPanelUpi');
+
+            if (tab === 'upi') {
+                btnCard.classList.remove('active');
+                btnUpi.classList.add('active');
+                panelCard.style.display = 'none';
+                panelUpi.style.display = 'block';
+            } else {
+                btnUpi.classList.remove('active');
+                btnCard.classList.add('active');
+                panelUpi.style.display = 'none';
+                panelCard.style.display = 'block';
+            }
+        }
+
+        async function confirmSandboxPayment(method) {
+            if (!currentOrderData) return;
+            const token = localStorage.getItem('adoptima_token');
+            const wsId = currentOrderData.workspace_id;
+            const plan = (currentOrderData.order && currentOrderData.order.plan) || pendingCheckoutPlan || 'starter';
+            const banner = document.getElementById('sbxResultBanner');
+            const btnCard = document.getElementById('sbxPayCardBtn');
+            const btnUpi = document.getElementById('sbxPayUpiBtn');
+
+            btnCard.disabled = true;
+            btnUpi.disabled = true;
+            banner.style.display = 'block';
+            banner.style.background = 'rgba(56, 189, 248, 0.1)';
+            banner.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+            banner.style.color = '#38bdf8';
+            banner.textContent = `Processing Sandbox ${method.toUpperCase()} Payment...`;
+
+            try {
+                const res = await fetch('/api/billing/sandbox-simulate-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        plan: plan,
+                        workspace_id: wsId
+                    })
+                });
+
+                const result = await res.json();
+                if (!res.ok) {
+                    throw new Error(result.detail || 'Payment simulation failed.');
+                }
+
+                banner.style.background = 'rgba(16, 185, 129, 0.15)';
+                banner.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+                banner.style.color = '#34d399';
+                banner.innerHTML = `✓ <strong>Payment Successful!</strong> Upgraded to <strong>${result.plan.toUpperCase()} Plan</strong>.<br>Redirecting to your workspace...`;
+
+                setTimeout(() => {
+                    window.location.href = '/adguard-workspace';
+                }, 1400);
+            } catch (err) {
+                banner.style.background = 'var(--danger-bg)';
+                banner.style.border = '1px solid rgba(220,38,38,0.3)';
+                banner.style.color = '#fca5a5';
+                banner.textContent = 'Simulation error: ' + err.message;
+                btnCard.disabled = false;
+                btnUpi.disabled = false;
+            }
+        }
+
+        async function verifyPaidOrder(workspaceId, plan, paymentId, orderId, signature) {
+            const token = localStorage.getItem('adoptima_token');
+            try {
+                const res = await fetch('/api/billing/verify-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        workspace_id: workspaceId,
+                        plan: plan,
+                        razorpay_payment_id: paymentId,
+                        razorpay_order_id: orderId,
+                        razorpay_signature: signature
+                    })
+                });
+
+                const result = await res.json();
+                if (!res.ok) {
+                    throw new Error(result.detail || 'Payment verification failed.');
+                }
+
+                alert(`Subscription upgraded successfully to ${result.plan.toUpperCase()}!`);
+                window.location.href = '/adguard-workspace';
+            } catch (err) {
+                alert('Verification error: ' + err.message);
+            }
+        }
+
         // Register new subscriber + auto-provision workspace
         async function doRegister() {
             const fullName = document.getElementById('regFullName').value.trim();
@@ -1468,7 +1786,7 @@
             const phone = document.getElementById('regPhone').value.trim();
             const company = document.getElementById('regCompany').value.trim();
             const password = document.getElementById('regPassword').value;
-            const plan = (document.getElementById('regPlan') && document.getElementById('regPlan').value) || 'trial';
+            const plan = (document.getElementById('regPlan') && document.getElementById('regPlan').value) || pendingCheckoutPlan || 'trial';
             const errBox = document.getElementById('signupError');
             const btn = document.getElementById('signupSubmitBtn');
 
@@ -1503,7 +1821,14 @@
                 }
 
                 localStorage.setItem('adoptima_token', data.access_token);
-                window.location.href = data.redirect_url || '/adguard-workspace';
+                closeAuthModal();
+
+                // If user selected a paid plan, initiate checkout immediately!
+                if (pendingCheckoutPlan && pendingCheckoutPlan !== 'trial') {
+                    await launchCheckout(pendingCheckoutPlan);
+                } else {
+                    window.location.href = data.redirect_url || '/adguard-workspace';
+                }
             } catch (err) {
                 errBox.textContent = err.message;
                 errBox.style.display = 'block';
@@ -1543,11 +1868,17 @@
                 }
 
                 localStorage.setItem('adoptima_token', data.access_token);
-                const role = (data.user && data.user.role) || 'user';
-                if (role === 'admin' || role === 'superadmin') {
-                    window.location.href = '/adguard';
+                closeAuthModal();
+
+                if (pendingCheckoutPlan && pendingCheckoutPlan !== 'trial') {
+                    await launchCheckout(pendingCheckoutPlan);
                 } else {
-                    window.location.href = '/adguard-workspace';
+                    const role = (data.user && data.user.role) || 'user';
+                    if (role === 'admin' || role === 'superadmin') {
+                        window.location.href = '/adguard';
+                    } else {
+                        window.location.href = '/adguard-workspace';
+                    }
                 }
             } catch (err) {
                 errBox.textContent = err.message;

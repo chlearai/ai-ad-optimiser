@@ -13,6 +13,7 @@ from backend.routes import config, campaigns, search_terms, negatives, optimizat
 from backend.routes import crashclub
 from backend.routes import adguard
 from backend.routes import adguard_support
+from backend.routes import billing
 
 from backend.db.database import init_db
 from backend.services.scheduler import start_scheduler, stop_scheduler
@@ -68,6 +69,7 @@ app.include_router(activity_log.router)
 app.include_router(crashclub.router)
 app.include_router(adguard.router)
 app.include_router(adguard_support.router)
+app.include_router(billing.router)
 
 
 # Initialize database tables only at import time; scheduler starts lazily on first request

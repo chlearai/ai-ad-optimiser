@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         (function() {
             try { if (localStorage.getItem('adoptima_theme') === 'dark') document.documentElement.classList.add('dark-mode'); } catch (e) {}
@@ -576,6 +577,7 @@
                     <span id="quotaUsedText">0 / 100 used</span>
                     <span id="quotaPctText">0%</span>
                 </div>
+                <button type="button" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">⚡ Upgrade Plan</button>
             </div>
 
             <!-- MY WORKSPACE -->
@@ -746,7 +748,7 @@
                     <div>
                         <strong>⚠️ Plan Quota Alert:</strong> You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="window.location.href='/adguard-landing#pricing'">Upgrade Plan</button>
+                    <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()">Upgrade Plan</button>
                 </div>
 
                 <!-- CONNECT BANNER -->
@@ -1019,6 +1021,164 @@
 
     <div id="toastContainer"></div>
 
+    <!-- UPGRADE PLAN MODAL -->
+    <div id="upgradeModalOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:110;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:760px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">⚡ Upgrade Your AdGuard Plan</h2>
+                    <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Unlock higher lead quotas, real-time AI scoring, and multi-platform protection.</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeUpgradeModal()">✕</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;margin-bottom:20px;">
+                <!-- STARTER -->
+                <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:16px;display:flex;flex-direction:column;position:relative;">
+                    <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Starter</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For small single-brand campaigns.</div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹4,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:11px;font-weight:600;color:var(--color-accent);margin-bottom:12px;">1,000 Leads / mo</div>
+                    <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
+                        <li>✓ 1 Connected Workspace</li>
+                        <li>✓ Phone &amp; Email Validation</li>
+                        <li>✓ Direct CRM Push</li>
+                        <li>✓ Quota Alert Banners</li>
+                    </ul>
+                    <button type="button" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('starter')">Select Starter</button>
+                </div>
+
+                <!-- PRO (RECOMMENDED) -->
+                <div style="background:var(--color-bg-card);border:2px solid var(--color-accent);border-radius:10px;padding:16px;display:flex;flex-direction:column;position:relative;box-shadow:var(--shadow-md);">
+                    <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--color-accent);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;">Recommended</div>
+                    <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Pro</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For high-volume performance marketers.</div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹14,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:11px;font-weight:600;color:var(--color-success);margin-bottom:12px;">5,000 Leads / mo</div>
+                    <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
+                        <li>✓ Everything in Starter</li>
+                        <li>✓ Multi-Account Workspaces</li>
+                        <li>✓ Gemini AI Deep Intent Scoring</li>
+                        <li>✓ 5-Min Meta Poller Backup</li>
+                        <li>✓ Shared Threat Graph Network</li>
+                    </ul>
+                    <button type="button" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('pro')">Select Pro</button>
+                </div>
+
+                <!-- AGENCY -->
+                <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:16px;display:flex;flex-direction:column;position:relative;">
+                    <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Agency</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For digital agencies handling client brands.</div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹39,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:11px;font-weight:600;color:var(--color-purple);margin-bottom:12px;">Unlimited Leads</div>
+                    <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
+                        <li>✓ Unlimited Client Workspaces</li>
+                        <li>✓ Unlimited Leads Volume</li>
+                        <li>✓ Multi-tenant Business Manager</li>
+                        <li>✓ Custom Webhook &amp; CRM Routing</li>
+                        <li>✓ SLA &amp; Priority Support</li>
+                    </ul>
+                    <button type="button" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('agency')">Select Agency</button>
+                </div>
+            </div>
+
+            <div style="text-align:center;font-size:11px;color:var(--color-text-muted);">
+                🔒 Razorpay Sandbox Mode · Instant test activation with Card or UPI QR Simulation
+            </div>
+        </div>
+    </div>
+
+    <!-- WORKSPACE RAZORPAY SANDBOX SIMULATOR MODAL -->
+    <div id="wsSandboxOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:120;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeWsSandboxModal()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:94vw;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:18px;">💳</span>
+                    <div>
+                        <h3 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0;">Razorpay Test Checkout</h3>
+                        <span style="font-size:11px;color:var(--color-info);font-weight:600;">Sandbox Mode · ₹0 Charged</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeWsSandboxModal()">✕</button>
+            </div>
+
+            <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-muted);">Upgrade Plan</div>
+                    <div style="font-weight:700;font-size:14px;color:var(--color-text-primary);" id="wsSbxPlanLabel">Pro Plan</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-muted);">Amount</div>
+                    <div style="font-weight:800;font-size:16px;color:var(--color-success);" id="wsSbxAmountLabel">₹14,999</div>
+                </div>
+            </div>
+
+            <div style="display:flex;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:3px;margin-bottom:14px;">
+                <button type="button" id="wsTabBtnCard" class="btn btn-sm" style="flex:1;justify-content:center;background:var(--color-accent);color:#fff;" onclick="switchWsSandboxTab('card')">💳 Test Card</button>
+                <button type="button" id="wsTabBtnUpi" class="btn btn-sm btn-secondary" style="flex:1;justify-content:center;border:none;" onclick="switchWsSandboxTab('upi')">📱 UPI / QR Code</button>
+            </div>
+
+            <!-- CARD PANEL -->
+            <div id="wsSbxCardPanel">
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);display:block;margin-bottom:4px;">Test Card Number</label>
+                    <input type="text" value="4111 1111 1111 1111" readonly style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-input);color:var(--color-text-primary);font-family:monospace;font-weight:600;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                    <div>
+                        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);display:block;margin-bottom:4px;">Expiry</label>
+                        <input type="text" value="12/28" readonly style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-input);color:var(--color-text-primary);font-family:monospace;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-text-secondary);display:block;margin-bottom:4px;">CVV</label>
+                        <input type="text" value="123" readonly style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-input);color:var(--color-text-primary);font-family:monospace;">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" id="wsSbxCardBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('card')">⚡ Pay &amp; Upgrade Workspace</button>
+            </div>
+
+            <!-- UPI PANEL -->
+            <div id="wsSbxUpiPanel" style="display:none;text-align:center;">
+                <div style="display:inline-block;background:#fff;padding:12px;border-radius:10px;margin-bottom:10px;box-shadow:var(--shadow-sm);">
+                    <svg width="130" height="130" viewBox="0 0 100 100" style="display:block;">
+                        <rect width="100" height="100" fill="#ffffff"/>
+                        <rect x="6" y="6" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="10" y="10" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="14" y="14" width="10" height="10" fill="#0f172a" rx="1"/>
+                        <rect x="68" y="6" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="72" y="10" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="76" y="14" width="10" height="10" fill="#0f172a" rx="1"/>
+                        <rect x="6" y="68" width="26" height="26" fill="#0f172a" rx="3"/>
+                        <rect x="10" y="72" width="18" height="18" fill="#ffffff" rx="2"/>
+                        <rect x="14" y="76" width="10" height="10" fill="#0f172a" rx="1"/>
+                        <rect x="36" y="8" width="6" height="6" fill="#0f172a"/>
+                        <rect x="46" y="14" width="6" height="6" fill="#0f172a"/>
+                        <rect x="56" y="8" width="6" height="6" fill="#0f172a"/>
+                        <rect x="36" y="24" width="6" height="6" fill="#0f172a"/>
+                        <rect x="46" y="32" width="6" height="6" fill="#0f172a"/>
+                        <rect x="12" y="40" width="6" height="6" fill="#0f172a"/>
+                        <rect x="22" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="32" y="42" width="6" height="6" fill="#0f172a"/>
+                        <rect x="42" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="52" y="44" width="6" height="6" fill="#0f172a"/>
+                        <rect x="62" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="72" y="40" width="6" height="6" fill="#0f172a"/>
+                        <rect x="82" y="48" width="6" height="6" fill="#0f172a"/>
+                        <rect x="42" y="60" width="6" height="6" fill="#0f172a"/>
+                        <rect x="52" y="68" width="6" height="6" fill="#0f172a"/>
+                        <rect x="62" y="62" width="6" height="6" fill="#0f172a"/>
+                        <rect x="72" y="70" width="6" height="6" fill="#0f172a"/>
+                        <rect x="82" y="78" width="6" height="6" fill="#0f172a"/>
+                    </svg>
+                </div>
+                <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;">Scan or authorize test payment via UPI</div>
+                <button type="button" class="btn btn-primary" id="wsSbxUpiBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('upi')">📲 Simulate Instant UPI Payment</button>
+            </div>
+
+            <div id="wsSbxMsg" style="display:none;margin-top:12px;font-size:12px;padding:8px 12px;border-radius:6px;text-align:center;"></div>
+        </div>
+    </div>
+
     <script>
         const API = '/api/adguard';
         const AUTH = '/api/auth';
@@ -1138,6 +1298,183 @@
                 } else {
                     $('quotaAlertBanner').classList.add('hidden');
                 }
+            }
+        }
+
+        let wsCurrentOrderData = null;
+        let wsPendingPlan = null;
+
+        function openUpgradeModal() {
+            $('upgradeModalOverlay').style.display = 'flex';
+        }
+
+        function closeUpgradeModal() {
+            $('upgradeModalOverlay').style.display = 'none';
+        }
+
+        async function startWorkspaceUpgrade(plan) {
+            if (!selectedWorkspaceObj) {
+                toast('No workspace selected', 'warn');
+                return;
+            }
+            closeUpgradeModal();
+            wsPendingPlan = plan;
+
+            try {
+                const res = await fetch('/api/billing/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        plan: plan,
+                        workspace_id: selectedWorkspaceObj.id
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Could not initiate upgrade');
+
+                wsCurrentOrderData = data;
+                const keyId = (data.order && data.order.key_id) || '';
+                const isRealKey = keyId.startsWith('rzp_live_') || (keyId.startsWith('rzp_test_') && !keyId.includes('placeholder'));
+
+                if (isRealKey && typeof window.Razorpay !== 'undefined') {
+                    const rzp = new window.Razorpay({
+                        key: keyId,
+                        amount: data.order.amount,
+                        currency: data.order.currency || 'INR',
+                        name: 'AdGuard AI',
+                        description: `${plan.toUpperCase()} Subscription Upgrade`,
+                        order_id: data.order.id,
+                        handler: async function(resp) {
+                            await verifyWorkspacePaidOrder(selectedWorkspaceObj.id, plan, resp.razorpay_payment_id, resp.razorpay_order_id, resp.razorpay_signature);
+                        },
+                        prefill: {
+                            name: (currentUser && currentUser.full_name) || '',
+                            email: (currentUser && currentUser.email) || ''
+                        },
+                        theme: { color: '#f59e0b' }
+                    });
+                    rzp.open();
+                } else {
+                    openWsSandboxModal(data, plan);
+                }
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        }
+
+        function openWsSandboxModal(data, plan) {
+            const planNames = { starter: 'Starter Plan (1,000 Leads)', pro: 'Pro Plan (5,000 Leads)', agency: 'Agency Plan (Unlimited)' };
+            const planPrices = { starter: '₹4,999', pro: '₹14,999', agency: '₹39,999' };
+
+            $('wsSbxPlanLabel').textContent = planNames[plan] || plan.toUpperCase();
+            $('wsSbxAmountLabel').textContent = planPrices[plan] || '₹0';
+            $('wsSbxMsg').style.display = 'none';
+            switchWsSandboxTab('card');
+
+            $('wsSandboxOverlay').style.display = 'flex';
+        }
+
+        function closeWsSandboxModal() {
+            $('wsSandboxOverlay').style.display = 'none';
+        }
+
+        function switchWsSandboxTab(tab) {
+            if (tab === 'upi') {
+                $('wsTabBtnCard').className = 'btn btn-sm btn-secondary';
+                $('wsTabBtnCard').style.background = 'transparent';
+                $('wsTabBtnCard').style.color = 'var(--color-text-secondary)';
+                $('wsTabBtnUpi').className = 'btn btn-sm';
+                $('wsTabBtnUpi').style.background = 'var(--color-accent)';
+                $('wsTabBtnUpi').style.color = '#fff';
+                $('wsSbxCardPanel').style.display = 'none';
+                $('wsSbxUpiPanel').style.display = 'block';
+            } else {
+                $('wsTabBtnUpi').className = 'btn btn-sm btn-secondary';
+                $('wsTabBtnUpi').style.background = 'transparent';
+                $('wsTabBtnUpi').style.color = 'var(--color-text-secondary)';
+                $('wsTabBtnCard').className = 'btn btn-sm';
+                $('wsTabBtnCard').style.background = 'var(--color-accent)';
+                $('wsTabBtnCard').style.color = '#fff';
+                $('wsSbxUpiPanel').style.display = 'none';
+                $('wsSbxCardPanel').style.display = 'block';
+            }
+        }
+
+        async function confirmWsSandboxPayment(method) {
+            if (!wsCurrentOrderData) return;
+            const wsId = wsCurrentOrderData.workspace_id;
+            const plan = (wsCurrentOrderData.order && wsCurrentOrderData.order.plan) || wsPendingPlan || 'starter';
+            const msg = $('wsSbxMsg');
+            const btnCard = $('wsSbxCardBtn');
+            const btnUpi = $('wsSbxUpiBtn');
+
+            btnCard.disabled = true;
+            btnUpi.disabled = true;
+            msg.style.display = 'block';
+            msg.style.background = 'var(--color-info-light)';
+            msg.style.color = 'var(--color-info-text)';
+            msg.textContent = `Processing Sandbox ${method.toUpperCase()} Payment...`;
+
+            try {
+                const res = await fetch('/api/billing/sandbox-simulate-success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        plan: plan,
+                        workspace_id: wsId
+                    })
+                });
+
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.detail || 'Simulation failed');
+
+                msg.style.background = 'var(--color-success-light)';
+                msg.style.color = 'var(--color-success-text)';
+                msg.innerHTML = `✓ <strong>Success!</strong> Upgraded to <strong>${result.plan.toUpperCase()} Plan</strong>.`;
+
+                setTimeout(async () => {
+                    closeWsSandboxModal();
+                    toast(`Workspace upgraded to ${result.plan.toUpperCase()} Plan!`, 'success');
+                    await loadWorkspaces();
+                }, 1200);
+            } catch (err) {
+                msg.style.background = 'var(--color-danger-light)';
+                msg.style.color = 'var(--color-danger-text)';
+                msg.textContent = err.message;
+                btnCard.disabled = false;
+                btnUpi.disabled = false;
+            }
+        }
+
+        async function verifyWorkspacePaidOrder(workspaceId, plan, paymentId, orderId, signature) {
+            try {
+                const res = await fetch('/api/billing/verify-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        workspace_id: workspaceId,
+                        plan: plan,
+                        razorpay_payment_id: paymentId,
+                        razorpay_order_id: orderId,
+                        razorpay_signature: signature
+                    })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.detail || 'Verification failed');
+                toast(`Subscription upgraded to ${result.plan.toUpperCase()}!`, 'success');
+                await loadWorkspaces();
+            } catch (err) {
+                toast(err.message, 'error');
             }
         }
 
