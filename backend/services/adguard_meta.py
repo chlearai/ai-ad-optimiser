@@ -27,6 +27,7 @@ GRAPH_VERSION = "v21.0"
 GRAPH = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
 META_SCOPES = [
+    "email",
     "ads_read",
     "ads_management",
     "leads_retrieval",
@@ -122,11 +123,15 @@ def get_adguard_meta_auth_url(adguard_account_id: int, admin_initiated: bool = F
 
 
 def get_meta_profile_label(token: str) -> Optional[str]:
-    """Best-effort identity label for a Meta login: profile name, else email, else None."""
-    data = _graph_get("me", {"fields": "name,email", "token": token})
+    """Best-effort identity label for a Meta login: email if available, else profile name."""
+    data = _graph_get("me", {"fields": "email,name", "token": token})
     if not data:
         return None
-    return data.get("name") or data.get("email")
+    email = data.get("email")
+    name = data.get("name")
+    if email and name and email != name:
+        return f"{email} ({name})"
+    return email or name or None
 
 
 def exchange_adguard_meta_code(code: str) -> Optional[str]:

@@ -1040,7 +1040,7 @@ class AdGuardAccount(Base):
             "account_status": self.account_status or "active",
             "google_is_live": self.google_is_live,
             "discovered_accounts": json.loads(self.discovered_accounts) if self.discovered_accounts else [],
-            "google_identities": json.loads(self.google_identities) if self.google_identities else [],
+            "google_identities": [i for i in (json.loads(self.google_identities) if self.google_identities else []) if i.get("email") and not str(i.get("email")).startswith("google-account")],
             "meta_is_live": self.meta_is_live,
             "meta_identities": json.loads(self.meta_identities) if self.meta_identities else [],
             "discovered_meta_accounts": json.loads(self.discovered_meta_accounts) if self.discovered_meta_accounts else [],

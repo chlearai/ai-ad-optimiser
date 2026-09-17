@@ -386,13 +386,22 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
         except Exception:
             identities = []
         identities = [i for i in identities if i.get("email") != req.identity_email]
-        ws.google_identities = json.dumps(identities)
+        ws.google_identities = json.dumps(identities) if identities else None
         if not identities:
             # last identity removed -> full google disconnect
             ws.google_credentials = None
             ws.google_is_live = False
             ws.discovered_accounts = "[]"
             ws.google_last_sync_at = None
+        else:
+            merged = []
+            seen_ids = set()
+            for i in identities:
+                for a in i.get("discovered") or []:
+                    if a.get("id") not in seen_ids:
+                        merged.append(a)
+                        seen_ids.add(a.get("id"))
+            ws.discovered_accounts = json.dumps(merged)
         db.commit()
         log_activity(module="AdGuard", action="Google Identity Disconnected",
                      description=f"{req.identity_email} disconnected from {ws.display_name or ws.owner_email}",
@@ -408,13 +417,27 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
         except Exception:
             meta_idents = []
         meta_idents = [i for i in meta_idents if i.get("label") != req.identity_label]
-        ws.meta_identities = json.dumps(meta_idents)
+        ws.meta_identities = json.dumps(meta_idents) if meta_idents else None
         if not meta_idents:
             ws.meta_credentials = None
             ws.meta_is_live = False
             ws.discovered_meta_accounts = "[]"
             ws.discovered_meta_pages = "[]"
             ws.meta_last_sync_at = None
+        else:
+            merged_accs, merged_pages = [], []
+            seen_acc_ids, seen_page_ids = set(), set()
+            for i in meta_idents:
+                for a in i.get("discovered_accounts") or []:
+                    if a.get("id") not in seen_acc_ids:
+                        merged_accs.append(a)
+                        seen_acc_ids.add(a.get("id"))
+                for p in i.get("discovered_pages") or []:
+                    if p.get("id") not in seen_page_ids:
+                        merged_pages.append(p)
+                        seen_page_ids.add(p.get("id"))
+            ws.discovered_meta_accounts = json.dumps(merged_accs)
+            ws.discovered_meta_pages = json.dumps(merged_pages)
         db.commit()
         log_activity(module="AdGuard", action="Meta Identity Disconnected",
                      description=f"{req.identity_label} disconnected from {ws.display_name or ws.owner_email}",

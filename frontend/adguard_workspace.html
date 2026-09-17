@@ -800,9 +800,10 @@
                 if (!accounts.length) return '';
                 const checkedCount = accounts.filter(a => a.selected !== false).length;
                 return '<details style="margin-bottom:4px;" open>' +
-                    '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:6px;">' +
-                    '<span style="display:inline-block;width:12px;">▾</span><span style="flex:1;">' + escapeHtml(label) + '</span>' +
-                    '<span class="badge ' + (checkedCount ? 'badge-green' : 'badge-gray') + '" style="font-size:9px;" title="' + checkedCount + ' of ' + accounts.length + ' accounts selected">' + checkedCount + '/' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
+                    '<summary style="cursor:pointer;font-size:12px;font-weight:600;padding:4px 6px;color:var(--color-text-primary);list-style:none;display:flex;align-items:center;gap:4px;box-sizing:border-box;width:100%;">' +
+                    '<span style="display:inline-block;width:10px;flex-shrink:0;">▾</span>' +
+                    '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;" title="' + escapeHtml(label) + '">' + escapeHtml(label) + '</span>' +
+                    '<span class="badge ' + (checkedCount ? 'badge-green' : 'badge-gray') + '" style="font-size:9px;padding:1px 4px;flex-shrink:0;" title="' + checkedCount + ' of ' + accounts.length + ' accounts selected">' + checkedCount + '/' + accounts.length + '</span>' + (disconnectHtml || '') + '</summary>' +
                     accounts.map(a => accountItem(a, platform)).join('') + '</details>';
             };
 
@@ -810,12 +811,12 @@
 
             // Google: one collapsible group PER Gmail identity, accounts from identity.discovered
             if (ws.google_is_live) {
-                const identities = (ws.google_identities || []).filter(i => i.email);
+                const identities = (ws.google_identities || []).filter(i => i.email && i.email !== 'google-account' && !i.email.startsWith('google-account'));
                 if (identities.length) {
                     identities.forEach(ident => {
                         const email = ident.email;
                         const accounts = ident.discovered || [];
-                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;margin-left:4px;" title="Disconnect this Google login" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(email) + '" onclick="disconnectGoogleIdentity(\'' + escapeHtml(email) + '\')">✕</button>';
                         html += groupSection('📧 ' + email, accounts, dis, 'google');
                     });
                 } else {
@@ -831,7 +832,7 @@
                         const label = ident.label;
                         const accounts = ident.discovered_accounts || [];
                         const pages = ident.discovered_pages || [];
-                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;margin-left:4px;" title="Disconnect this Meta login" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
+                        const dis = '<button class="btn btn-secondary btn-sm" style="padding:1px 5px;font-size:9px;margin-left:2px;flex-shrink:0;color:var(--color-danger-text);" title="Disconnect ' + escapeHtml(label) + '" onclick="disconnectMetaIdentity(\'' + escapeHtml(label) + '\')">✕</button>';
                         const both = accounts.concat(pages.map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
                         html += groupSection('📘 ' + label, both, dis, 'meta');
                     });

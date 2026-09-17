@@ -843,35 +843,39 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     except Exception as e:
         logger.warning(f"[AdGuard] id_token decode failed: {e}")
     if not identity_email:
-        try:
-            tok_req = urllib.request.Request(
-                "https://www.googleapis.com/oauth2/v2/userinfo",
-                headers={"Authorization": f"Bearer {token_data.get('access_token', '')}"},
-            )
-            with urllib.request.urlopen(tok_req, timeout=15) as tok_resp:
-                identity_email = (json.loads(tok_resp.read().decode()) or {}).get("email")
-        except Exception as e:
-            logger.warning(f"[AdGuard] could not read Google identity email: {e}")
+        for userinfo_url in (
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+        ):
+            try:
+                tok_req = urllib.request.Request(
+                    userinfo_url,
+                    headers={"Authorization": f"Bearer {token_data.get('access_token', '')}"},
+                )
+                with urllib.request.urlopen(tok_req, timeout=10) as tok_resp:
+                    resp_data = json.loads(tok_resp.read().decode()) or {}
+                    identity_email = resp_data.get("email")
+                    if identity_email:
+                        break
+            except Exception as e:
+                logger.warning(f"[AdGuard] {userinfo_url} failed: {e}")
+
+    if not identity_email:
+        identity_email = ws.owner_email or "connected-google-user"
 
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
 
     # Multi-identity: append THIS Google login's entry with its OWN creds + accounts.
-    # Same email replaces its own entry. Never let two identities collide on a
-    # generic placeholder name — uniquify instead.
+    # Same email replaces its own entry. Also prune any legacy 'google-account' placeholder.
     try:
         identities = json.loads(ws.google_identities) if ws.google_identities else []
-        if identity_email:
-            identities = [i for i in identities if i.get("email") != identity_email]
-        else:
-            base = "google-account"
-            placeholder = base
-            n = 2
-            existing = {i.get("email") for i in identities}
-            while placeholder in existing:
-                placeholder = f"{base}-{n}"
-                n += 1
-            identity_email = placeholder
+        # Filter out identical email AND remove legacy 'google-account' placeholder
+        identities = [
+            i for i in identities
+            if i.get("email") != identity_email and i.get("email") != "google-account" and not str(i.get("email", "")).startswith("google-account")
+        ]
         identities.append({
             "email": identity_email,
             "credentials": fernet_encrypt(json.dumps(creds)),

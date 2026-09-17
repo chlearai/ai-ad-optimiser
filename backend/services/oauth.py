@@ -246,7 +246,7 @@ def get_adguard_auth_url(adguard_account_id: int, admin_initiated: bool = False)
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.email",
+        "scope": "openid email https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.email",
         "access_type": "offline",
         "prompt": "consent select_account",
         "state": state_b64,

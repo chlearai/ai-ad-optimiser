@@ -228,6 +228,12 @@ def init_db():
             run_adguard_commercial_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard commercial columns migration skipped/failed: {me}")
+        # Clean up any legacy 'google-account' placeholder identities
+        try:
+            from backend.migrations.cleanup_google_account_identity import run_migration as run_adguard_cleanup_gid_migration
+            run_adguard_cleanup_gid_migration()
+        except Exception as me:
+            logger.warning(f"Cleanup AdGuard google-account identities migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
