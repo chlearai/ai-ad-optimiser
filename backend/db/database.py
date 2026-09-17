@@ -234,6 +234,12 @@ def init_db():
             run_adguard_cleanup_gid_migration()
         except Exception as me:
             logger.warning(f"Cleanup AdGuard google-account identities migration skipped/failed: {me}")
+        # Update Meta identity email to actual connected Meta email
+        try:
+            from backend.migrations.update_meta_identity_email import run_migration as run_adguard_meta_email_migration
+            run_adguard_meta_email_migration()
+        except Exception as me:
+            logger.warning(f"Update AdGuard Meta identity email migration skipped/failed: {me}")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise

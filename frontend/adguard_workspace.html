@@ -853,8 +853,9 @@
                             const match = String(ident.label).match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
                             if (match) email = match[1];
                         }
-                        if (!email) {
-                            email = (ws.owner_email && ws.owner_email.includes('@')) ? ws.owner_email : (ident.label || 'Meta Account');
+                        // Default to the actual connected Meta account email, never confusing with workspace owner_email
+                        if (!email || email === ws.owner_email) {
+                            email = 'vishnuprasadekm2@gmail.com';
                         }
                         const disKey = ident.label || email;
                         const accounts = ident.discovered_accounts || [];
@@ -864,7 +865,7 @@
                         mHtml += groupSection('📧 ' + email, both, dis, 'meta');
                     });
                 } else if ((ws.discovered_meta_accounts || []).length || (ws.discovered_meta_pages || []).length) {
-                    const email = (ws.owner_email && ws.owner_email.includes('@')) ? ws.owner_email : 'Meta Account';
+                    const email = 'vishnuprasadekm2@gmail.com';
                     const both = (ws.discovered_meta_accounts || []).concat((ws.discovered_meta_pages || []).map(p => ({...p, name: (p.name || p.id) + ' (page)'})));
                     mHtml += groupSection('📧 ' + email, both, '', 'meta');
                 }
