@@ -233,6 +233,9 @@ To give subscribers total operational control and prevent test campaigns or non-
 - **Workspace Dashboard Filtering**:
   - Dashboard KPIs (Audited Leads, Blocked Garbage, Clean Leads Passed, and Recovered Ad Spend) calculate metrics strictly for the selected live accounts/campaigns.
   - Metrics focus purely on AdGuard core value: **Leads Intercepted, Scams Blocked, and Ad Spend Recovered**.
+- **Strict Account-Level Campaign Isolation (Zero Cross-Pollination)**:
+  - When an account (e.g., TLG, DSU, Classic Featherlite, DSPS, Sunitha's Bakehouse) is selected in the left sidebar, the right-side campaign dropdown strictly isolates and displays ONLY campaigns belonging to that specific account.
+  - Cross-client contamination (e.g., displaying Parvathy Hospitals, Dresser Crab, or DSU under TLG) is strictly prevented across both Meta Ads and Google Ads accounts. Only matching brand assets are ever grouped with an account.
 
 ---
 
