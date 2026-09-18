@@ -62,11 +62,14 @@ To remove all sales friction. Within the first 24–48 hours, the customer typic
   - Real estate brokers, boutique clinics, local colleges, and D2C brands generating up to 1,000 leads/mo.
 
 #### Key Features & Inclusions
-- **All Trial features included**.
+- **Google & Meta 1-Click Connectors**: Seamless OAuth integration without code or developers.
+- **0–100 Real-Time Scoring Engine**: Sub-second audit of every incoming ad lead.
+- **Direct CRM Delivery**: Automatic routing of verified leads (≥70) to Zoho, Salesforce, HubSpot, or webhooks.
 - **1 Connected Workspace**: Dedicated workspace for the subscriber's primary brand.
 - **Disposable Email Blacklist**: Real-time screening against 3,500+ disposable, temp-mail, and 10-minute inbox domains (e.g., GuerrillaMail, Mailinator).
 - **Real-Time Phone & Carrier Validation**: Validates Indian 10-digit mobile series, detects invalid telecom prefixes, and checks carrier alignment (Airtel, Jio, Vi, BSNL).
 - **Quota Alerts (80% & 95%)**: Dynamic sidebar progress widget and warning banners when monthly quota approaches limits.
+- **CSV Export & Audit Trail**: Download complete lead payload audit logs anytime.
 - **Standard Email Support**: 24-hour turnaround on operational support tickets.
 
 #### ROI Economics (The "Pays for Itself" Pitch)
@@ -90,12 +93,13 @@ To remove all sales friction. Within the first 24–48 hours, the customer typic
   - Multi-location real estate developers (e.g., Mantri, Prestige), university groups (e.g., DSU, DSI), fintech lenders, and edtech companies.
 
 #### Advanced Features & Inclusions
-- **All Starter features included**.
+- **Core Pipeline Inclusions**: 1-Click Google/Meta connectors, 0–100 real-time scoring, 3,500+ disposable email blacklist, and phone carrier checks.
 - **Multi-Account Workspaces**: Connect multiple Google MCC child accounts and Meta Business Manager ad accounts under a single unified dashboard.
 - **Gemini AI Deep Intent Scoring**: Beyond syntax checks, Google Gemini AI reads lead comments, questions, and form responses to calculate legitimate commercial buying intent vs. spam bots or casual misclicks.
-- **5-Minute Automated Meta Poller**: Active background poller backup ensures zero lost leads even during webhook downtime or API delays.
+- **5-Minute Automated Meta Poller Backup**: Active background poller backup ensures zero lost leads even during webhook downtime or API delays.
 - **FraudGraph Shared Threat Network**: Cross-customer threat intelligence. A spam bot, click ring, or fraudulent phone number caught on any client's campaigns is instantly pre-blocked for all Pro subscribers across India.
 - **Priority CRM Push Retries**: Exponential backoff retries with auto-alerting if subscriber CRM endpoints return 5xx errors or throttle API limits.
+- **Money Shield Autonomous Auto-Pause**: Auto-pauses bleeding ad campaigns with high junk rates to stop ad spend burns before the budget is wasted.
 - **Priority Support**: Dedicated support ticketing with < 4 hour SLA response.
 
 #### ROI Economics
