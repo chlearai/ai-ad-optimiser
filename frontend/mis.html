@@ -968,7 +968,7 @@
             renderMantriReport();
             return;
         }
-        if (a && a.name === 'Crash Club') {
+        if (a && a.name && a.name.toLowerCase() === 'crash club') {
             computeDateRange(reportDateRange.preset || 'last30');
             await renderCrashClubReport(a);
             return;
@@ -2710,6 +2710,8 @@
         `;
 
         if (returnHtml) return __html;
+
+        $('reportContent').innerHTML = __html;
 
         // Restore controls state
         $('misDatePreset').value = reportDateRange.preset;
