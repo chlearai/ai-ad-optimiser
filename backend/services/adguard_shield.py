@@ -50,8 +50,27 @@ def scan_workspace_shield(db, ws) -> Dict[str, Any]:
         "paused": [],
     }
 
-    if not ws.shield_enabled:
+    # Autonomous Shield is active if shield_enabled is True OR if workspace has live campaigns
+    has_live_campaigns = False
+    if ws.cached_campaigns:
+        try:
+            cached = json.loads(ws.cached_campaigns) if isinstance(ws.cached_campaigns, str) else ws.cached_campaigns
+            if cached and isinstance(cached, dict) and cached.get("__live_campaign_ids__"):
+                has_live_campaigns = True
+        except Exception:
+            pass
+
+    if not ws.shield_enabled and not has_live_campaigns:
         return result
+
+    if not ws.shield_enabled and has_live_campaigns:
+        ws.shield_enabled = True
+        try:
+            db.commit()
+        except Exception:
+            pass
+
+    result["shield_enabled"] = True
 
     cutoff = datetime.utcnow() - timedelta(hours=24)
     rows = (
@@ -104,11 +123,23 @@ def scan_workspace_shield(db, ws) -> Dict[str, Any]:
 
 
 def run_shield_scan_all(db) -> Dict[str, Any]:
-    """Run the shield governor across all shield-enabled workspaces (scheduler entry)."""
+    """Run the shield governor across all workspaces that are shield-enabled or have live campaigns."""
     from backend.db.models import AdGuardAccount
 
     summary = {"workspaces_scanned": 0, "campaigns_paused": 0, "details": []}
-    for ws in db.query(AdGuardAccount).filter(AdGuardAccount.shield_enabled == True).all():  # noqa: E712
+    all_ws = db.query(AdGuardAccount).filter(AdGuardAccount.is_archived == False).all()  # noqa: E712
+    for ws in all_ws:
+        has_live = False
+        if ws.cached_campaigns:
+            try:
+                cached = json.loads(ws.cached_campaigns) if isinstance(ws.cached_campaigns, str) else ws.cached_campaigns
+                if cached and isinstance(cached, dict) and cached.get("__live_campaign_ids__"):
+                    has_live = True
+            except Exception:
+                pass
+        if not ws.shield_enabled and not has_live:
+            continue
+
         try:
             r = scan_workspace_shield(db, ws)
             summary["workspaces_scanned"] += 1

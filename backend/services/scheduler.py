@@ -42,9 +42,9 @@ def start_scheduler():
     # AdGuard: poll Meta Pages for new leadgen leads every 5 minutes (webhook-free path)
     if os.getenv("ADGUARD_META_POLL_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_meta_poll, 'interval', minutes=5, id='adguard_meta_leads_poll', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=1))
-    # AdGuard Money Shield: junk-rate governor scan every 30 minutes (Layer 1 prevention)
+    # AdGuard Money Shield: junk-rate governor scan every 5 minutes (Layer 1 autonomous prevention)
     if os.getenv("ADGUARD_SHIELD_ENABLED", "true").lower() in ("true", "1", "yes"):
-        _scheduler.add_job(_run_adguard_shield_scan, 'interval', minutes=30, id='adguard_shield_scan', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=5))
+        _scheduler.add_job(_run_adguard_shield_scan, 'interval', minutes=5, id='adguard_shield_scan', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(minutes=1))
     # AdGuard weekly report email (every Monday 8:30 AM IST = 3:00 AM UTC)
     if os.getenv("ADGUARD_WEEKLY_REPORT_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_weekly_reports, 'cron', day_of_week='mon', hour=3, minute=0, id='adguard_weekly_reports', replace_existing=True)

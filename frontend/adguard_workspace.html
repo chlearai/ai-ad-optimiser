@@ -130,6 +130,28 @@
         .nav-back{display:flex;align-items:center;gap:8px;padding:8px 16px;font-size:13px;color:var(--color-text-secondary);text-decoration:none;cursor:pointer;border-top:1px solid var(--color-border)}
         .nav-back:hover{background:var(--color-bg-card-hover)}
 
+        @keyframes shieldPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .shield-pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            animation: shieldPulse 2s infinite;
+            vertical-align: middle;
+        }
+        .shield-watchdog-card {
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+
         .main{flex-grow:1;display:flex;flex-direction:column;min-width:0}
         .topbar{height:52px;background:var(--color-bg-page);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
         .topbar h1{font-size:18px;font-weight:600}
@@ -614,31 +636,48 @@
 
 
 
-            <!-- MONEY SHIELD (Layer 1 prevention) -->
+            <!-- MONEY SHIELD (24/7 Autonomous Watchdog) -->
             <div class="nav-section open" id="shieldSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>🛡️ Money Shield</span>
+                    <span class="nav-section-arrow">▶</span>
+                    <span style="display:flex;align-items:center;gap:6px;">
+                        <span class="shield-pulse-dot" id="shieldStatusDot"></span>
+                        <span>Money Shield 24/7</span>
+                    </span>
                 </div>
                 <div class="nav-section-items" style="padding:0 12px 10px;">
-                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:4px 0;">
-                        <input type="checkbox" id="shieldToggle" onchange="saveShieldSetting('shield_enabled', this.checked)">
-                        <span>Stop junk <b>before</b> ad spend burns</span>
-                    </label>
-                    <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px;">
-                        Auto-pause campaigns with junk-rate above:
+                    <div class="shield-watchdog-card">
+                        <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--color-success);letter-spacing:0.03em;">
+                            <span class="shield-pulse-dot"></span>
+                            <span id="shieldStatusLabel">AUTONOMOUS MONITOR ACTIVE</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;" id="shieldMonitorDetail">
+                            Scanning live campaigns every 5 mins in background. Auto-stops fraud before spend burns.
+                        </div>
                     </div>
-                    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-                        <input class="filter-input" id="shieldThreshold" type="number" min="10" max="100" style="width:64px;padding:4px 8px;font-size:12px;" onchange="saveShieldSetting('shield_junk_threshold', parseInt(this.value))" value="40">
-                        <span style="font-size:11px;color:var(--color-text-muted);">% junk with min</span>
-                        <input class="filter-input" id="shieldMinLeads" type="number" min="5" max="10000" style="width:64px;padding:4px 8px;font-size:12px;" onchange="saveShieldSetting('shield_min_leads', parseInt(this.value))" value="50">
+
+                    <div style="font-size:11px;color:var(--color-text-muted);margin:6px 0 4px;">
+                        Auto-Circuit Breaker:
+                    </div>
+                    <div style="display:flex;gap:4px;align-items:center;margin-bottom:8px;">
+                        <input class="filter-input" id="shieldThreshold" type="number" min="10" max="100" style="width:52px;padding:3px 6px;font-size:11px;" onchange="saveShieldSetting('shield_junk_threshold', parseInt(this.value))" value="40">
+                        <span style="font-size:11px;color:var(--color-text-muted);">% junk / min</span>
+                        <input class="filter-input" id="shieldMinLeads" type="number" min="5" max="10000" style="width:52px;padding:3px 6px;font-size:11px;" onchange="saveShieldSetting('shield_min_leads', parseInt(this.value))" value="50">
                         <span style="font-size:11px;color:var(--color-text-muted);">leads/24h</span>
                     </div>
-                    <button class="btn btn-secondary btn-sm" style="width:100%;" onclick="runShieldScan()">🛡️ Run Shield Scan Now</button>
-                    <div id="shieldScanResult" style="font-size:11px;margin-top:6px;"></div>
-                    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;" onclick="syncExclusions()">🚫 Push Exclusions to Platforms</button>
-                    <div id="exclusionSyncResult" style="font-size:11px;margin-top:6px;"></div>
-                    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;" onclick="viewShieldActions()">📜 Shield Action Log</button>
-                    <div id="shieldActionsBox" style="font-size:11px;margin-top:6px;display:none;max-height:200px;overflow-y:auto;"></div>
+
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="runShieldScan()" title="Trigger immediate test scan">⚡ Test Scan</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="syncExclusions()" title="Push blocklist to Google & Meta">🚫 Sync Lists</button>
+                    </div>
+                    <div id="shieldScanResult" style="font-size:10px;margin-top:4px;"></div>
+                    <div id="exclusionSyncResult" style="font-size:10px;margin-top:4px;"></div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--color-border);">
+                        <span style="font-size:10px;color:var(--color-text-muted);" id="shieldHeartbeatText">Watchdog: 5m cycle</span>
+                        <a href="javascript:void(0)" onclick="viewShieldActions()" style="font-size:11px;color:var(--color-accent);text-decoration:none;font-weight:500;">📜 View Log</a>
+                    </div>
+                    <div id="shieldActionsBox" style="font-size:11px;margin-top:6px;display:none;max-height:180px;overflow-y:auto;"></div>
                 </div>
             </div>
 
@@ -2689,12 +2728,37 @@
                 .catch(e => toast(e.message, 'error'));
         }
 
-        // ---------- Money Shield (Layer 1) ----------
+        // ---------- Money Shield (24/7 Autonomous Watchdog) ----------
         function renderShield(ws) {
             if (!ws) return;
-            $('shieldToggle').checked = !!ws.shield_enabled;
-            $('shieldThreshold').value = ws.shield_junk_threshold != null ? ws.shield_junk_threshold : 40;
-            $('shieldMinLeads').value = ws.shield_min_leads != null ? ws.shield_min_leads : 50;
+            // Check how many live campaigns exist in this workspace
+            let liveCount = 0;
+            if (ws.cached_campaigns) {
+                try {
+                    const c = typeof ws.cached_campaigns === 'string' ? JSON.parse(ws.cached_campaigns) : ws.cached_campaigns;
+                    liveCount = (c && c.__live_campaign_ids__ && Array.isArray(c.__live_campaign_ids__)) ? c.__live_campaign_ids__.length : 0;
+                } catch (e) {}
+            }
+            if ($('shieldThreshold')) $('shieldThreshold').value = ws.shield_junk_threshold != null ? ws.shield_junk_threshold : 40;
+            if ($('shieldMinLeads')) $('shieldMinLeads').value = ws.shield_min_leads != null ? ws.shield_min_leads : 50;
+
+            const dot = $('shieldStatusDot');
+            const lbl = $('shieldStatusLabel');
+            const detail = $('shieldMonitorDetail');
+            const hb = $('shieldHeartbeatText');
+
+            if (liveCount > 0 || ws.shield_enabled) {
+                if (dot) dot.style.display = 'inline-block';
+                if (lbl) lbl.textContent = 'AUTONOMOUS MONITOR ACTIVE';
+                if (detail) detail.innerHTML = liveCount > 0
+                    ? `Guarding <b>${liveCount} live campaign${liveCount > 1 ? 's' : ''}</b> every 5 mins. Breaches are auto-paused instantly.`
+                    : '24/7 background watchdog active. Auto-pauses campaigns if junk leads breach threshold.';
+                if (hb) hb.textContent = 'Watchdog: Active (5m cycle)';
+            } else {
+                if (lbl) lbl.textContent = 'AUTONOMOUS STANDBY';
+                if (detail) detail.textContent = 'Select campaigns or ad accounts to Go Live above. Shield will guard them 24/7.';
+                if (hb) hb.textContent = 'Standby (no live campaigns)';
+            }
         }
 
         async function saveShieldSetting(key, value) {
@@ -2719,7 +2783,7 @@
         async function runShieldScan() {
             if (!selectedWorkspaceObj) { toast('No workspace selected', 'error'); return; }
             try {
-                toast('Running shield scan...', 'info');
+                toast('Running diagnostic test scan...', 'info');
                 const res = await fetch(API + '/shield/scan', {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -2728,13 +2792,13 @@
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 const data = await res.json();
                 const box = $('shieldScanResult');
-                if (!data.shield_enabled) {
-                    box.innerHTML = '<span style="color:var(--color-text-muted);">Shield is OFF — turn it on to enable auto-pause.</span>';
+                if (!data.shield_enabled && !(data.campaigns_scanned)) {
+                    box.innerHTML = '<span style="color:var(--color-text-muted);">No live campaigns active to scan.</span>';
                 } else if ((data.breached || []).length) {
                     box.innerHTML = '<span style="color:var(--color-danger-text);font-weight:600;">⚠️ ' + data.breached.length + ' campaign(s) breached:</span>' +
                         data.breached.map(b => '<div>' + escapeHtml(b.campaign) + ' — ' + b.junk_pct + '% junk (' + b.flagged + '/' + b.leads_24h + ')</div>').join('');
                 } else {
-                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ Clean — ' + data.campaigns_scanned + ' campaign(s) scanned, none breached threshold.</span>';
+                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ 24/7 Watchdog Verified — ' + (data.campaigns_scanned || 0) + ' campaign(s) safe.</span>';
                 }
             } catch (e) { toast(e.message, 'error'); }
         }

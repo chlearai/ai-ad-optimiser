@@ -1314,6 +1314,14 @@ def activate_workspace_campaigns(
                 except Exception:
                     pass
 
+    # Auto-arm 24/7 Autonomous Money Shield when live campaigns are present
+    if req.activate or len(live_ids) > 0:
+        ws.shield_enabled = True
+        if ws.shield_junk_threshold is None:
+            ws.shield_junk_threshold = 40
+        if ws.shield_min_leads is None:
+            ws.shield_min_leads = 50
+
     db.commit()
 
     log_activity(
