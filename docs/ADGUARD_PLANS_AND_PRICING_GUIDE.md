@@ -40,12 +40,13 @@ AdGuard is an AI-powered **Lead Integrity Gatekeeper & Ad Budget Recovery Platfo
   - Prospective customers wanting immediate proof of fraud on active campaigns.
   - Performance marketing managers auditing lead quality for a single brand.
 
-#### Included Capabilities
-- **1-Click Connectors**: Seamless OAuth connection to Google Ads Lead Form extensions and Meta Ads Instant Lead Forms.
-- **Heuristic Scoring (0–100)**: Evaluates email syntax, basic phone digits, and disposable email blacklists.
-- **Direct CRM Push**: Pushes verified leads (score ≥ 70) to their chosen CRM (Zoho, Salesforce, LeadSquared, HubSpot, or Custom Webhook).
-- **Fraud Proof Dashboard**: Live feed showing verified vs. blocked leads with reason chips.
-- **CSV Export**: Ability to download audited lead payloads for manual team reviews.
+#### Included Capabilities (The 6 Base Features)
+1. ✓ **Google & Meta 1-Click Connectors**
+2. ✓ **0–100 Lead Integrity Scoring**
+3. ✓ **Real-Time Fraud & Bot Blocker**
+4. ✓ **Direct CRM Delivery & CSV Export**
+5. ✓ **Recovered ₹ Spend Audit Log**
+6. ✓ **Standard Ticket & Help Center Support**
 
 #### Why We Offer It
 To remove all sales friction. Within the first 24–48 hours, the customer typically sees 15–30% of their ad leads blocked with clear reasons (disposable emails, non-serviceable numbers). This creates an undeniable urgency to upgrade to a paid plan before the 100-lead quota runs out.
@@ -61,16 +62,15 @@ To remove all sales friction. Within the first 24–48 hours, the customer typic
   - Single-brand businesses spending ₹50,000 to ₹2,50,000/month on Meta & Google ads.
   - Real estate brokers, boutique clinics, local colleges, and D2C brands generating up to 1,000 leads/mo.
 
-#### Key Features & Inclusions
-- **Google & Meta 1-Click Connectors**: Seamless OAuth integration without code or developers.
-- **0–100 Real-Time Scoring Engine**: Sub-second audit of every incoming ad lead.
-- **Direct CRM Delivery**: Automatic routing of verified leads (≥70) to Zoho, Salesforce, HubSpot, or webhooks.
-- **1 Connected Workspace**: Dedicated workspace for the subscriber's primary brand.
-- **Disposable Email Blacklist**: Real-time screening against 3,500+ disposable, temp-mail, and 10-minute inbox domains (e.g., GuerrillaMail, Mailinator).
-- **Real-Time Phone & Carrier Validation**: Validates Indian 10-digit mobile series, detects invalid telecom prefixes, and checks carrier alignment (Airtel, Jio, Vi, BSNL).
-- **Quota Alerts (80% & 95%)**: Dynamic sidebar progress widget and warning banners when monthly quota approaches limits.
-- **CSV Export & Audit Trail**: Download complete lead payload audit logs anytime.
-- **Standard Email Support**: 24-hour turnaround on operational support tickets.
+#### Key Features & Inclusions (8 Cumulative Features)
+1. ✓ **Google & Meta 1-Click Connectors**
+2. ✓ **0–100 Lead Integrity Scoring**
+3. ✓ **Real-Time Fraud & Bot Blocker**
+4. ✓ **Direct CRM Delivery & CSV Export**
+5. ✓ **Recovered ₹ Spend Audit Log**
+6. ✓ **3,500+ Disposable Email Blacklist** *(Added)*
+7. ✓ **Indian Carrier Phone Validation** *(Added)*
+8. ✓ **Standard Email & Ticket Support (24h response)**
 
 #### ROI Economics (The "Pays for Itself" Pitch)
 - Average monthly ad spend: ₹1,50,000
@@ -92,15 +92,17 @@ To remove all sales friction. Within the first 24–48 hours, the customer typic
   - High-volume performance marketing teams spending ₹2,50,000 to ₹15,00,000/month.
   - Multi-location real estate developers (e.g., Mantri, Prestige), university groups (e.g., DSU, DSI), fintech lenders, and edtech companies.
 
-#### Advanced Features & Inclusions
-- **Core Pipeline Inclusions**: 1-Click Google/Meta connectors, 0–100 real-time scoring, 3,500+ disposable email blacklist, and phone carrier checks.
-- **Multi-Account Workspaces**: Connect multiple Google MCC child accounts and Meta Business Manager ad accounts under a single unified dashboard.
-- **Gemini AI Deep Intent Scoring**: Beyond syntax checks, Google Gemini AI reads lead comments, questions, and form responses to calculate legitimate commercial buying intent vs. spam bots or casual misclicks.
-- **5-Minute Automated Meta Poller Backup**: Active background poller backup ensures zero lost leads even during webhook downtime or API delays.
-- **FraudGraph Shared Threat Network**: Cross-customer threat intelligence. A spam bot, click ring, or fraudulent phone number caught on any client's campaigns is instantly pre-blocked for all Pro subscribers across India.
-- **Priority CRM Push Retries**: Exponential backoff retries with auto-alerting if subscriber CRM endpoints return 5xx errors or throttle API limits.
-- **Money Shield Autonomous Auto-Pause**: Auto-pauses bleeding ad campaigns with high junk rates to stop ad spend burns before the budget is wasted.
-- **Priority Support**: Dedicated support ticketing with < 4 hour SLA response.
+#### Advanced Features & Inclusions (10 Cumulative Features)
+1. ✓ **Google & Meta 1-Click Connectors**
+2. ✓ **0–100 Lead Integrity Scoring**
+3. ✓ **Real-Time Fraud & Bot Blocker**
+4. ✓ **Direct CRM Delivery & CSV Export**
+5. ✓ **Recovered ₹ Spend Audit Log**
+6. ✓ **3,500+ Disposable Email Blacklist**
+7. ✓ **Indian Carrier Phone Validation**
+8. ✓ **Gemini AI Deep Intent Scoring** *(Added)*
+9. ✓ **FraudGraph Shared Threat Network** *(Added)*
+10. ✓ **Priority Support (< 4h SLA response)**
 
 #### ROI Economics
 - Average monthly ad spend: ₹8,00,000
@@ -122,14 +124,19 @@ To remove all sales friction. Within the first 24–48 hours, the customer typic
   - Digital marketing agencies, performance media agencies, and lead generation companies managing 5 to 50+ client accounts simultaneously.
   - Large enterprise conglomerates operating multiple independent sub-brands.
 
-#### Enterprise Features & Inclusions
-- **Unlimited Workspaces & Brands**: Create and manage segregated client workspaces (e.g., Client DSU, Client TLG, Client Mantri) from a single agency cockpit.
-- **Unlimited Leads Volume**: No monthly quota caps or overage fees.
-- **Multi-Tenant Business Manager Management**: Link multiple Facebook Business Managers and Google Ads MCC hierarchies.
-- **Custom Webhook & Multi-CRM Routing**: Route leads from different client campaigns to distinct CRM endpoints (e.g., Client A → Salesforce, Client B → Zoho, Client C → Custom Webhook).
-- **Custom Campaign Shield Thresholds**: Set individualized junk-rate pause thresholds (e.g., auto-pause campaign if junk > 35%) per client.
-- **Dedicated Account Manager**: Direct Slack/WhatsApp channel with AdGuard engineering & performance specialists.
-- **Custom Rules & SLA**: Guaranteed 99.9% uptime SLA with custom heuristic rule weighting for niche client industries.
+#### Enterprise Features & Inclusions (12 Cumulative Features)
+1. ✓ **Google & Meta 1-Click Connectors**
+2. ✓ **0–100 Lead Integrity Scoring**
+3. ✓ **Real-Time Fraud & Bot Blocker**
+4. ✓ **Direct CRM Delivery & CSV Export**
+5. ✓ **Recovered ₹ Spend Audit Log**
+6. ✓ **3,500+ Disposable Email Blacklist**
+7. ✓ **Indian Carrier Phone Validation**
+8. ✓ **Gemini AI Deep Intent Scoring**
+9. ✓ **FraudGraph Shared Threat Network**
+10. ✓ **Unlimited Client Workspaces & Brands** *(Added)*
+11. ✓ **Multi-tenant BM & Multi-CRM Routing** *(Added)*
+12. ✓ **Dedicated Account Manager & VIP SLA**
 
 #### Agency Value Proposition
 Agencies package AdGuard as an added-value tech layer for their retainers:
