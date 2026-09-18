@@ -78,19 +78,50 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 ---
 
 ## Live Evidence Sources (pull before pitching)
-- /adguard admin KPIs: Leads Audited · Verified & Pushed · Blocked Garbage · Recovered Spend (₹)
-- /leads/export CSV for campaign-level breakdown
+- `/adguard` admin KPIs: Leads Audited · Verified & Pushed · Blocked Garbage · Recovered Spend (₹)
+- `/leads/export` CSV for campaign-level breakdown
 - Landing page fraud visualizer for the demo moment
 
 ---
 
-## Pricing (for the pitch appendix)
-| Plan | Price (INR/mo) | Lead quota |
-|---|---|---|
-| Trial | Free, 14 days | 100 |
-| Starter | ₹4,999 | 1,000 |
-| Pro | ₹14,999 | 5,000 |
-| Agency | ₹39,999 | Unlimited |
+## Executive Definitions for Leadership & CFOs
 
-ROI line: at ₹350 CPL, Pro blocks 5,000 junk leads max → up to ₹17.5L protected spend/mo for ₹14,999.
-Layer 1 upgrade line: "Every month of Layer 1 data makes the exclusion lists stronger — the shield compounds."
+### 1. What is "Lead Quota"?
+> **Lead Quota** is the **total number of ad form-fill leads audited, verified, and scored** by AdGuard per month — **not just the leads that get blocked**.
+
+* **Why it covers all leads**: Every lead undergoes our 14-point inspection engine (Indian carrier phone network check, 3,500+ disposable email blacklist check, geo-verification, Gemini AI buying intent, and FraudGraph threat scoring). Because intelligence is computed for every lead before routing to your CRM, the quota covers total lead ingestion volume.
+
+### 2. What is "Recovered ₹ Spend Audit Log"?
+> **Recovered ₹ Spend** is the accountant-verifiable rupee calculation of ad budget saved by intercepting fake leads:
+> $$\text{Recovered ₹ Spend} = \text{Blocked Fake Leads} \times \text{Campaign CPL}$$
+
+* Every blocked lead records an immutable audit log with timestamp, ad account ID, campaign ID, integrity score (< 70), specific failure reason chips, and the rupee savings.
+* Sent every Monday directly to executives in the **Automated Executive Report Email**.
+
+---
+
+## Pricing & Cumulative Tier Progression (Pitch Appendix)
+
+Every tier strictly repeats all prior tier capabilities and adds high-leverage features:
+
+| Plan | Price (INR/mo) | Monthly Quota | Key Additions | Support SLA |
+|---|---|---|---|---|
+| **Trial** | **Free** (14 days) | 100 Leads | 1-Click Connectors, 0–100 Integrity Scoring, Real-Time Fraud & Bot Blocker, CRM Delivery, Recovered ₹ Spend Audit Log | Help Center & FAQs |
+| **Starter** | **₹4,999** | 1,000 Leads/mo | All Trial + 3,500+ Disposable Email Blacklist, Indian Carrier Phone Validation | Standard Email (24h response) |
+| **Pro** *(Popular)* | **₹14,999** | 5,000 Leads/mo | All Starter + Gemini AI Deep Intent Scoring, FraudGraph Threat Network | **Priority Support (< 4h SLA)** |
+| **Agency** | **₹39,999** | **Unlimited** | All Pro + Unlimited Client Workspaces & Brands, Multi-tenant BM, Multi-CRM Routing | **Dedicated Account Manager & VIP SLA** |
+
+---
+
+## Multi-Channel Support & Enterprise SLA Guarantee
+
+- **Official Support Desk**: **`support@adguard.ai`**
+- **In-Dashboard Help Desk**: Integrated ticket desk inside the subscriber workspace (`/adguard-workspace`), displaying the user's active plan SLA badge, 1-click email launch, and 1-click email copy.
+- **Admin Cockpit (`/adguard`)**: Centralized support inbox with live email reconfiguration, direct customer reply composer, and **automated two-way email notifications** whenever tickets are raised or answered.
+- **Zero-Risk Testing Mode**: Razorpay Sandbox simulator integrated with Test Credit Cards (`4111 •••• 1111`) and simulated UPI QR code scans for frictionless onboarding walkthroughs.
+
+---
+
+## ROI Pitch Summary
+- At ₹350 CPL, Pro blocks up to 5,000 junk leads max → **up to ₹17.5L in protected spend for ₹14,999**.
+- Layer 1 upgrade line: *"Every month of Layer 1 data makes the exclusion lists stronger — the shield compounds."*

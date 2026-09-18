@@ -197,3 +197,45 @@ By charging each client a modest ₹5,000–₹10,000 tech add-on fee across 8�
 
 ### Objection 3: *"What happens if our campaign generates more leads than our quota?"*
 > **Sales Response**: *"You receive early warning alerts at 80% usage. You can upgrade with one click directly from your dashboard to Pro or Agency anytime. Your lead history is never deleted, and upgrading instantly expands your quota."*
+
+---
+
+## 6. Email Support Architecture & Help Desk SLAs
+
+AdGuard delivers professional, multi-tier customer support integrated directly into both the customer workspace and administrator portal:
+
+### Support Channels & Contact Points
+1. **Official Help Desk Contact**: **`support@adguard.ai`**
+2. **Web Ticketing System**: In-dashboard threaded ticket manager inside `/adguard-workspace` (`#tab-support`).
+3. **Admin Cockpit Inbox**: Unified customer support inbox in `/adguard` allowing live filtering, response authoring, and contact email reconfiguration (`POST /api/adguard/support/admin/config`).
+
+### Tiered SLA Matrix
+| Plan Tier | Guaranteed Support SLA | Delivery Channels | Escalation Path |
+| :--- | :--- | :--- | :--- |
+| **Trial** | Documentation & Community FAQs | In-app Docs | Community & Web Form |
+| **Starter** | **Standard Support (24h turnaround)** | Web Tickets + Email | Tier-1 Support Desk |
+| **Pro** | **Priority Support (< 4h SLA response)** | Priority Queue + Web Tickets | Senior Technical Specialist |
+| **Agency** | **Dedicated VIP SLA & Account Manager** | Direct Phone / WhatsApp / Dedicated Email | VP / Product Lead Direct |
+
+### Automated Two-Way Notification Dispatching
+- **Subscriber Notification**: When an admin responds to a ticket in `/adguard`, the backend automatically sends a branded HTML & plain-text email notification to the customer with the response and a 1-click CTA button to view the thread.
+- **Support Desk Alert**: When a customer files a ticket or submits a message, an automated notification is dispatched to `support@adguard.ai` and the admin desk.
+
+---
+
+## 7. Glossary of Key Terms
+
+### Lead Quota
+> **Definition**: The total number of incoming ad form-fill leads ingested, audited, and processed through AdGuard's 14-point fraud detection pipeline per month — **not just the leads that get blocked**.
+> 
+> **Why all leads count against quota**: AdGuard runs deep, compute-intensive threat intelligence on **every lead** (carrier network validation, disposable domain checks, geo-matching, cross-lead timing heuristics, and Gemini AI intent analysis). Because every lead is scored and protected before CRM delivery, the quota represents total processed capacity.
+
+### Recovered ₹ Spend Audit Log
+> **Definition**: The accountant-verifiable rupee calculation of ad budget saved by blocking fraudulent form-fills before they waste sales bandwidth and ad spend:
+> $$\text{Recovered ₹ Spend} = \text{Blocked Garbage Leads} \times \text{Campaign Cost-Per-Lead (CPL)}$$
+> 
+> **Verification & Auditability**: Every blocked lead is stamped with an immutable timestamp, campaign reference, integrity score (< 70), specific failure reason chips (e.g., `disposable_email`, `bad_phone_carrier`), and the exact rupee amount saved. Downloadable via CSV anytime and delivered in the **Weekly Monday Executive Report Email**.
+
+### Integrity Score (0–100)
+> **Definition**: A composite score calculated in real-time evaluating 14 fraud vectors. A score of **70 or higher** is classified as **Verified** and automatically routed downstream to your CRM. A score **below 70** is classified as **Flagged Garbage** and halted.
+
