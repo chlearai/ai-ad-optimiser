@@ -359,6 +359,69 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
                     )
                     raise QuotaExceededError(f"Lead quota reached ({ws.lead_quota}). Upgrade plan to continue.")
 
+            # Selective screening: only screen leads from campaigns explicitly activated by the customer
+            if ws is not None and ws.cached_campaigns:
+                try:
+                    c_data = json.loads(ws.cached_campaigns) or {}
+                    live_camp_ids = c_data.get("__live_campaign_ids__") or []
+                    if live_camp_ids:
+                        live_set = {str(cid).lower() for cid in live_camp_ids}
+                        in_cid = str(lead.get("campaign_id") or "").lower()
+                        in_cname = str(lead.get("campaign_name") or "").lower()
+                        in_form = str(lead.get("form_id") or "").lower()
+                        in_page = str(lead.get("page_id") or "").lower()
+
+                        matched_live = False
+                        if in_cid and in_cid in live_set:
+                            matched_live = True
+                        if in_form and in_form in live_set:
+                            matched_live = True
+                        if in_page and in_page in live_set:
+                            matched_live = True
+                        if not matched_live and in_cname:
+                            for lcid in live_set:
+                                if lcid in in_cname or in_cname in lcid:
+                                    matched_live = True
+                                    break
+
+                        if not matched_live:
+                            logger.info(
+                                f"[AdGuard] Lead from unactivated/standby campaign received: '{in_cname}'. Not active for live screening."
+                            )
+                            # Record in audit trail as standby without running AI or pushing to CRM
+                            record = AdGuardLead(
+                                account_id=getattr(account, "id", None) if account is not None else None,
+                                adguard_account_id=workspace_id,
+                                gclid=lead.get("gclid"),
+                                form_id=lead.get("form_id"),
+                                campaign_name=lead.get("campaign_name"),
+                                lead_type=lead.get("lead_type"),
+                                full_name=lead.get("full_name"),
+                                email=lead.get("email"),
+                                phone=lead.get("phone"),
+                                city=lead.get("city"),
+                                state=lead.get("state"),
+                                country=lead.get("country"),
+                                postal_code=lead.get("postal_code"),
+                                raw_payload=raw_payload,
+                                integrity_score=0,
+                                verdict="standby",
+                                email_valid=False,
+                                disposable_email=False,
+                                phone_valid=False,
+                                geo_match=False,
+                                ai_legitimacy_score=0,
+                                ai_reason="Campaign on standby (not activated for live screening)",
+                                flags=json.dumps(["campaign_not_live"]),
+                                lsq_status="skipped_inactive_campaign",
+                            )
+                            db.add(record)
+                            db.commit()
+                            db.refresh(record)
+                            return record.to_dict()
+                except Exception as ex:
+                    logger.warning(f"[AdGuard] Selective screening check error: {ex}")
+
         # Dedup: same email or same phone in the last 7 days.
         dup = None
         now = datetime.utcnow()

@@ -1251,9 +1251,95 @@ def shield_actions(workspace_id: int, db: Session = Depends(get_db), user: User 
     }
 
 
+class ActivateCampaignsRequest(BaseModel):
+    campaign_ids: List[str]
+    activate: bool = True
+    account_id: Optional[str] = None
+
+
+@router.post("/workspace/{workspace_id}/campaigns/activate")
+def activate_workspace_campaigns(
+    workspace_id: int,
+    req: ActivateCampaignsRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
+    """Mark which campaigns/accounts are LIVE for screening vs paused/standby."""
+    _require_adguard_access(user)
+    ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+    if not ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Not your workspace")
+
+    cached = {}
+    if ws.cached_campaigns:
+        try:
+            cached = json.loads(ws.cached_campaigns) or {}
+        except Exception:
+            cached = {}
+
+    live_ids = set(cached.get("__live_campaign_ids__") or [])
+    target_ids = set(str(cid) for cid in req.campaign_ids)
+
+    if req.activate:
+        live_ids.update(target_ids)
+    else:
+        live_ids.difference_update(target_ids)
+
+    cached["__live_campaign_ids__"] = list(live_ids)
+
+    # Update is_live flags in all account lists
+    for aid, clist in cached.items():
+        if aid.startswith("__") or not isinstance(clist, list):
+            continue
+        for item in clist:
+            if isinstance(item, dict) and str(item.get("id")) in target_ids:
+                item["is_live"] = bool(req.activate)
+
+    ws.cached_campaigns = json.dumps(cached)
+
+    # If account_id supplied, also update account screening status
+    if req.account_id:
+        aid_clean = str(req.account_id).replace("-", "").lower()
+        for field in ("discovered_accounts", "discovered_meta_accounts"):
+            raw = getattr(ws, field)
+            if raw:
+                try:
+                    accs = json.loads(raw)
+                    for a in accs:
+                        if str(a.get("id", "")).replace("-", "").lower() == aid_clean:
+                            a["screening_live"] = bool(req.activate)
+                    setattr(ws, field, json.dumps(accs))
+                except Exception:
+                    pass
+
+    db.commit()
+
+    log_activity(
+        module="AdGuard",
+        action="Campaigns Go-Live" if req.activate else "Campaigns Paused",
+        description=f"Workspace {ws.display_name or ws.owner_email} set {len(target_ids)} campaigns to {'LIVE' if req.activate else 'STANDBY'}",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        entity_type="adguard_account",
+        entity_id=str(ws.id),
+        db=db,
+    )
+
+    return {
+        "ok": True,
+        "workspace_id": workspace_id,
+        "live_campaign_ids": list(live_ids),
+        "count": len(target_ids),
+        "status": "live" if req.activate else "standby",
+        "message": f"{len(target_ids)} campaign(s) are now {'LIVE for screening' if req.activate else 'paused on standby'}",
+    }
+
+
 @router.get("/workspace/{workspace_id}/campaigns")
 def get_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Fetch campaigns and pages map for all accounts in workspace."""
+    """Fetch campaigns and pages map for all accounts in workspace with live screening status."""
     _require_adguard_access(user)
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
     if not ws:
@@ -1263,9 +1349,28 @@ def get_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), us
 
     from backend.services.adguard_campaigns import build_workspace_campaigns_map
     cmap = build_workspace_campaigns_map(ws, db)
+
+    # Retrieve stored live_campaign_ids
+    live_ids = []
+    if ws.cached_campaigns:
+        try:
+            stored_cached = json.loads(ws.cached_campaigns) or {}
+            live_ids = stored_cached.get("__live_campaign_ids__") or []
+        except Exception:
+            live_ids = []
+
+    # Overlay is_live status onto the returned campaigns
+    live_set = set(str(x) for x in live_ids)
+    for aid, clist in cmap.items():
+        if isinstance(clist, list):
+            for c in clist:
+                if isinstance(c, dict):
+                    c["is_live"] = str(c.get("id")) in live_set
+
     return {
         "workspace_id": workspace_id,
         "campaigns_by_account": cmap,
+        "live_campaign_ids": live_ids,
     }
 
 
@@ -1281,8 +1386,29 @@ def sync_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), u
 
     from backend.services.adguard_campaigns import build_workspace_campaigns_map
     cmap = build_workspace_campaigns_map(ws, db)
+
+    # Preserve __live_campaign_ids__ when re-caching
+    live_ids = []
+    if ws.cached_campaigns:
+        try:
+            stored_cached = json.loads(ws.cached_campaigns) or {}
+            live_ids = stored_cached.get("__live_campaign_ids__") or []
+        except Exception:
+            live_ids = []
+
+    live_set = set(str(x) for x in live_ids)
+    for aid, clist in cmap.items():
+        if isinstance(clist, list):
+            for c in clist:
+                if isinstance(c, dict):
+                    c["is_live"] = str(c.get("id")) in live_set
+
+    cmap_to_store = dict(cmap)
+    if live_ids:
+        cmap_to_store["__live_campaign_ids__"] = live_ids
+
     try:
-        ws.cached_campaigns = json.dumps(cmap)
+        ws.cached_campaigns = json.dumps(cmap_to_store)
         db.commit()
     except Exception as e:
         logger.warning(f"Failed caching campaigns for ws {ws.id}: {e}")
@@ -1291,6 +1417,7 @@ def sync_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), u
         "ok": True,
         "workspace_id": workspace_id,
         "campaigns_by_account": cmap,
+        "live_campaign_ids": live_ids,
     }
 
 

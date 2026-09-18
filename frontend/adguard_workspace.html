@@ -736,8 +736,16 @@
                             <span>🔄 Refresh</span>
                         </button>
 
-                        <!-- FLOATING POPOVER (Anchored to button, Image 2 style) -->
-                        <div id="ryzePopover" class="ryze-popover hidden" onclick="event.stopPropagation()">
+                        <!-- FLOATING POPOVER (Anchored to button, Go-Live Screening Control) -->
+                        <div id="ryzePopover" class="ryze-popover hidden" onclick="event.stopPropagation()" style="min-width:380px;">
+                            <div style="padding:10px 12px 6px;border-bottom:1px solid var(--color-border);background:rgba(37,99,235,0.04);">
+                                <div style="font-size:11px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                                    <span>🛡️ Campaign Screening Control</span>
+                                </div>
+                                <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px;line-height:1.35;">
+                                    Select which campaigns should go <strong>LIVE</strong> for screening. Only active campaigns are screened and delivered to CRM.
+                                </div>
+                            </div>
                             <div class="ryze-popover-search">
                                 <span style="font-size:12px;color:var(--color-text-muted);">🔍</span>
                                 <input type="text" id="ryzeSearchInput" placeholder="Search campaigns & pages..." oninput="onRyzeSearch(this.value)">
@@ -750,8 +758,12 @@
                             <div class="ryze-popover-list" id="ryzePopoverList">
                                 <div style="font-size:11px;color:var(--color-text-muted);padding:12px;text-align:center;">Loading campaigns…</div>
                             </div>
-                            <div class="ryze-popover-footer" id="ryzePopoverFooter">
-                                <span id="ryzePopoverFooterText">0 selected</span>
+                            <div class="ryze-popover-footer" id="ryzePopoverFooter" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--color-bg-secondary);border-top:1px solid var(--color-border);">
+                                <span id="ryzePopoverFooterText" style="font-size:11px;color:var(--color-text-muted);">0 selected</span>
+                                <div style="display:flex;gap:6px;">
+                                    <button type="button" class="btn btn-secondary btn-xs" style="font-size:11px;padding:4px 8px;" onclick="deactivateSelectedCampaigns()" title="Pause screening for selected campaigns">⏸️ Standby</button>
+                                    <button type="button" class="btn btn-primary btn-xs" style="font-size:11px;padding:4px 10px;font-weight:600;" onclick="activateSelectedCampaigns()" title="Activate real-time screening for selected campaigns">🚀 Go Live</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -772,66 +784,82 @@
                         <button class="btn btn-primary btn-sm" onclick="startConnect()">Connect Google Ads</button>
                     </div>
                     <p style="font-size:13px;color:var(--color-text-secondary);">
-                        One click. Sign in with Google or Meta, approve access, and your ad lead forms appear here automatically.
+                        One click. Sign in with Google or Meta, approve access, and select which campaigns go live for screening.
                     </p>
                 </div>
 
-                <!-- RYZE KPI CARDS (4 Column Grid, Image 2 style) -->
+                <!-- ADGUARD CORE VALUE KPI CARDS (Audited, Verified, Blocked, Recovered Spend) -->
                 <div class="ryze-kpi-grid" id="ryzeKpiGrid">
+                    <!-- Card 1: Leads Audited -->
                     <div class="ryze-card">
-                        <div class="ryze-card-header"><span class="ryze-card-label">Spend</span><span class="ryze-pill-trend ryze-pill-green">↑ 17.6%</span></div>
-                        <div class="ryze-card-value" id="kpiSpend">INR —</div>
-                        <div class="ryze-card-sub">30-day total across connected platforms</div>
+                        <div class="ryze-card-header">
+                            <span class="ryze-card-label">Leads Audited</span>
+                            <span class="ryze-pill-trend ryze-pill-blue" id="kpiAuditedPill">🛡️ Live Screened</span>
+                        </div>
+                        <div class="ryze-card-value" id="kpiAuditedLeads">0</div>
+                        <div class="ryze-card-sub" id="kpiAuditedSub">0 Google · 0 Meta</div>
                     </div>
+                    <!-- Card 2: Verified Leads (Passed to CRM) -->
                     <div class="ryze-card">
-                        <div class="ryze-card-header"><span class="ryze-card-label">Results</span><span class="ryze-pill-trend ryze-pill-green">↑ 11.7%</span></div>
-                        <div class="ryze-card-value" id="kpiResults">—</div>
-                        <div class="ryze-card-sub" id="kpiPlatformBreakdown">— Google · — Meta</div>
+                        <div class="ryze-card-header">
+                            <span class="ryze-card-label">Verified Leads</span>
+                            <span class="ryze-pill-trend ryze-pill-green" id="kpiPassRatePill">🟢 100% Quality</span>
+                        </div>
+                        <div class="ryze-card-value" id="kpiVerifiedLeads">0</div>
+                        <div class="ryze-card-sub" id="kpiVerifiedSub">0 clean leads passed to CRM</div>
                     </div>
+                    <!-- Card 3: Blocked Garbage -->
                     <div class="ryze-card">
-                        <div class="ryze-card-header"><span class="ryze-card-label">Best CPA</span><span class="ryze-pill-trend ryze-pill-blue">Google Ads</span></div>
-                        <div class="ryze-card-value" id="kpiCpa">INR —</div>
-                        <div class="ryze-card-sub" id="kpiCpaSub">Verified leads delivered to CRM</div>
+                        <div class="ryze-card-header">
+                            <span class="ryze-card-label">Blocked Garbage</span>
+                            <span class="ryze-pill-trend ryze-pill-orange" id="kpiBlockPill">🛑 0% Blocked</span>
+                        </div>
+                        <div class="ryze-card-value" id="kpiBlockedLeads">0</div>
+                        <div class="ryze-card-sub" id="kpiBlockedSub">0 fake &amp; bot leads stopped</div>
                     </div>
+                    <!-- Card 4: Recovered ₹ Spend -->
                     <div class="ryze-card">
-                        <div class="ryze-card-header"><span class="ryze-card-label">Shield &amp; Saved Spend</span><span class="ryze-pill-trend ryze-pill-green" id="kpiShieldPill">🛡️ Protected</span></div>
-                        <div class="ryze-card-value" id="kpiSaved">INR —</div>
-                        <div class="ryze-card-sub" id="kpiSavedSub">Fake &amp; bot leads blocked</div>
+                        <div class="ryze-card-header">
+                            <span class="ryze-card-label">Recovered ₹ Spend</span>
+                            <span class="ryze-pill-trend ryze-pill-green" id="kpiBudgetPill">💰 Budget Saved</span>
+                        </div>
+                        <div class="ryze-card-value" id="kpiSavedSpend">₹0</div>
+                        <div class="ryze-card-sub" id="kpiSavedSub">₹0 saved vs ₹0 would-be ad burn</div>
                     </div>
                 </div>
                 <div id="kpiGrid" style="display:none;"></div>
 
-                <!-- RYZE PERFORMANCE CHARTS (3 Side-by-Side Charts, Image 2 style) -->
+                <!-- ADGUARD SCREENING PERFORMANCE CHARTS (3 Side-by-Side Charts) -->
                 <div class="ryze-charts-grid" id="ryzeChartsGrid">
-                    <!-- Chart 1: Spend & ROAS / Shield -->
+                    <!-- Chart 1: Audited vs Blocked Leads -->
                     <div class="ryze-chart-card">
                         <div class="ryze-chart-title">
-                            <span>Spend &amp; Shield</span>
+                            <span>Audited vs Blocked Leads</span>
                             <div class="ryze-chart-legend">
-                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Cost</span>
-                                <span><span class="legend-dot" style="background:#2563eb;"></span> Integrity %</span>
+                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Audited</span>
+                                <span><span class="legend-dot" style="background:#ef4444;"></span> Blocked</span>
                             </div>
                         </div>
                         <div id="chartSpendIntegrity" style="height:140px;width:100%;"></div>
                     </div>
-                    <!-- Chart 2: Conversions & Rate -->
+                    <!-- Chart 2: Quality & Pass Rate -->
                     <div class="ryze-chart-card">
                         <div class="ryze-chart-title">
-                            <span>Conversions &amp; rate</span>
+                            <span>Quality &amp; Pass Rate</span>
                             <div class="ryze-chart-legend">
-                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Conversions</span>
-                                <span><span class="legend-dot" style="background:#1e293b;"></span> Conv. rate</span>
+                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Verified</span>
+                                <span><span class="legend-dot" style="background:#10b981;"></span> Pass %</span>
                             </div>
                         </div>
                         <div id="chartConversionsRate" style="height:140px;width:100%;"></div>
                     </div>
-                    <!-- Chart 3: Clicks & CTR -->
+                    <!-- Chart 3: Recovered ₹ Spend -->
                     <div class="ryze-chart-card">
                         <div class="ryze-chart-title">
-                            <span>Clicks &amp; CTR</span>
+                            <span>Recovered ₹ Spend</span>
                             <div class="ryze-chart-legend">
-                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Clicks</span>
-                                <span><span class="legend-dot" style="background:#0f172a;"></span> CTR</span>
+                                <span><span class="legend-dot" style="background:#93c5fd;"></span> Would-be Spend</span>
+                                <span><span class="legend-dot" style="background:#059669;"></span> ₹ Saved</span>
                             </div>
                         </div>
                         <div id="chartClicksCtr" style="height:140px;width:100%;"></div>
@@ -1715,7 +1743,12 @@
                 });
             }
 
-            // Fallback seed accounts for seamless demonstration if none configured
+            // If the workspace has live connected accounts, only show their real accounts (no dummy seed accounts)
+            if (ws && (ws.google_is_live || ws.meta_is_live) && list.length > 0) {
+                return list;
+            }
+
+            // Fallback seed accounts for demonstration only when nothing is connected
             if (!list.length) {
                 list.push(
                     { id: '2909919094', name: 'DSU - New', formatted: '290-991-9094', platform: 'google' },
@@ -1777,14 +1810,18 @@
             renderRyzeDashboard();
         }
 
+        let liveCampaignIds = new Set();
+
         async function loadWorkspaceCampaigns() {
             if (!selectedWorkspaceObj) return;
             try {
                 const res = await api('GET', '/workspace/' + selectedWorkspaceObj.id + '/campaigns');
                 workspaceCampaignsMap = (res && res.campaigns_by_account) || {};
+                liveCampaignIds = new Set((res && res.live_campaign_ids) || []);
             } catch (e) {
                 console.warn('Campaign fetch error, using local fallback:', e);
                 workspaceCampaignsMap = {};
+                liveCampaignIds = new Set();
             }
             updateCurrentAvailableCampaigns();
             renderRyzeCampaignDropdown();
@@ -1836,17 +1873,16 @@
 
             const total = currentAvailableCampaigns.length;
             const selectedCount = activeCampaignIds.size;
+            const liveInView = currentAvailableCampaigns.filter(c => liveCampaignIds.has(c.id)).length;
 
-            if (selectedCount === total) {
-                btnText.textContent = total + ' ' + (activeClientId === 'all' ? 'accounts & campaigns' : 'campaigns') + ' selected';
-            } else if (selectedCount === 0) {
-                btnText.textContent = '0 campaigns selected';
+            if (liveInView > 0) {
+                btnText.innerHTML = `<span style="color:#059669;font-weight:700;">🟢 ${liveInView} LIVE</span> · ${selectedCount} of ${total} selected`;
             } else {
-                btnText.textContent = selectedCount + ' of ' + total + ' selected';
+                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">⚪ Standby</span> · ${selectedCount} of ${total} selected`;
             }
 
             if (footerEl) {
-                footerEl.textContent = selectedCount + ' of ' + total + ' selected · up to ' + total + ' accounts/campaigns';
+                footerEl.textContent = `${selectedCount} selected · ${liveInView} live`;
             }
 
             const q = (ryzeSearchQuery || '').toLowerCase().trim();
@@ -1865,10 +1901,15 @@
                 html += '<div class="ryze-popover-group-title">Google Ads</div>';
                 googleItems.forEach(item => {
                     const isChecked = activeCampaignIds.has(item.id);
+                    const isLive = liveCampaignIds.has(item.id);
+                    const liveBadge = isLive
+                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">🟢 LIVE</span>'
+                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">⚪ Standby</span>';
                     html += `
-                        <label class="ryze-popover-item">
+                        <label class="ryze-popover-item" style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
                             <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRyzeCampaignItem('${escapeHtml(String(item.id))}', this.checked)">
-                            <span class="ryze-popover-item-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                            <span class="ryze-popover-item-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                            ${liveBadge}
                         </label>
                     `;
                 });
@@ -1877,16 +1918,69 @@
                 html += '<div class="ryze-popover-group-title">Meta Ads</div>';
                 metaItems.forEach(item => {
                     const isChecked = activeCampaignIds.has(item.id);
+                    const isLive = liveCampaignIds.has(item.id);
+                    const liveBadge = isLive
+                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">🟢 LIVE</span>'
+                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">⚪ Standby</span>';
                     html += `
-                        <label class="ryze-popover-item">
+                        <label class="ryze-popover-item" style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
                             <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRyzeCampaignItem('${escapeHtml(String(item.id))}', this.checked)">
-                            <span class="ryze-popover-item-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                            <span class="ryze-popover-item-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                            ${liveBadge}
                         </label>
                     `;
                 });
             }
 
             listEl.innerHTML = html;
+        }
+
+        async function activateSelectedCampaigns() {
+            if (!selectedWorkspaceObj) return;
+            if (activeCampaignIds.size === 0) {
+                toast('Please select at least one campaign to go live', 'error');
+                return;
+            }
+            const ids = Array.from(activeCampaignIds);
+            try {
+                toast('Activating screening for ' + ids.length + ' campaign(s)…');
+                const res = await api('POST', '/workspace/' + selectedWorkspaceObj.id + '/campaigns/activate', {
+                    workspace_id: selectedWorkspaceObj.id,
+                    campaign_ids: ids,
+                    activate: true,
+                    account_id: activeClientId !== 'all' ? activeClientId : null
+                });
+                (res.live_campaign_ids || ids).forEach(id => liveCampaignIds.add(id));
+                toast('🛡️ ' + ids.length + ' campaign(s) are now LIVE for screening!');
+                renderRyzeCampaignDropdown();
+                renderRyzeDashboard();
+            } catch (e) {
+                toast(e.message || 'Failed to activate campaigns', 'error');
+            }
+        }
+
+        async function deactivateSelectedCampaigns() {
+            if (!selectedWorkspaceObj) return;
+            if (activeCampaignIds.size === 0) {
+                toast('Please select at least one campaign to pause', 'error');
+                return;
+            }
+            const ids = Array.from(activeCampaignIds);
+            try {
+                toast('Pausing screening for ' + ids.length + ' campaign(s)…');
+                const res = await api('POST', '/workspace/' + selectedWorkspaceObj.id + '/campaigns/activate', {
+                    workspace_id: selectedWorkspaceObj.id,
+                    campaign_ids: ids,
+                    activate: false,
+                    account_id: activeClientId !== 'all' ? activeClientId : null
+                });
+                ids.forEach(id => liveCampaignIds.delete(id));
+                toast('⏸️ ' + ids.length + ' campaign(s) set to standby');
+                renderRyzeCampaignDropdown();
+                renderRyzeDashboard();
+            } catch (e) {
+                toast(e.message || 'Failed to pause campaigns', 'error');
+            }
         }
 
         function toggleRyzePopover(e) {
@@ -2000,41 +2094,77 @@
                     <line x1="${padding.left}" y1="${padding.top + chartH}" x2="${w - padding.right}" y2="${padding.top + chartH}" stroke="var(--color-border)" stroke-width="1" />
                     ${barsSvg}
                     ${linePath}
-                    <text x="${padding.left}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">06-11</text>
-                    <text x="${w / 2 - 14}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">06-25</text>
-                    <text x="${w - padding.right - 24}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">07-10</text>
+                    <text x="${padding.left}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">14d ago</text>
+                    <text x="${w / 2 - 14}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">7d ago</text>
+                    <text x="${w - padding.right - 24}" y="${h - 4}" font-size="9" fill="var(--color-text-muted)">Today</text>
                 </svg>
             `;
         }
 
         function renderRyzeCharts(leads) {
-            const days = 24;
-            const baseSpend = (activeClientId === 'all' ? 320 : 120);
-            const spendData = [];
-            const integrityData = [];
-            const convData = [];
-            const rateData = [];
-            const clickData = [];
-            const ctrData = [];
+            const hasLeads = leads && leads.length > 0;
 
-            for (let i = 0; i < days; i++) {
-                const dayFactor = 0.8 + 0.4 * Math.sin(i * 0.7) + 0.2 * ((i * 13) % 5);
-                const s = Math.round(baseSpend * dayFactor * 1000);
-                spendData.push(s);
-                integrityData.push(78 + Math.round(18 * Math.sin(i * 0.5)));
+            if (!hasLeads) {
+                // Clean high-tech zero state for all 3 charts (No fake sinusoidal waves)
+                const emptySvg = (label, color) => `
+                    <div style="height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;background:rgba(0,0,0,0.01);border-radius:6px;">
+                        <svg width="100%" height="80" viewBox="0 0 280 80" style="overflow:visible;">
+                            <line x1="10" y1="65" x2="270" y2="65" stroke="var(--color-border)" stroke-width="1" stroke-dasharray="3,3" />
+                            <circle cx="140" cy="65" r="4" fill="${color}" opacity="0.8" />
+                            <text x="140" y="52" font-size="11" fill="var(--color-text-muted)" text-anchor="middle" font-weight="600">0 ${label}</text>
+                            <text x="15" y="77" font-size="9" fill="var(--color-text-muted)">14d ago</text>
+                            <text x="140" y="77" font-size="9" fill="var(--color-text-muted)" text-anchor="middle">7d ago</text>
+                            <text x="265" y="77" font-size="9" fill="var(--color-text-muted)" text-anchor="end">Today</text>
+                        </svg>
+                        <div style="font-size:10px;color:var(--color-text-muted);margin-top:2px;display:flex;align-items:center;gap:4px;">
+                            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;"></span>
+                            <span>Live Shield Active · Waiting for leads</span>
+                        </div>
+                    </div>
+                `;
 
-                const c = Math.max(5, Math.round(dayFactor * (activeClientId === 'all' ? 45 : 18)));
-                convData.push(c);
-                rateData.push(+(3.2 + 1.8 * Math.cos(i * 0.6)).toFixed(1));
-
-                const clk = Math.max(100, Math.round(dayFactor * (activeClientId === 'all' ? 2400 : 900)));
-                clickData.push(clk);
-                ctrData.push(+(2.1 + 0.8 * Math.sin(i * 0.8)).toFixed(2));
+                if ($('chartSpendIntegrity')) $('chartSpendIntegrity').innerHTML = emptySvg('Audited', '#3b82f6');
+                if ($('chartConversionsRate')) $('chartConversionsRate').innerHTML = emptySvg('Quality %', '#10b981');
+                if ($('chartClicksCtr')) $('chartClicksCtr').innerHTML = emptySvg('₹ Saved', '#059669');
+                return;
             }
 
-            drawRyzeChart('chartSpendIntegrity', spendData, integrityData, '#93c5fd', '#2563eb', 'INR', '%');
-            drawRyzeChart('chartConversionsRate', convData, rateData, '#93c5fd', '#1e293b', 'Leads', '%');
-            drawRyzeChart('chartClicksCtr', clickData, ctrData, '#93c5fd', '#0f172a', 'Clicks', '%');
+            // Real data grouping by date from actual leads
+            const daysMap = {};
+            const now = new Date();
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(d.getDate() - i);
+                const key = d.toISOString().split('T')[0];
+                const display = (d.getMonth() + 1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0');
+                daysMap[key] = { display, audited: 0, verified: 0, blocked: 0, saved: 0 };
+            }
+
+            leads.forEach(l => {
+                const dateStr = (l.received_at || l.created_at || '').split('T')[0];
+                if (dateStr && daysMap[dateStr]) {
+                    daysMap[dateStr].audited += 1;
+                    if (l.verdict === 'verified') daysMap[dateStr].verified += 1;
+                    if (l.verdict === 'flagged') {
+                        daysMap[dateStr].blocked += 1;
+                        daysMap[dateStr].saved += 350;
+                    }
+                }
+            });
+
+            const keys = Object.keys(daysMap);
+            const auditedBars = keys.map(k => daysMap[k].audited);
+            const blockedLines = keys.map(k => daysMap[k].blocked);
+
+            const verifiedBars = keys.map(k => daysMap[k].verified);
+            const passRateLines = keys.map(k => daysMap[k].audited ? Math.round((daysMap[k].verified / daysMap[k].audited) * 100) : 100);
+
+            const wouldBeSpendBars = keys.map(k => daysMap[k].audited * 350);
+            const savedSpendLines = keys.map(k => daysMap[k].saved);
+
+            drawRyzeChart('chartSpendIntegrity', auditedBars, blockedLines, '#93c5fd', '#ef4444', 'Audited', 'Blocked');
+            drawRyzeChart('chartConversionsRate', verifiedBars, passRateLines, '#93c5fd', '#10b981', 'Verified', '% Pass');
+            drawRyzeChart('chartClicksCtr', wouldBeSpendBars, savedSpendLines, '#93c5fd', '#059669', '₹ Cost', '₹ Saved');
         }
 
         function renderRyzeKpis(leads) {
@@ -2042,36 +2172,61 @@
             const flaggedLeads = leads.filter(l => l.verdict === 'flagged');
             const totalLeads = leads.length;
 
-            let totalSpend = 0;
-            if (activeClientId !== 'all') {
-                const c = clientAccountsList.find(x => String(x.id) === String(activeClientId));
-                totalSpend = (c && c.spend) ? c.spend : Math.max(185000, totalLeads * 480);
-            } else {
-                totalSpend = 7780000;
-            }
-
             const googleLeads = leads.filter(l => (l.source || 'google').toLowerCase() === 'google').length;
             const metaLeads = leads.filter(l => (l.source || '').toLowerCase() === 'meta').length;
 
-            const avgCpa = totalLeads ? Math.round(totalSpend / Math.max(1, verifiedLeads.length || totalLeads)) : 403;
-            const recoveredSpend = flaggedLeads.length * 350;
-            const junkRate = totalLeads ? Math.round((flaggedLeads.length / totalLeads) * 100) : 18;
+            const passRate = totalLeads ? Math.round((verifiedLeads.length / totalLeads) * 100) : 0;
+            const junkRate = totalLeads ? Math.round((flaggedLeads.length / totalLeads) * 100) : 0;
+
+            const cplBenchmark = 350; // INR benchmark per lead
+            const wouldBeSpend = totalLeads * cplBenchmark;
+            const recoveredSpend = flaggedLeads.length * cplBenchmark;
 
             function formatInr(num) {
-                if (num >= 10000000) return 'INR ' + (num / 10000000).toFixed(2) + 'M';
-                if (num >= 100000) return 'INR ' + (num / 100000).toFixed(2) + 'L';
-                if (num >= 1000) return 'INR ' + (num / 1000).toFixed(1) + 'k';
-                return 'INR ' + Math.round(num).toLocaleString('en-IN');
+                if (!num || num === 0) return '₹0';
+                if (num >= 10000000) return '₹' + (num / 10000000).toFixed(2) + ' Cr';
+                if (num >= 100000) return '₹' + (num / 100000).toFixed(2) + 'L';
+                if (num >= 1000) return '₹' + (num / 1000).toFixed(1) + 'k';
+                return '₹' + Math.round(num).toLocaleString('en-IN');
             }
 
-            if ($('kpiSpend')) $('kpiSpend').textContent = formatInr(totalSpend);
-            if ($('kpiResults')) $('kpiResults').textContent = (totalLeads ? totalLeads.toLocaleString('en-IN') : '16,378');
-            if ($('kpiPlatformBreakdown')) $('kpiPlatformBreakdown').textContent = (googleLeads ? googleLeads.toLocaleString('en-IN') : '15,595') + ' Google · ' + (metaLeads ? metaLeads.toLocaleString('en-IN') : '783') + ' Meta';
-            if ($('kpiCpa')) $('kpiCpa').textContent = 'INR ' + avgCpa.toLocaleString('en-IN');
-            if ($('kpiCpaSub')) $('kpiCpaSub').textContent = (verifiedLeads.length || '15,595') + ' verified leads delivered to CRM';
-            if ($('kpiSaved')) $('kpiSaved').textContent = 'INR ' + (recoveredSpend ? recoveredSpend.toLocaleString('en-IN') : '1.42M');
+            // 1. Leads Audited (Clean 0 when 0 leads)
+            if ($('kpiAuditedLeads')) $('kpiAuditedLeads').textContent = totalLeads ? totalLeads.toLocaleString('en-IN') : '0';
+            if ($('kpiAuditedSub')) $('kpiAuditedSub').textContent = totalLeads 
+                ? (googleLeads.toLocaleString('en-IN') + ' Google · ' + metaLeads.toLocaleString('en-IN') + ' Meta')
+                : '0 Google · 0 Meta';
+            if ($('kpiAuditedPill')) $('kpiAuditedPill').textContent = totalLeads ? ('🛡️ ' + totalLeads + ' Screened') : '🛡️ Live Screened';
+
+            // 2. Verified Leads (Passed to CRM)
+            if ($('kpiVerifiedLeads')) $('kpiVerifiedLeads').textContent = verifiedLeads.length ? verifiedLeads.length.toLocaleString('en-IN') : '0';
+            if ($('kpiVerifiedSub')) $('kpiVerifiedSub').textContent = totalLeads
+                ? (passRate + '% pass rate · Delivered to CRM')
+                : '0 clean leads passed to CRM';
+            if ($('kpiPassRatePill')) $('kpiPassRatePill').textContent = totalLeads ? ('🟢 ' + passRate + '% Quality') : '🟢 0% Quality';
+
+            // 3. Blocked Garbage
+            if ($('kpiBlockedLeads')) $('kpiBlockedLeads').textContent = flaggedLeads.length ? flaggedLeads.length.toLocaleString('en-IN') : '0';
+            if ($('kpiBlockedSub')) $('kpiBlockedSub').textContent = totalLeads
+                ? (flaggedLeads.length.toLocaleString('en-IN') + ' fake & bot leads stopped')
+                : '0 fake & bot leads stopped';
+            if ($('kpiBlockPill')) $('kpiBlockPill').textContent = totalLeads ? ('🛑 ' + junkRate + '% Blocked') : '🛑 0% Blocked';
+
+            // 4. Recovered ₹ Spend
+            if ($('kpiSavedSpend')) $('kpiSavedSpend').textContent = formatInr(recoveredSpend);
+            if ($('kpiSavedSub')) $('kpiSavedSub').textContent = totalLeads
+                ? (formatInr(recoveredSpend) + ' saved vs ' + formatInr(wouldBeSpend) + ' would-be ad burn')
+                : '₹0 saved vs ₹0 would-be ad burn';
+            if ($('kpiBudgetPill')) $('kpiBudgetPill').textContent = totalLeads ? ('💰 ' + formatInr(recoveredSpend) + ' Saved') : '💰 Budget Saved';
+
+            // Backward compatibility fallbacks if older IDs referenced
+            if ($('kpiSpend')) $('kpiSpend').textContent = formatInr(wouldBeSpend);
+            if ($('kpiResults')) $('kpiResults').textContent = totalLeads ? totalLeads.toLocaleString('en-IN') : '0';
+            if ($('kpiPlatformBreakdown')) $('kpiPlatformBreakdown').textContent = googleLeads + ' Google · ' + metaLeads + ' Meta';
+            if ($('kpiCpa')) $('kpiCpa').textContent = totalLeads ? ('₹' + Math.round(wouldBeSpend / Math.max(1, verifiedLeads.length))) : '₹0';
+            if ($('kpiCpaSub')) $('kpiCpaSub').textContent = verifiedLeads.length + ' verified leads delivered to CRM';
+            if ($('kpiSaved')) $('kpiSaved').textContent = formatInr(recoveredSpend);
             if ($('kpiShieldPill')) $('kpiShieldPill').textContent = '🛡️ ' + junkRate + '% Junk Blocked';
-            if ($('kpiSavedSub')) $('kpiSavedSub').textContent = (flaggedLeads.length || '783') + ' fake & bot leads blocked from ad waste';
+            if ($('kpiSavedSub')) $('kpiSavedSub').textContent = flaggedLeads.length + ' fake & bot leads blocked from ad waste';
         }
 
         function renderRyzeDashboard() {
