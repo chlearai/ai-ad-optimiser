@@ -17,15 +17,16 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 
 ## THE 3-LAYER MONEY SHIELD
 
-### 🛡️ Layer 1 — BEFORE the spend (prevention)
-*The money never leaves your account.*
+### 🛡️ Layer 1 — BEFORE the spend (prevention) — LIVE TODAY ✅
+*The money never leaves your account. Runs autonomously 24/7 in background every 5 minutes.*
 
-| Mechanism | How it saves |
-|---|---|
-| **Platform exclusion sync** | FraudGraph fingerprints (emails, phones, device patterns) pushed to Google Customer Match suppression + Meta Custom Audience exclusion → blocked scammers never see your ad again |
-| **Auto-pause Governor** | Campaign junk-rate > 40% over 24h (min 50 leads) → auto-paused + WhatsApp alert + one-click re-approve. Bleeding campaigns stop overnight, mid-burn |
-| **Placement/keyword hygiene** | Placements and search terms driving junk auto-added to exclusion/negative lists → budget diverts to clean inventory |
-| **Geo/device bid shields** | Junk concentration patterns (specific city + device + 3AM timing) → bid down or exclude before budget drains |
+| Mechanism | How it saves | Status |
+|---|---|---|
+| **Autonomous Circuit Breaker** | Background watchdog scans every 5 min. Campaign junk-rate > 40% over 24h (min 50 leads) → auto-paused mid-burn | **LIVE (every 5m)** ✅ |
+| **Platform exclusion sync** | FraudGraph fingerprints (emails, phones) pushed to Google Customer Match + Meta Custom Audience exclusion | **LIVE (weekly + on-demand)** ✅ |
+| **Selective Go-Live Controls** | Granular account & campaign selector; only selected active campaigns are monitored & billed | **LIVE** ✅ |
+| **Placement/keyword hygiene** | Placements and search terms driving junk auto-added to exclusion/negative lists → budget diverts to clean inventory | Roadmap |
+| **Geo/device bid shields** | Junk concentration patterns (specific city + device + 3AM timing) → bid down or exclude before budget drains | Roadmap |
 
 **Network effect at spend level:** a scammer excluded by customer A is excluded from customer B's campaigns before their first click. Every customer's shield protects every other customer.
 
@@ -48,8 +49,9 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 ---
 
 ## Status honesty (internal only — not for slide)
-- Layer 2 + Layer 3: **built and live in production today**
-- Layer 1: **the build ask.** Uses existing FraudGraph fingerprint store + fuses two planned roadmap items (Autonomous Budget Governor + Meta CAPI feedback loop) pointed at spend. Build = exclusion-list sync APIs (Google Customer Match, Meta Custom Audiences) + pause rules engine.
+- **Layer 1**: Autonomous Circuit Breaker Governor (5-min background daemon) + Google Customer Match & Meta Custom Audience exclusion sync are **built and live in production today**.
+- **Layer 2 + Layer 3**: **built and live in production today**.
+- Full 3-Layer Money Shield is operational end-to-end.
 
 ---
 

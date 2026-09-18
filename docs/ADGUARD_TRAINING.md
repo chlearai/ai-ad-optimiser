@@ -221,6 +221,39 @@ AdGuard provides an integrated, multi-channel support infrastructure bridging di
 
 ---
 
+## Selective Account & Campaign Screening (Go-Live Control)
+
+To give subscribers total operational control and prevent test campaigns or non-commercial accounts from consuming lead quotas or skewing metrics:
+- **Zero by Default / Clean Slate**:
+  - Newly connected Google or Meta ad accounts are in **Standby** by default.
+  - No dummy figures, no fabricated metrics: a workspace starts with clean zeros (`0` audited, `0` blocked, `₹0` recovered) until genuine leads enter active campaigns.
+- **Granular Go-Live Selection**:
+  - In the subscriber workspace (`/adguard-workspace`), users can select specific ad accounts or individual campaigns from the right-hand panel and click **"Go Live"** (or pause).
+  - Only campaigns explicitly marked as **LIVE** are screened through the fraud detection pipeline.
+- **Workspace Dashboard Filtering**:
+  - Dashboard KPIs (Audited Leads, Blocked Garbage, Clean Leads Passed, and Recovered Ad Spend) calculate metrics strictly for the selected live accounts/campaigns.
+  - Metrics focus purely on AdGuard core value: **Leads Intercepted, Scams Blocked, and Ad Spend Recovered**.
+
+---
+
+## 24/7 Autonomous Money Shield Watchdog (Zero Idle / Zero Manual Intervention)
+
+Money Shield does not sit idle waiting for manual execution. It operates 100% autonomously in the background:
+- **Autonomous Auto-Arming**:
+  - The moment any campaign or account is marked **LIVE**, Money Shield is automatically armed (`ws.shield_enabled = True`).
+- **5-Minute Continuous Background Watchdog**:
+  - An automated background worker runs every **5 minutes** (`scheduler.py` interval job).
+  - Inspects all live campaigns across all active workspaces in real time.
+- **Circuit Breaker Auto-Pause**:
+  - If any live campaign generates a junk lead rate exceeding the threshold (default: **> 40% junk** with a minimum of **50 leads in 24 hours**), Money Shield **automatically pauses the campaign mid-burn**.
+  - Prevents ad budgets from draining overnight into bot farms.
+  - Action is logged to the subscriber's permanent **Shield Action Log** and reported in the Monday Executive Email.
+- **Visual Heartbeat & Pulsating Status**:
+  - The subscriber workspace displays a live pulsating green status beacon: `🟢 AUTONOMOUS MONITOR ACTIVE`.
+  - Details exact live campaigns guarded and the 5-minute background cycle, with compact diagnostic test scan (`⚡ Test Scan`) and list synchronization (`🚫 Sync Lists`) tools.
+
+---
+
 ## Tech Reference & Deployment
 
 - **Repository**: `C:\Users\Shekhar Raju\Downloads\Clients\Shekhar_AI_Agents\AI_The_Optimiser`
