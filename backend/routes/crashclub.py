@@ -15,7 +15,8 @@ import logging
 import os
 from typing import Any, Dict
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from backend.routes.auth import get_current_user_required
 from pydantic import BaseModel
 
 logger = logging.getLogger("AdOptima")
@@ -160,6 +161,18 @@ def backfill():
     except Exception as e:
         logger.error(f"[CrashClub] backfill failed: {e}")
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.post("/ui/{account_id}/sync")
+def crashclub_sync_from_ui(
+    account_id: int,
+    current_user=Depends(get_current_user_required),
+):
+    """
+    'Run Leads Sheet Bot' button on InsightDesk: run the same logic as the
+    5-min scheduler (Meta -> Google Sheet + app DB) on demand.
+    """
+    return run_scheduled_sync()
 
 
 @router.get("/status")

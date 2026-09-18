@@ -2345,14 +2345,63 @@
         }
     }
 
-    /* ============ Crash Club: two lead tables (Goa + MW) ============ */
+    /* ============ Crash Club: tabbed views (Overall / Goa / MW / Bot) ============ */
+    let ccView = 'overall';
+    let ccLastData = { overall: null, goa: null, mw: null };
+
+    function ccViewButtons() {
+        const active = (v) => v === ccView
+            ? 'background:var(--primary,#2563eb); color:#fff; border-color:var(--primary,#2563eb);'
+            : 'background:transparent; color:inherit;';
+        return `
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <button class="btn" style="${active('overall')}" onclick="ccSetView('overall')">Overall Report</button>
+            <button class="btn" style="${active('goa')}" onclick="ccSetView('goa')">Goa Leads Sheet</button>
+            <button class="btn" style="${active('mw')}" onclick="ccSetView('mw')">MW Leads Sheet</button>
+            <button class="btn" style="${active('bot')}" onclick="ccSetView('bot')">▶ Run Leads Sheet Bot</button>
+        </div>`;
+    }
+
+    function ccSetView(view) {
+        ccView = view;
+        const a = allAccounts.find(x => x.id === selectedAccountId);
+        if (!a) return;
+        if (view === 'bot') { ccRunBot(); return; }
+        renderCrashClubReport(a);
+    }
+
+    async function ccRunBot() {
+        const acc = allAccounts.find(x => x.id === selectedAccountId);
+        const botHtml = `
+            <div class="card">
+                <div class="card-header"><div class="report-title">Leads Sheet Bot</div></div>
+                <div id="ccBotStatus" class="empty-state">Starting bot…</div>
+            </div>`;
+        $('reportContent').innerHTML = ccViewButtons() + botHtml;
+        const st = $('ccBotStatus');
+        try {
+            st.textContent = 'Syncing Meta leads → Google Sheet + database… (this can take up to a minute)';
+            const res = await api('POST', '/crashclub/ui/' + selectedAccountId + '/sync', {});
+            const parts = [];
+            if (res.sheet) parts.push(`Sheet: wrote ${res.sheet.written ?? 0}, skipped ${res.sheet.skipped_dedup ?? 0}`);
+            if (res.db) parts.push(`Database: added ${res.db.added ?? 0}, skipped ${res.db.skipped ?? 0}`);
+            if (res.sheet_error) parts.push('Sheet note: ' + res.sheet_error);
+            st.innerHTML = '<div style="color:var(--success,#16a34a); font-weight:600;">✅ Bot run complete</div>' +
+                '<div style="margin-top:0.5rem;">' + parts.join('<br>') + '</div>' +
+                '<div style="margin-top:0.75rem; color:var(--text-muted);">The Google Sheet and these tables are now up to date. Auto-sync also runs every 5 minutes.</div>';
+        } catch (e) {
+            st.innerHTML = '<div style="color:var(--danger,#dc2626); font-weight:600;">❌ Bot failed: ' + escapeHtml(e.message) + '</div>';
+        }
+    }
+
     async function renderCrashClubReport(account) {
-        const wrap = (id, title, rowsBody, count) => `
+        const ccWrapTable = (id, title, rowsBody, count, note) => `
             <div class="card">
                 <div class="card-header" style="cursor:pointer;" onclick="toggleCcTable('${id}')">
                     <div class="report-title">${title} <span class="status-badge live" style="margin-left:8px;">${count} leads</span></div>
                     <div id="${id}_chev" style="font-size:1.1rem;">▾</div>
                 </div>
+                ${note ? `<div style="padding:0.5rem 1rem; color:var(--text-muted); font-size:0.85rem;">${note}</div>` : ''}
                 <div id="${id}_body" style="max-height:420px; overflow:auto;">
                     <table>
                         <thead><tr>
@@ -2367,12 +2416,13 @@
 
         try {
             const params = getReportParams();
-            const [goa, mw] = await Promise.all([
-                api('GET', '/accounts/' + account.id + '/crashclub-leads?form=goa' + params),
-                api('GET', '/accounts/' + account.id + '/crashclub-leads?form=mw' + params)
-            ]);
+            let goa = ccLastData.goa, mw = ccLastData.mw, overall = ccLastData.overall;
+            if (!goa) goa = await api('GET', '/accounts/' + account.id + '/crashclub-leads?form=goa' + params);
+            if (!mw) mw = await api('GET', '/accounts/' + account.id + '/crashclub-leads?form=mw' + params);
+            if (ccView === 'overall' && !overall) overall = await api('GET', '/accounts/' + account.id + '/crm-summary' + params);
+            ccLastData = { overall, goa, mw };
 
-            const goaRows = (goa.leads || []).map(l => `<tr>
+            const rowHtml = (l) => `<tr>
                 <td>${escapeHtml(l.lead_created || '-')}</td>
                 <td>${escapeHtml(l.date_time || '-')}</td>
                 <td><span class="badge badge-meta">${escapeHtml((l.source || 'Meta').toUpperCase())}</span></td>
@@ -2382,21 +2432,12 @@
                 <td>${escapeHtml(l.email || '-')}</td>
                 <td>${escapeHtml(l.name || '-')}</td>
                 <td>${escapeHtml(l.phone || '-')}</td>
-            </tr>`).join('');
+            </tr>`;
 
-            const mwRows = (mw.leads || []).map(l => `<tr>
-                <td>${escapeHtml(l.lead_created || '-')}</td>
-                <td>${escapeHtml(l.date_time || '-')}</td>
-                <td><span class="badge badge-meta">${escapeHtml((l.source || 'Meta').toUpperCase())}</span></td>
-                <td>${escapeHtml(l.col_d || '-')}</td>
-                <td>${escapeHtml(l.col_e || '-')}</td>
-                <td>${escapeHtml(l.col_f || '-')}</td>
-                <td>${escapeHtml(l.email || '-')}</td>
-                <td>${escapeHtml(l.name || '-')}</td>
-                <td>${escapeHtml(l.phone || '-')}</td>
-            </tr>`).join('');
+            const goaRows = (goa.leads || []).map(rowHtml).join('');
+            const mwRows = (mw.leads || []).map(rowHtml).join('');
 
-            let html = `
+            const controls = `
             <div class="card">
                 <div class="card-header">
                     <div class="report-title">Report Controls</div>
@@ -2427,32 +2468,43 @@
                         </select>
                     </div>
                     <div class="form-group" style="flex:0; min-width:auto;">
-                        <button class="btn btn-primary" onclick="reloadReport()">Refresh</button>
+                        <button class="btn btn-primary" onclick="ccRefresh()">Refresh</button>
                     </div>
                 </div>
             </div>`;
 
-            // Goa table (columns D-F: Occasion / Budget / Purchase Timeline)
-            html += wrap('ccGoa', 'Goa Leads', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length);
-            // MW table (columns D-F: Plans to purchase / Purchased before? / Tentative Date)
-            html += wrap('ccMw', 'Magnificent Wedding Leads', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length);
+            const goaHead = ['Occasion', 'Budget', 'Purchase Timeline'];
+            const mwHead = ['Plans to purchase before March 2027?', 'Purchase made on cc/CKC before?', 'Tentative Date of Event'];
+
+            let html = ccViewButtons() + controls;
+            if (ccView === 'overall') {
+                html += buildReport(overall, account, true);
+                html += ccWrapTable('ccGoa', 'Goa Leads', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length);
+                html += ccWrapTable('ccMw', 'Magnificent Wedding Leads', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length);
+            } else if (ccView === 'goa') {
+                html += ccWrapTable('ccGoa', 'Goa Leads Sheet', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length, 'Mirrors tab "JUNE - SEPT 2026 - Goa Leads" in the PPC Workbook');
+            } else {
+                html += ccWrapTable('ccMw', 'MW Leads Sheet', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length, 'Mirrors tab "JUNE - SEPT 2026 - MW Leads" in the PPC Workbook');
+            }
 
             $('reportContent').innerHTML = html;
 
-            // set per-form column headers for D, E, F
-            const goaHead = ['Occasion', 'Budget', 'Purchase Timeline'];
-            const mwHead = ['Plans to purchase before March 2027?', 'Purchase made on cc/CKC before?', 'Tentative Date of Event'];
             goaHead.forEach((h, i) => { const el = $('ccGoa_th' + (4 + i)); if (el) el.textContent = h; });
             mwHead.forEach((h, i) => { const el = $('ccMw_th' + (4 + i)); if (el) el.textContent = h; });
 
-            // keep dropdowns in sync with current state
             const periodSel = $('misPeriod'); const dateSel = $('misDatePreset');
             if (periodSel && reportDateRange.preset) periodSel.value = ['daily','weekly','fortnightly','monthly'].includes(reportDateRange.preset) ? reportDateRange.preset : 'daily';
             if (dateSel && reportDateRange.preset) dateSel.value = reportDateRange.preset;
         } catch (e) {
             toast(e.message, true);
-            $('reportContent').innerHTML = '<div class="empty-state">Failed to load Crash Club leads: ' + escapeHtml(e.message) + '</div>';
+            $('reportContent').innerHTML = ccViewButtons() + '<div class="empty-state">Failed to load Crash Club leads: ' + escapeHtml(e.message) + '</div>';
         }
+    }
+
+    function ccRefresh() {
+        ccLastData = { overall: null, goa: null, mw: null };
+        const a = allAccounts.find(x => x.id === selectedAccountId);
+        if (a) renderCrashClubReport(a);
     }
 
     function toggleCcTable(id) {
@@ -2474,7 +2526,7 @@
         }
     }
 
-    function buildReport(data, account) {
+    function buildReport(data, account, returnHtml) {
         const sf = data.salesforce || {};
         const ls = data.leadsquared || {};
         const acc = data.account || {};
@@ -2509,7 +2561,7 @@
         const cpl = totalLeads ? totalSpend / totalLeads : 0;
         const leadToOppRate = totalLeads ? (totalOpps / totalLeads) * 100 : 0;
 
-        $('reportContent').innerHTML = `
+        const __html = `
             <div class="card">
                 <div class="card-header">
                     <div class="report-title">Report Controls</div>
@@ -2656,6 +2708,8 @@
                 <div id="savedRemarks" class="notes-box hidden" style="margin-top:0.75rem;"></div>
             </div>
         `;
+
+        if (returnHtml) return __html;
 
         // Restore controls state
         $('misDatePreset').value = reportDateRange.preset;
