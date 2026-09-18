@@ -1375,6 +1375,16 @@ def get_workspace_campaigns(workspace_id: int, db: Session = Depends(get_db), us
                 if isinstance(c, dict):
                     c["is_live"] = str(c.get("id")) in live_set
 
+    # Persist clean isolated cmap back into ws.cached_campaigns
+    try:
+        cmap_to_store = dict(cmap)
+        if live_ids:
+            cmap_to_store["__live_campaign_ids__"] = live_ids
+        ws.cached_campaigns = json.dumps(cmap_to_store)
+        db.commit()
+    except Exception as e:
+        logger.debug(f"Campaign cache update skipped: {e}")
+
     return {
         "workspace_id": workspace_id,
         "campaigns_by_account": cmap,

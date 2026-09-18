@@ -236,51 +236,68 @@ def get_account_campaigns_roster(account_id: str, account_name: str = "", platfo
 
 def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Builds the full accounts -> [campaigns, pages] map for the entire workspace.
-    Merges live API discovery, ingested leads metadata, and rich rosters.
+    Builds the strictly isolated accounts -> [campaigns] map for each individual account.
+    Each account contains ONLY its own campaigns. Unrelated pages or campaigns from other
+    clients/accounts are strictly prohibited from cross-pollinating.
     """
-    cached = {}
-    if ws.cached_campaigns:
-        try:
-            cached = json.loads(ws.cached_campaigns) or {}
-        except Exception:
-            cached = {}
+    result: Dict[str, List[Dict[str, Any]]] = {}
 
-    result: Dict[str, List[Dict[str, Any]]] = dict(cached)
-
-    # 1. Process Google accounts
-    google_idents = []
+    # 1. Process Google accounts (both multi-identity and single-identity)
+    google_accounts_to_process = []
     if ws.google_identities:
         try:
-            google_idents = json.loads(ws.google_identities) or []
+            for g_ident in (json.loads(ws.google_identities) or []):
+                creds = g_ident.get("credentials")
+                for acc in (g_ident.get("discovered") or []):
+                    google_accounts_to_process.append((acc, creds))
         except Exception:
-            google_idents = []
+            pass
 
-    for g_ident in google_idents:
-        creds_enc = g_ident.get("credentials")
-        discovered = g_ident.get("discovered") or []
-        for acc in discovered:
-            aid = str(acc.get("id") or "")
-            aname = acc.get("name") or aid
-            if not aid:
-                continue
+    if not google_accounts_to_process and ws.discovered_accounts:
+        try:
+            for acc in (json.loads(ws.discovered_accounts) or []):
+                google_accounts_to_process.append((acc, ws.google_credentials))
+        except Exception:
+            pass
 
-            # Check if live fetch succeeds
-            items = []
-            if creds_enc:
-                items = fetch_google_account_campaigns_live(creds_enc, aid)
-            if not items:
-                items = get_account_campaigns_roster(aid, aname, "google")
+    for acc, creds_enc in google_accounts_to_process:
+        aid = str(acc.get("id") or "")
+        aname = acc.get("name") or aid
+        if not aid:
+            continue
 
-            result[aid] = items
+        items = []
+        if creds_enc:
+            items = fetch_google_account_campaigns_live(creds_enc, aid)
+        if not items:
+            items = get_account_campaigns_roster(aid, aname, "google")
 
-    # 2. Process Meta accounts
-    meta_idents = []
+        clean_aid = _clean_id(aid)
+        result[aid] = items
+        if clean_aid and clean_aid != aid:
+            result[clean_aid] = items
+
+    # 2. Process Meta accounts (both multi-identity and single-identity)
+    meta_accounts_to_process = []
     if ws.meta_identities:
         try:
-            meta_idents = json.loads(ws.meta_identities) or []
+            for m_ident in (json.loads(ws.meta_identities) or []):
+                creds = m_ident.get("credentials")
+                from backend.services.adguard_meta import get_meta_token_from_credentials
+                token = get_meta_token_from_credentials(creds or "") if creds else ""
+                for m_acc in (m_ident.get("discovered_accounts") or []):
+                    meta_accounts_to_process.append((m_acc, token))
         except Exception:
-            meta_idents = []
+            pass
+
+    if not meta_accounts_to_process and ws.discovered_meta_accounts:
+        try:
+            from backend.services.adguard_meta import get_meta_token_from_credentials
+            token = get_meta_token_from_credentials(ws.meta_credentials or "") if ws.meta_credentials else ""
+            for m_acc in (json.loads(ws.discovered_meta_accounts) or []):
+                meta_accounts_to_process.append((m_acc, token))
+        except Exception:
+            pass
 
     pages_list = []
     if ws.discovered_meta_pages:
@@ -289,31 +306,51 @@ def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]
         except Exception:
             pages_list = []
 
-    for m_ident in meta_idents:
-        creds_enc = m_ident.get("credentials")
-        from backend.services.adguard_meta import get_meta_token_from_credentials
-        token = get_meta_token_from_credentials(creds_enc or "") if creds_enc else ""
-        m_accounts = m_ident.get("discovered_accounts") or []
+    for m_acc, token in meta_accounts_to_process:
+        aid = str(m_acc.get("id") or "")
+        aname = m_acc.get("name") or aid
+        if not aid:
+            continue
 
-        for m_acc in m_accounts:
-            aid = str(m_acc.get("id") or "")
-            aname = m_acc.get("name") or aid
-            if not aid:
-                continue
+        items = []
+        if token:
+            items = fetch_meta_account_campaigns_live(token, aid)
+        if not items:
+            items = get_account_campaigns_roster(aid, aname, "meta")
 
-            items = []
-            if token:
-                items = fetch_meta_account_campaigns_live(token, aid)
-            if not items:
-                items = get_account_campaigns_roster(aid, aname, "meta")
-
-            # Add discovered pages to Meta accounts
+        # ONLY attach a page if its brand name specifically and strictly matches THIS ad account.
+        # NEVER dump unrelated pages (e.g., Parvathy Hospitals, Dresser Crab, DSU, etc.) into TLG or any other account!
+        clean_aname = aname.lower()
+        if pages_list:
             seen_ids = {c.get("id") for c in items}
             for p in pages_list:
                 pid = str(p.get("id") or "")
-                pname = p.get("name") or pid
-                if pid and pid not in seen_ids:
-                    # associate page if it matches account name or add to account roster
+                pname = str(p.get("name") or "")
+                pname_lower = pname.lower()
+                if not pid or pid in seen_ids:
+                    continue
+
+                is_brand_match = False
+                if ("tlg" in clean_aname or "little gym" in clean_aname) and ("tlg" in pname_lower or "little gym" in pname_lower):
+                    is_brand_match = True
+                elif "featherlite" in clean_aname and "featherlite" in pname_lower:
+                    is_brand_match = True
+                elif "dsps" in clean_aname and "dsps" in pname_lower:
+                    is_brand_match = True
+                elif ("dsu" in clean_aname or "dayananda" in clean_aname) and ("dsu" in pname_lower or "dayananda" in pname_lower):
+                    is_brand_match = True
+                elif "mantri" in clean_aname and "mantri" in pname_lower:
+                    is_brand_match = True
+                elif "sparsh" in clean_aname and "sparsh" in pname_lower:
+                    is_brand_match = True
+                elif "shyam" in clean_aname and "shyam" in pname_lower:
+                    is_brand_match = True
+                elif "crash club" in clean_aname and "crash club" in pname_lower:
+                    is_brand_match = True
+                elif ("sunitha" in clean_aname or "bakehouse" in clean_aname) and ("sunitha" in pname_lower or "bakehouse" in pname_lower):
+                    is_brand_match = True
+
+                if is_brand_match:
                     items.append({
                         "id": pid,
                         "name": f"📄 {pname}",
@@ -323,21 +360,26 @@ def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]
                     })
                     seen_ids.add(pid)
 
-            result[aid] = items
+        clean_aid = _clean_id(aid)
+        result[aid] = items
+        if clean_aid and clean_aid != aid:
+            result[clean_aid] = items
 
-    # 3. Augment with actual campaigns & pages found in ingested leads
+    # 3. Augment with actual campaigns & pages found in ingested leads (strictly scoped to account_id)
     if db:
         try:
             from backend.db.models import AdGuardLead
             leads = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).all()
             for l in leads:
-                aid = str(l.account_id or "")
+                aid = str(l.account_id or "").strip()
                 if not aid:
                     continue
-                if aid not in result:
-                    result[aid] = get_account_campaigns_roster(aid, l.account_name or aid, l.source or "google")
+                clean_aid = _clean_id(aid)
+                target_key = aid if aid in result else (clean_aid if clean_aid in result else None)
+                if not target_key:
+                    continue
 
-                existing = result[aid]
+                existing = result[target_key]
                 ex_names = {str(x.get("name", "")).lower() for x in existing}
 
                 if l.campaign_name and l.campaign_name.lower() not in ex_names:
@@ -349,16 +391,6 @@ def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]
                         "status": "ENABLED",
                     })
                     ex_names.add(l.campaign_name.lower())
-
-                if l.page_name and l.page_name.lower() not in ex_names:
-                    existing.append({
-                        "id": str(l.page_id or l.page_name),
-                        "name": f"📄 {l.page_name}",
-                        "type": "page",
-                        "platform": "meta",
-                        "status": "ENABLED",
-                    })
-                    ex_names.add(l.page_name.lower())
         except Exception as le:
             logger.debug(f"Lead campaigns augmentation skipped: {le}")
 

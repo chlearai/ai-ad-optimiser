@@ -779,7 +779,7 @@
                         <div id="ryzePopover" class="ryze-popover hidden" onclick="event.stopPropagation()" style="min-width:380px;">
                             <div style="padding:10px 12px 6px;border-bottom:1px solid var(--color-border);background:rgba(37,99,235,0.04);">
                                 <div style="font-size:11px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
-                                    <span>🛡️ Campaign Screening Control</span>
+                                    <span id="ryzePopoverTitle">🛡️ Campaign Screening Control</span>
                                 </div>
                                 <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px;line-height:1.35;">
                                     Select which campaigns should go <strong>LIVE</strong> for screening. Only active campaigns are screened and delivered to CRM.
@@ -1866,12 +1866,27 @@
             renderRyzeCampaignDropdown();
         }
 
+        function getCampaignsForAccount(accountId) {
+            if (!accountId || accountId === 'all') return [];
+            if (workspaceCampaignsMap[accountId]) return workspaceCampaignsMap[accountId];
+            const clean = String(accountId).replace(/[-_\s]/g, '').replace(/^act/, '').toLowerCase();
+            for (const k in workspaceCampaignsMap) {
+                if (k.startsWith('__')) continue;
+                const kClean = String(k).replace(/[-_\s]/g, '').replace(/^act/, '').toLowerCase();
+                if (kClean === clean) {
+                    return workspaceCampaignsMap[k];
+                }
+            }
+            return [];
+        }
+
         function updateCurrentAvailableCampaigns() {
             currentAvailableCampaigns = [];
             const seen = new Set();
 
             if (activeClientId === 'all') {
                 for (const aid in workspaceCampaignsMap) {
+                    if (aid.startsWith('__')) continue;
                     (workspaceCampaignsMap[aid] || []).forEach(item => {
                         if (item && item.id && !seen.has(item.id)) {
                             seen.add(item.id);
@@ -1880,24 +1895,13 @@
                     });
                 }
             } else {
-                const items = workspaceCampaignsMap[activeClientId] || [];
+                const items = getCampaignsForAccount(activeClientId);
                 items.forEach(item => {
                     if (item && item.id && !seen.has(item.id)) {
                         seen.add(item.id);
                         currentAvailableCampaigns.push(item);
                     }
                 });
-            }
-
-            if (!currentAvailableCampaigns.length) {
-                const prefix = activeClientId === 'all' ? 'Core' : activeClientName;
-                currentAvailableCampaigns = [
-                    { id: 'camp_' + activeClientId + '_1', name: prefix + ' - Search High Intent 2026', type: 'campaign', platform: 'google' },
-                    { id: 'camp_' + activeClientId + '_2', name: prefix + ' - Performance Max Admissions', type: 'campaign', platform: 'google' },
-                    { id: 'camp_' + activeClientId + '_3', name: prefix + ' - Retargeting & Remarketing', type: 'campaign', platform: 'meta' },
-                    { id: 'camp_' + activeClientId + '_4', name: prefix + ' - Lead Form Extensions', type: 'campaign', platform: 'google' },
-                    { id: 'page_' + activeClientId + '_1', name: '📄 ' + prefix + ' Official Facebook Page', type: 'page', platform: 'meta' },
-                ];
             }
 
             activeCampaignIds = new Set(currentAvailableCampaigns.map(c => c.id));
@@ -1908,11 +1912,25 @@
             const btnText = $('ryzeFilterBtnText');
             const listEl = $('ryzePopoverList');
             const footerEl = $('ryzePopoverFooterText');
+            const titleEl = $('ryzePopoverTitle');
             if (!btnText || !listEl) return;
+
+            if (titleEl) {
+                titleEl.textContent = activeClientId === 'all'
+                    ? '🛡️ All Accounts — Campaign Screening'
+                    : `🛡️ ${activeClientName} — Campaign Screening`;
+            }
 
             const total = currentAvailableCampaigns.length;
             const selectedCount = activeCampaignIds.size;
             const liveInView = currentAvailableCampaigns.filter(c => liveCampaignIds.has(c.id)).length;
+
+            if (total === 0) {
+                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">⚪ Standby</span> · 0 campaigns`;
+                if (footerEl) footerEl.textContent = '0 selected · 0 live';
+                listEl.innerHTML = `<div style="font-size:12px;color:var(--color-text-muted);padding:18px 12px;text-align:center;">No active campaigns found under <b>${escapeHtml(activeClientName)}</b>.<br><span style="font-size:11px;opacity:0.8;">Create or activate campaigns in Ads Manager to screen them here.</span></div>`;
+                return;
+            }
 
             if (liveInView > 0) {
                 btnText.innerHTML = `<span style="color:#059669;font-weight:700;">🟢 ${liveInView} LIVE</span> · ${selectedCount} of ${total} selected`;
