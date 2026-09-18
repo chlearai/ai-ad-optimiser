@@ -318,3 +318,90 @@ def send_adguard_invite_email(
     except Exception as e:
         logger.exception(f"AdGuard invite SMTP send failed for {recipient_email}: {e}")
         return {"sent": False, "error": str(e), "provider": "smtp"}
+
+
+def send_adguard_support_notification(
+    recipient_email: str,
+    subject: str,
+    title: str,
+    message_body: str,
+    ticket_id: int,
+    cta_link: str = "",
+    cta_text: str = "View in Workspace",
+    sender_name: str = "AdGuard Support",
+    reply_to: str = "",
+    timeout: int = 45,
+) -> Dict[str, Any]:
+    """Send an AdGuard-branded support notification email to subscriber or admin."""
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "")).strip() or "support@adguard.ai"
+    reply_to_email = reply_to or os.getenv("ADGUARD_SUPPORT_EMAIL", "support@adguard.ai")
+
+    html_body = f"""
+    <html>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1c1917; background:#fafaf9; padding:24px;">
+        <div style="max-width:580px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+            <div style="background:#d97706;padding:20px 24px;display:flex;align-items:center;">
+                <span style="display:inline-block;width:32px;height:32px;background:#ffffff;color:#d97706;font-weight:700;border-radius:8px;text-align:center;line-height:32px;font-size:14px;">AG</span>
+                <span style="color:#ffffff;font-size:18px;font-weight:700;margin-left:10px;">AdGuard Support Desk</span>
+            </div>
+            <div style="padding:28px 24px;">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#d97706;letter-spacing:0.05em;margin-bottom:6px;">
+                    Ticket #{ticket_id}
+                </div>
+                <h2 style="font-size:18px;font-weight:700;color:#1c1917;margin:0 0 16px;">{title}</h2>
+                <div style="background:#f5f5f4;border-left:4px solid #d97706;border-radius:6px;padding:14px 16px;margin-bottom:20px;font-size:14px;color:#292524;white-space:pre-wrap;">{message_body}</div>
+                {f'<p style="margin:0 0 20px;"><a href="{cta_link}" style="display:inline-block;padding:11px 24px;background:#d97706;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:13px;">{cta_text} &rarr;</a></p>' if cta_link else ''}
+                <p style="font-size:12px;color:#78716c;margin-top:20px;border-top:1px solid #e7e5e4;padding-top:14px;">
+                    You can reply directly to this ticket inside your <a href="{cta_link or '/adguard-workspace'}" style="color:#d97706;">AdGuard Workspace</a> or email our support desk at <a href="mailto:{reply_to_email}" style="color:#d97706;">{reply_to_email}</a>.
+                </p>
+            </div>
+            <div style="padding:14px 24px;background:#fafaf9;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e;">
+                &copy; 2026 AdGuard &middot; Chlear Digital Support Desk
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+    plain_body = f"""AdGuard Support Desk — Ticket #{ticket_id}
+{title}
+
+{message_body}
+
+View in workspace: {cta_link}
+Direct email support: {reply_to_email}
+
+© 2026 AdGuard · Chlear Digital Support Desk
+"""
+
+    cfg = _smtp_from_env()
+    if cfg.get("error"):
+        logger.warning(f"SMTP not fully configured for support notification ({cfg.get('error')})")
+        return {"sent": False, "error": cfg.get("error"), "provider": "none"}
+
+    message_id = make_msgid(domain=(sender_email.split("@")[-1] or "adguard.ai"))
+    msg = MIMEMultipart("alternative")
+    msg["From"] = formataddr((sender_name, sender_email))
+    msg["To"] = recipient_email
+    msg["Subject"] = subject
+    msg["Message-ID"] = message_id
+    msg["Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg["Reply-To"] = reply_to_email
+    msg["X-Mailer"] = "AdGuardSupportMailer/1.0"
+    msg.attach(MIMEText(plain_body, "plain", _charset="utf-8"))
+    msg.attach(MIMEText(html_body, "html", _charset="utf-8"))
+
+    try:
+        addrs = socket.getaddrinfo(cfg["host"], cfg["port"], socket.AF_INET, socket.SOCK_STREAM)
+        server = smtplib.SMTP(addrs[0][4][0], cfg["port"], timeout=timeout)
+        server.ehlo(cfg["host"])
+        server.starttls()
+        server.ehlo(cfg["host"])
+        server.login(cfg["user"], cfg["pass"])
+        server.sendmail(sender_email, [recipient_email], msg.as_string())
+        server.quit()
+        logger.info(f"Support notification sent to {recipient_email} for Ticket #{ticket_id}")
+        return {"sent": True, "provider": "smtp", "message_id": message_id}
+    except Exception as e:
+        logger.warning(f"Support notification email failed to send to {recipient_email}: {e}")
+        return {"sent": False, "error": str(e), "provider": "smtp"}

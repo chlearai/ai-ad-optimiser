@@ -406,19 +406,45 @@
                         <button class="btn btn-secondary btn-sm" onclick="loadSupportInbox()">Refresh</button>
                     </div>
                 </div>
+
+                <!-- OFFICIAL SUPPORT EMAIL CONFIG BAR -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:12px 14px;border-radius:8px;background:rgba(217, 119, 6, 0.05);border:1px solid rgba(217, 119, 6, 0.25);flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:18px;">📬</span>
+                        <div>
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-amber, #d97706);letter-spacing:0.05em;">Official Support Contact</div>
+                            <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin-top:2px;">
+                                <span id="adminSupportEmailVal">support@adguard.ai</span>
+                                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;" onclick="configureAdminSupportEmail()">✏️ Configure Email</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);">
+                        <span class="badge badge-green" style="font-size:11px;">✓ Auto-notify subscriber on reply</span>
+                        <span class="badge badge-gray" style="font-size:11px;">SMTP / Mailer Ready</span>
+                    </div>
+                </div>
+
                 <div class="table-wrap">
                     <table>
                         <thead><tr><th>#</th><th>Subscriber</th><th>Subject</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
                         <tbody id="adminTicketsBody"></tbody>
                     </table>
                 </div>
-                <div class="hidden" id="adminTicketThread" style="margin-top:16px;border:1px solid var(--color-border);border-radius:12px;padding:16px;">
-                    <div style="font-weight:600;margin-bottom:10px;" id="adminTicketTitle"></div>
+
+                <div class="hidden" id="adminTicketThread" style="margin-top:16px;border:1px solid var(--color-border);border-radius:12px;padding:16px;background:var(--color-bg-page);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                        <div style="font-weight:700;font-size:14px;" id="adminTicketTitle"></div>
+                        <div style="display:flex;gap:6px;" id="adminTicketActionsTop"></div>
+                    </div>
                     <div id="adminTicketMessages" style="max-height:300px;overflow-y:auto;margin-bottom:12px;"></div>
-                    <div style="display:flex;gap:8px;">
-                        <input class="filter-input" id="adminTicketReply" placeholder="Reply to subscriber..." style="flex:1;" onkeydown="if(event.key==='Enter')sendAdminReply()">
-                        <button class="btn btn-primary btn-sm" onclick="sendAdminReply()">Reply</button>
+                    <div style="display:flex;gap:8px;margin-bottom:6px;">
+                        <input class="filter-input" id="adminTicketReply" placeholder="Reply to subscriber (auto-dispatches email)..." style="flex:1;" onkeydown="if(event.key==='Enter')sendAdminReply()">
+                        <button class="btn btn-primary btn-sm" onclick="sendAdminReply()">Reply &amp; Send Email</button>
                         <button class="btn btn-secondary btn-sm" onclick="adminCloseTicket()">Close Ticket</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--color-text-muted);">
+                        ℹ️ Submitting a reply saves the message to the thread and automatically dispatches an AdGuard email notification to the customer.
                     </div>
                 </div>
             </div>
@@ -1052,11 +1078,54 @@
             renderFeed();
         }
 
-        // ---------- Admin: support inbox ----------
+        // ---------- Admin: support inbox & email configuration ----------
         let adminTicketId = null;
+        let adminConfiguredSupportEmail = 'support@adguard.ai';
+
+        async function loadAdminSupportConfig() {
+            try {
+                const res = await fetch(API + '/support/config', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.support_email) {
+                        adminConfiguredSupportEmail = data.support_email;
+                        if ($('adminSupportEmailVal')) {
+                            $('adminSupportEmailVal').textContent = adminConfiguredSupportEmail;
+                        }
+                    }
+                }
+            } catch (e) { console.warn('Could not load admin support config', e); }
+        }
+
+        async function configureAdminSupportEmail() {
+            const current = adminConfiguredSupportEmail || 'support@adguard.ai';
+            const newEmail = prompt('Enter official support contact email address displayed to subscribers:', current);
+            if (!newEmail || !newEmail.trim() || newEmail.trim() === current) return;
+            if (!newEmail.includes('@')) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            try {
+                const res = await fetch(API + '/support/admin/config', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ support_email: newEmail.trim() })
+                });
+                if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    throw new Error(d.detail || 'Failed to update support email');
+                }
+                adminConfiguredSupportEmail = newEmail.trim();
+                if ($('adminSupportEmailVal')) $('adminSupportEmailVal').textContent = adminConfiguredSupportEmail;
+                toast('Official support email updated to ' + adminConfiguredSupportEmail, 'success');
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        }
 
         async function loadSupportInbox() {
             try {
+                loadAdminSupportConfig();
                 const status = $('ticketStatusFilter').value;
                 const res = await fetch(API + '/support/admin/inbox' + (status ? '?status=' + status : ''), { headers: { 'Authorization': 'Bearer ' + token } });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
@@ -1084,7 +1153,15 @@
                 const t = await res.json();
                 adminTicketId = id;
                 $('adminTicketThread').classList.remove('hidden');
-                $('adminTicketTitle').textContent = '#' + t.id + ' — ' + t.subject + ' (' + t.status + ') from ' + (t.workspace_name || t.requester_email);
+                $('adminTicketTitle').innerHTML = '<span>#' + t.id + ' — ' + escapeHtml(t.subject) + '</span> ' +
+                    '<span class="badge ' + (t.status === 'open' ? 'badge-orange' : t.status === 'answered' ? 'badge-green' : 'badge-gray') + '">' + t.status + '</span> ' +
+                    '<span style="font-size:12px;font-weight:400;color:var(--color-text-muted);">from ' + escapeHtml(t.workspace_name || t.requester_email) + '</span>';
+                
+                const mailtoUrl = 'mailto:' + encodeURIComponent(t.requester_email) + '?subject=' + encodeURIComponent('Re: [AdGuard Support #' + t.id + '] ' + t.subject);
+                $('adminTicketActionsTop').innerHTML = 
+                    '<a class="btn btn-secondary btn-sm" href="' + mailtoUrl + '" target="_blank" title="Email subscriber directly via your mail client">✉️ Direct Mail Client</a>' +
+                    '<button class="btn btn-secondary btn-sm" onclick="$(\'adminTicketThread\').classList.add(\'hidden\')">✕</button>';
+
                 $('adminTicketMessages').innerHTML = (t.messages || []).map(m =>
                     '<div style="margin-bottom:10px;' + (m.sender === 'owner' ? 'background:var(--color-accent-light);border-radius:10px;padding:10px 12px;' : 'background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;') + '">' +
                     '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' · ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
@@ -1104,6 +1181,7 @@
                     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ body })
                 });
+                toast('Reply posted & email notification dispatched to subscriber', 'success');
                 openAdminTicket(adminTicketId);
                 loadSupportInbox();
             } catch (e) { toast(e.message, 'error'); }

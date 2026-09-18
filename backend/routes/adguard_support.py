@@ -34,16 +34,41 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
-from backend.db.models import AdGuardAccount, AdGuardLead, AdGuardSupportTicket, AdGuardTicketMessage, User
+from backend.db.models import AdGuardAccount, AdGuardLead, AdGuardSupportTicket, AdGuardTicketMessage, NotificationSetting, User
 from backend.routes.adguard import _require_adguard_access
 from backend.routes.auth import get_current_user_required
 from backend.services.activity_log import log_activity
+from backend.services.onboarding_email import send_adguard_support_notification
 
 logger = logging.getLogger("AdOptima")
 
 router = APIRouter(prefix="/api/adguard", tags=["adguard-support"])
 
 VALID_CATEGORIES = {"general", "connection", "billing", "bug", "feature"}
+
+
+def _get_support_email(db: Session) -> str:
+    """Read configured support email from DB or environment fallback."""
+    try:
+        setting = db.query(NotificationSetting).filter(NotificationSetting.channel == "adguard_support").first()
+        if setting and setting.config and setting.config.get("support_email"):
+            return str(setting.config.get("support_email")).strip()
+    except Exception as e:
+        logger.warning(f"Error reading support email from DB: {e}")
+    return os.getenv("ADGUARD_SUPPORT_EMAIL", "support@adguard.ai").strip()
+
+
+def _set_support_email(db: Session, email_str: str):
+    """Save configured support email to DB."""
+    setting = db.query(NotificationSetting).filter(NotificationSetting.channel == "adguard_support").first()
+    if not setting:
+        setting = NotificationSetting(channel="adguard_support", enabled=True, config={"support_email": email_str})
+        db.add(setting)
+    else:
+        cfg = dict(setting.config or {})
+        cfg["support_email"] = email_str
+        setting.config = cfg
+    db.commit()
 
 
 def _ws_scope(db: Session, user: User, workspace_id: Optional[int] = None):
@@ -54,6 +79,41 @@ def _ws_scope(db: Session, user: User, workspace_id: Optional[int] = None):
     if user.role not in ("admin", "superadmin"):
         q = q.filter(AdGuardAccount.owner_email == user.email)
     return q.all()
+
+
+# ---------------------------------------------------------------------------
+# SUPPORT CONFIG & DISCOVERY
+# ---------------------------------------------------------------------------
+
+class SupportConfigRequest(BaseModel):
+    support_email: str
+
+
+@router.get("/support/config")
+def get_support_config(db: Session = Depends(get_db)):
+    """Public/Customer endpoint to fetch active support email and plan SLAs."""
+    email_addr = _get_support_email(db)
+    return {
+        "support_email": email_addr,
+        "sla_by_plan": {
+            "trial": "Standard Support (Docs & FAQs)",
+            "starter": "Standard Email & Ticket Support (24h response)",
+            "pro": "Priority Email Support (< 4h SLA response)",
+            "agency": "Dedicated VIP SLA & Account Manager",
+        }
+    }
+
+
+@router.post("/support/admin/config")
+def update_support_config(req: SupportConfigRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Admin endpoint to update official support contact email."""
+    if user.role not in ("admin", "superadmin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    clean_email = req.support_email.strip()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Valid email required")
+    _set_support_email(db, clean_email)
+    return {"support_email": clean_email, "status": "updated"}
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +165,24 @@ def create_ticket(req: TicketCreateRequest, db: Session = Depends(get_db), user:
     log_activity(module="AdGuard", action="Ticket Created",
                  description=f"Ticket #{ticket.id}: {ticket.subject}",
                  user_id=user.id, user_name=user.email, entity_type="adguard_ticket", entity_id=str(ticket.id), db=db)
+
+    # Dispatch notification email to admin/support desk
+    try:
+        support_email = _get_support_email(db)
+        app_url = os.getenv("APP_BASE_URL", "https://adguard.ai").rstrip("/")
+        send_adguard_support_notification(
+            recipient_email=support_email,
+            subject=f"[AdGuard Support] New Ticket #{ticket.id}: {ticket.subject}",
+            title=f"New Ticket #{ticket.id} from {ticket.requester_name} ({ticket.requester_email})",
+            message_body=req.body.strip(),
+            ticket_id=ticket.id,
+            cta_link=f"{app_url}/adguard",
+            cta_text="Open Support Inbox",
+            reply_to=user.email,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to dispatch new ticket notification: {e}")
+
     return ticket.to_dict(include_messages=True)
 
 
@@ -159,6 +237,38 @@ def reply_ticket(ticket_id: int, req: TicketReplyRequest, db: Session = Depends(
         t.status = "open"
     db.commit()
     db.refresh(t)
+
+    # Dispatch email notifications
+    try:
+        support_email = _get_support_email(db)
+        app_url = os.getenv("APP_BASE_URL", "https://adguard.ai").rstrip("/")
+        if is_owner:
+            # Admin replied -> notify customer
+            send_adguard_support_notification(
+                recipient_email=t.requester_email,
+                subject=f"[AdGuard Support] Reply to Ticket #{t.id}: {t.subject}",
+                title=f"AdGuard Support replied to Ticket #{t.id}",
+                message_body=req.body.strip(),
+                ticket_id=t.id,
+                cta_link=f"{app_url}/adguard-workspace",
+                cta_text="Open AdGuard Workspace",
+                reply_to=support_email,
+            )
+        else:
+            # Customer replied -> notify support desk
+            send_adguard_support_notification(
+                recipient_email=support_email,
+                subject=f"[AdGuard Support] Customer reply on Ticket #{t.id}: {t.subject}",
+                title=f"New reply on Ticket #{t.id} from {user.full_name or user.email}",
+                message_body=req.body.strip(),
+                ticket_id=t.id,
+                cta_link=f"{app_url}/adguard",
+                cta_text="Open Support Inbox",
+                reply_to=user.email,
+            )
+    except Exception as e:
+        logger.warning(f"Failed to dispatch ticket reply notification: {e}")
+
     return t.to_dict(include_messages=True)
 
 
