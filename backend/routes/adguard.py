@@ -571,12 +571,20 @@ def retry_lsq(lead_id: int, db: Session = Depends(get_db), user: User = Depends(
 def _get_or_create_workspace(db: Session, user: User) -> AdGuardAccount:
     """One AdGuard workspace per user email (extend to many later if needed)."""
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
+    is_admin = user.role in ("admin", "superadmin")
     if not ws:
         ws = AdGuardAccount(
             owner_email=user.email,
-            display_name=user.full_name or user.email,
+            display_name="AdGuard System Admin" if is_admin else (user.full_name or user.email),
+            plan="agency" if is_admin else "trial",
+            lead_quota=-1 if is_admin else 100,
         )
         db.add(ws)
+        db.commit()
+        db.refresh(ws)
+    elif is_admin and (ws.plan == "trial" or ws.lead_quota == 100):
+        ws.plan = "agency"
+        ws.lead_quota = -1
         db.commit()
         db.refresh(ws)
     return ws
@@ -787,8 +795,11 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     except Exception as e:
         logger.warning(f"[AdGuard] Meta discovery failed (token still stored): {e}")
 
-    redirect_target = "/adguard" if meta_admin_initiated else f"/adguard-workspace?ws={ws.id}"
-    return RedirectResponse(url=f"{redirect_target}?oauth_success=meta" if not meta_admin_initiated else f"{redirect_target}?oauth_success=meta&ws={ws.id}")
+    admin_users = {u.email.lower() for u in db.query(User.email).filter(User.role.in_(["admin", "superadmin"])).all()}
+    is_admin_ws = bool(ws and ws.owner_email and ws.owner_email.lower() in admin_users)
+    if meta_admin_initiated or is_admin_ws:
+        return RedirectResponse(url=f"/adguard?oauth_success=meta&ws={ws.id}")
+    return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=meta")
 
 
 @router.get("/oauth/callback")
@@ -920,7 +931,9 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
     except Exception as e:
         logger.warning(f"[AdGuard] post-connect discovery failed: {e}")
 
-    if google_admin_initiated:
+    admin_users = {u.email.lower() for u in db.query(User.email).filter(User.role.in_(["admin", "superadmin"])).all()}
+    is_admin_ws = bool(ws and ws.owner_email and ws.owner_email.lower() in admin_users)
+    if google_admin_initiated or is_admin_ws:
         return RedirectResponse(url=f"/adguard?oauth_success=google&ws={ws.id}")
     return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_success=google")
 

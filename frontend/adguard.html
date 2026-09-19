@@ -803,23 +803,20 @@
             } catch (e) { window.location.href = '/adguard-landing'; return; }
             
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
-            if (!isAdmin && !currentUser.access_adguard) {
-                window.location.href = '/adguard-landing';
+            if (!isAdmin) {
+                // STRICT ROLE ISOLATION:
+                // Customers must NEVER access the Admin Cockpit (/adguard). Redirect immediately to workspace!
+                window.location.replace('/adguard-workspace');
                 return;
             }
             
-            applyRoleLayout(isAdmin);
+            applyRoleLayout(true);
             $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
             
             handleOAuthResult();
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
-            
-            if (isAdmin) {
-                showMasterView('subscribers');
-            } else {
-                loadLeads();
-            }
+            showMasterView('subscribers');
         }
 
         function applyRoleLayout(isAdmin) {

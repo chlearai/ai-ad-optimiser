@@ -272,10 +272,16 @@ def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]
         if not items:
             items = get_account_campaigns_roster(aid, aname, "google")
 
-        clean_aid = _clean_id(aid)
-        result[aid] = items
-        if clean_aid and clean_aid != aid:
-            result[clean_aid] = items
+        # Deduplicate items by ID
+        unique_items = []
+        seen_cids = set()
+        for item in items:
+            cid = str(item.get("id") or item.get("name") or "")
+            if cid and cid not in seen_cids:
+                seen_cids.add(cid)
+                unique_items.append(item)
+
+        result[aid] = unique_items
 
     # 2. Process Meta accounts (both multi-identity and single-identity)
     meta_accounts_to_process = []
@@ -360,10 +366,16 @@ def build_workspace_campaigns_map(ws, db=None) -> Dict[str, List[Dict[str, Any]]
                     })
                     seen_ids.add(pid)
 
-        clean_aid = _clean_id(aid)
-        result[aid] = items
-        if clean_aid and clean_aid != aid:
-            result[clean_aid] = items
+        # Deduplicate items by ID
+        unique_items = []
+        seen_cids = set()
+        for item in items:
+            cid = str(item.get("id") or item.get("name") or "")
+            if cid and cid not in seen_cids:
+                seen_cids.add(cid)
+                unique_items.append(item)
+
+        result[aid] = unique_items
 
     # 3. Augment with actual campaigns & pages found in ingested leads (strictly scoped to account_id)
     if db:

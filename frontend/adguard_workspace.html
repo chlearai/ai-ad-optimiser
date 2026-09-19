@@ -599,7 +599,7 @@
                     <span id="quotaUsedText">0 / 100 used</span>
                     <span id="quotaPctText">0%</span>
                 </div>
-                <button type="button" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">⚡ Upgrade Plan</button>
+                <button type="button" id="sidebarUpgradeBtn" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">⚡ Upgrade Plan</button>
             </div>
 
             <!-- MY WORKSPACE -->
@@ -718,6 +718,16 @@
 
     <!-- MAIN -->
     <div class="main">
+        <!-- ADMIN DIAGNOSTIC SIMULATION BANNER -->
+        <div id="adminSimBanner" style="display:none;background:linear-gradient(90deg, #312e81, #5b21b6);color:#fff;padding:9px 24px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.25);position:sticky;top:0;z-index:99999;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:16px;">👑</span>
+                <span>ADMIN DIAGNOSTIC MODE: Simulating Customer Workspace <strong id="adminSimWsName" style="color:#fde047;"></strong></span>
+                <span style="background:rgba(255,255,255,0.18);padding:2px 8px;border-radius:10px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Scoped Simulation</span>
+            </div>
+            <a href="/adguard" style="color:#fff;background:rgba(255,255,255,0.22);padding:4px 12px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,0.35);transition:all 0.2s;">← Return to Admin Cockpit</a>
+        </div>
+
         <div class="topbar">
             <h1 id="pageTitle"><span>My Workspace</span></h1>
             <div class="topbar-right">
@@ -1341,6 +1351,14 @@
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
             if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/adguard-landing'; return; }
 
+            // STRICT ROLE ISOLATION:
+            // Admins belong exclusively in the Admin Cockpit (/adguard).
+            // If an admin navigates to /adguard-workspace directly without ?ws=<id>, redirect immediately!
+            if (isAdmin && !simWsId) {
+                window.location.replace('/adguard');
+                return;
+            }
+
             if (isAdmin) {
                 $('sideRoleBadge').className = 'role-pill pill-admin';
                 $('sideRoleBadge').textContent = simWsId ? 'Admin — Simulating' : 'Owner / Admin';
@@ -1371,8 +1389,16 @@
                 if (isAdmin && simWsId) {
                     // Admin simulating a specific customer workspace
                     selectedWorkspaceObj = workspaces.find(w => String(w.id) === String(simWsId)) || null;
-                    $('pageTitle').innerHTML = '<span>' + escapeHtml(selectedWorkspaceObj ? (selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email) : 'Unknown workspace') + '</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>';
+                    const wsName = selectedWorkspaceObj ? (selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email) : 'Unknown workspace';
+                    $('pageTitle').innerHTML = '<span>' + escapeHtml(wsName) + '</span> <span class="badge badge-purple" style="font-size:11px;">Simulating Customer View</span>';
+                    const simBanner = $('adminSimBanner');
+                    if (simBanner) {
+                        simBanner.style.display = 'flex';
+                        $('adminSimWsName').textContent = wsName + (selectedWorkspaceObj ? ` (${selectedWorkspaceObj.owner_email})` : '');
+                    }
                 } else if (!isAdmin) {
+                    const simBanner = $('adminSimBanner');
+                    if (simBanner) simBanner.style.display = 'none';
                     const mine = workspaces.filter(w => w.owner_email === currentUser.email);
                     const first = mine[0] || workspaces[0] || null;
                     // Honor ?ws= switch for multi-account users too
@@ -1401,8 +1427,16 @@
                 $('quotaAlertBanner').classList.add('hidden');
                 return;
             }
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
             $('sidebarQuotaWidget').style.display = 'block';
             $('quotaPlanTag').textContent = (ws.plan || 'trial').toUpperCase();
+
+            // Admins never upgrade plans inside subscriber simulation
+            const upBtn = $('sidebarUpgradeBtn');
+            if (upBtn) {
+                upBtn.style.display = isAdmin ? 'none' : 'block';
+            }
+
             const quota = ws.lead_quota;
             const count = ws.lead_count || 0;
             if (quota < 0) {
@@ -1417,7 +1451,7 @@
                 $('quotaPctText').textContent = pct + '%';
                 $('quotaBar').style.width = pct + '%';
                 $('quotaBar').className = 'quota-bar' + (pct >= 95 ? ' danger' : pct >= 80 ? ' warn' : '');
-                if (pct >= 80) {
+                if (pct >= 80 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
                     $('alertQuotaPct').textContent = pct + '%';
                 } else {
@@ -1430,6 +1464,10 @@
         let wsPendingPlan = null;
 
         function openUpgradeModal() {
+            if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+                toast('Admins manage plans and quotas directly from the Admin Cockpit (/adguard).', 'info');
+                return;
+            }
             $('upgradeModalOverlay').style.display = 'flex';
         }
 
@@ -1885,26 +1923,43 @@
             const seen = new Set();
 
             if (activeClientId === 'all') {
-                for (const aid in workspaceCampaignsMap) {
-                    if (aid.startsWith('__')) continue;
-                    (workspaceCampaignsMap[aid] || []).forEach(item => {
-                        if (item && item.id && !seen.has(item.id)) {
-                            seen.add(item.id);
-                            currentAvailableCampaigns.push(item);
-                        }
+                // Strictly iterate over the accounts belonging to this workspace
+                const accountsToScan = (clientAccountsList && clientAccountsList.length) ? clientAccountsList : [];
+                if (accountsToScan.length) {
+                    accountsToScan.forEach(acc => {
+                        const items = getCampaignsForAccount(acc.id);
+                        items.forEach(item => {
+                            const strId = String(item.id || item.name || '');
+                            if (strId && !seen.has(strId)) {
+                                seen.add(strId);
+                                currentAvailableCampaigns.push(item);
+                            }
+                        });
                     });
+                } else {
+                    for (const aid in workspaceCampaignsMap) {
+                        if (aid.startsWith('__')) continue;
+                        (workspaceCampaignsMap[aid] || []).forEach(item => {
+                            const strId = String(item.id || item.name || '');
+                            if (strId && !seen.has(strId)) {
+                                seen.add(strId);
+                                currentAvailableCampaigns.push(item);
+                            }
+                        });
+                    }
                 }
             } else {
                 const items = getCampaignsForAccount(activeClientId);
                 items.forEach(item => {
-                    if (item && item.id && !seen.has(item.id)) {
-                        seen.add(item.id);
+                    const strId = String(item.id || item.name || '');
+                    if (strId && !seen.has(strId)) {
+                        seen.add(strId);
                         currentAvailableCampaigns.push(item);
                     }
                 });
             }
 
-            activeCampaignIds = new Set(currentAvailableCampaigns.map(c => c.id));
+            activeCampaignIds = new Set(currentAvailableCampaigns.map(c => String(c.id)));
             renderRyzeCampaignDropdown();
         }
 

@@ -1178,8 +1178,13 @@
     }
 
     function openModule(url) {
-        if (url === '/adguard' && (!currentUser || !currentUser.access_adguard && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
-            window.location.href = '/adguard-landing';
+        if (url === '/adguard') {
+            if (!currentUser || (!currentUser.access_adguard && currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+                window.location.href = '/adguard-landing';
+                return;
+            }
+            const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+            window.location.href = isAdmin ? '/adguard' : '/adguard-workspace';
             return;
         }
         const card = document.querySelector(`.module-card${url.replace('/', '.')}`);
