@@ -775,8 +775,26 @@
                         </div>
                     </div>
 
-                    <!-- TOP-RIGHT DROPDOWN & REFRESH (Image 2 style) -->
-                    <div class="ryze-controls">
+                    <!-- TOP-RIGHT DROPDOWN & REFRESH (Ryze style) -->
+                    <div class="ryze-controls" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <!-- DASHBOARD DATE RANGE SELECTOR WITH CALENDAR PICKER -->
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <select class="filter-select" id="dashDateRange" onchange="onDashDateRangeChange()" style="font-size:12px;padding:6px 12px;border-radius:6px;font-weight:600;background:var(--color-bg-card);border:1px solid var(--color-border);" title="Filter dashboard & trends by date range">
+                                <option value="1">Last 24 hours</option>
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="all">All Time</option>
+                                <option value="custom">📅 Custom date range</option>
+                            </select>
+                            <div id="dashCustomDates" style="display:none;align-items:center;gap:4px;background:var(--color-bg-page);padding:2px 8px;border-radius:6px;border:1px solid var(--color-border);">
+                                <input type="date" id="dashStartDate" class="filter-input" style="padding:3px 6px;font-size:11px;cursor:pointer;">
+                                <span style="font-size:11px;color:var(--color-text-muted);">to</span>
+                                <input type="date" id="dashEndDate" class="filter-input" style="padding:3px 6px;font-size:11px;cursor:pointer;">
+                                <button class="btn btn-primary btn-xs" onclick="loadLeads()" style="padding:3px 8px;font-size:11px;">Apply</button>
+                            </div>
+                        </div>
+
                         <button id="ryzeFilterBtn" class="ryze-dropdown-btn" onclick="toggleRyzePopover(event)" title="Filter campaigns & pages">
                             <span id="ryzeFilterBtnText">All campaigns selected</span>
                             <span style="font-size:9px;margin-left:6px;display:inline-block;transition:transform .2s;" id="ryzeFilterCaret">▼</span>
@@ -947,14 +965,22 @@
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">📈 Campaign Junk Report</span>
-                        <div class="filters">
-                            <select class="filter-select" id="reportRange" onchange="loadReports()">
+                        <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <select class="filter-select" id="reportRange" onchange="onReportRangeChange()">
                                 <option value="1">Last 24 hours</option>
                                 <option value="7" selected>Last 7 days</option>
-                                <option value="28">Last 28 days</option>
                                 <option value="30">Last 30 days</option>
                                 <option value="90">Last 90 days</option>
+                                <option value="365">Last 365 days</option>
+                                <option value="custom">📅 Custom date range</option>
                             </select>
+                            <div id="reportCustomDates" style="display:none;align-items:center;gap:6px;background:var(--color-bg-page);padding:3px 8px;border-radius:6px;border:1px solid var(--color-border);">
+                                <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">From:</label>
+                                <input type="date" id="reportStartDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                                <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">To:</label>
+                                <input type="date" id="reportEndDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                                <button class="btn btn-primary btn-sm" onclick="loadReports()" style="padding:3px 10px;font-size:11px;">Apply</button>
+                            </div>
                             <button class="btn btn-secondary btn-sm" onclick="loadReports()">Refresh</button>
                         </div>
                     </div>
@@ -978,13 +1004,20 @@
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">⬇ Export</span>
-                        <div class="filters">
-                            <select class="filter-select" id="exportRange">
+                        <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <select class="filter-select" id="exportRange" onchange="onExportRangeChange()">
                                 <option value="7">Last 7 days</option>
                                 <option value="30" selected>Last 30 days</option>
                                 <option value="90">Last 90 days</option>
                                 <option value="365">Last 365 days</option>
+                                <option value="custom">📅 Custom date range</option>
                             </select>
+                            <div id="exportCustomDates" style="display:none;align-items:center;gap:6px;background:var(--color-bg-page);padding:3px 8px;border-radius:6px;border:1px solid var(--color-border);">
+                                <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">From:</label>
+                                <input type="date" id="exportStartDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                                <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">To:</label>
+                                <input type="date" id="exportEndDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                            </div>
                             <button class="btn btn-primary btn-sm" onclick="exportReportCsv()">Export CSV</button>
                         </div>
                     </div>
@@ -2241,10 +2274,25 @@
                 return;
             }
 
-            // Real data grouping by date from actual leads
+            // Real data grouping by date from actual leads (dynamic range based on selected filter)
             const daysMap = {};
             const now = new Date();
-            for (let i = 13; i >= 0; i--) {
+            let numDays = 14;
+            const dRange = $('dashDateRange') ? $('dashDateRange').value : '7';
+            if (dRange === '1') numDays = 1;
+            else if (dRange === '7') numDays = 7;
+            else if (dRange === '30') numDays = 30;
+            else if (dRange === '90') numDays = 90;
+            else if (dRange === 'all') numDays = 30;
+            else if (dRange === 'custom') {
+                const s = $('dashStartDate') && $('dashStartDate').value ? new Date($('dashStartDate').value) : null;
+                const e = $('dashEndDate') && $('dashEndDate').value ? new Date($('dashEndDate').value) : new Date();
+                if (s && e && e >= s) {
+                    numDays = Math.max(1, Math.min(90, Math.round((e - s) / 86400000) + 1));
+                }
+            }
+
+            for (let i = numDays - 1; i >= 0; i--) {
                 const d = new Date(now);
                 d.setDate(d.getDate() - i);
                 const key = d.toISOString().split('T')[0];
@@ -2710,6 +2758,23 @@
             });
         }
 
+        function onDashDateRangeChange() {
+            const val = $('dashDateRange') ? $('dashDateRange').value : '7';
+            const wrap = $('dashCustomDates');
+            if (wrap) {
+                wrap.style.display = val === 'custom' ? 'flex' : 'none';
+                if (val === 'custom') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const past = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+                    if (!$('dashStartDate').value) $('dashStartDate').value = past;
+                    if (!$('dashEndDate').value) $('dashEndDate').value = today;
+                }
+            }
+            if (val !== 'custom') {
+                loadLeads();
+            }
+        }
+
         async function loadLeads() {
             try {
                 const params = new URLSearchParams();
@@ -2718,6 +2783,17 @@
                 const s = $('leadSearch') ? $('leadSearch').value.trim() : '';
                 if (v) params.set('verdict', v);
                 if (s) params.set('search', s);
+
+                const dRange = $('dashDateRange') ? $('dashDateRange').value : '7';
+                if (dRange === 'custom') {
+                    const sDate = $('dashStartDate') ? $('dashStartDate').value : '';
+                    const eDate = $('dashEndDate') ? $('dashEndDate').value : '';
+                    if (sDate) params.set('start_date', sDate);
+                    if (eDate) params.set('end_date', eDate);
+                } else if (dRange && dRange !== 'all') {
+                    params.set('days', dRange);
+                }
+
                 params.set('limit', '500');
                 const data = await api('GET', '/leads?' + params.toString());
                 allLeads = data.leads || [];
@@ -2933,12 +3009,55 @@
         }
 
         // ---------- Reports ----------
+        function onReportRangeChange() {
+            const val = $('reportRange') ? $('reportRange').value : '7';
+            const wrap = $('reportCustomDates');
+            if (wrap) {
+                wrap.style.display = val === 'custom' ? 'flex' : 'none';
+                if (val === 'custom') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const past = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+                    if (!$('reportStartDate').value) $('reportStartDate').value = past;
+                    if (!$('reportEndDate').value) $('reportEndDate').value = today;
+                }
+            }
+            if (val !== 'custom') {
+                loadReports();
+            }
+        }
+
+        function onExportRangeChange() {
+            const val = $('exportRange') ? $('exportRange').value : '30';
+            const wrap = $('exportCustomDates');
+            if (wrap) {
+                wrap.style.display = val === 'custom' ? 'flex' : 'none';
+                if (val === 'custom') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const past = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+                    if (!$('exportStartDate').value) $('exportStartDate').value = past;
+                    if (!$('exportEndDate').value) $('exportEndDate').value = today;
+                }
+            }
+        }
+
         async function loadReports() {
-            const days = $('reportRange').value;
+            const rangeVal = $('reportRange') ? $('reportRange').value : '7';
+            const params = new URLSearchParams();
+            if (selectedWorkspaceObj) params.set('workspace_id', selectedWorkspaceObj.id);
+
+            if (rangeVal === 'custom') {
+                const sDate = $('reportStartDate') ? $('reportStartDate').value : '';
+                const eDate = $('reportEndDate') ? $('reportEndDate').value : '';
+                if (sDate) params.set('start_date', sDate);
+                if (eDate) params.set('end_date', eDate);
+            } else {
+                params.set('days', rangeVal);
+            }
+
             try {
                 const [camp, flags] = await Promise.all([
-                    api('GET', '/reports/campaigns?days=' + days),
-                    api('GET', '/reports/flags?days=' + days),
+                    api('GET', '/reports/campaigns?' + params.toString()),
+                    api('GET', '/reports/flags?' + params.toString()),
                 ]);
                 $('reportCampaignBody').innerHTML = (camp.campaigns || []).map(c =>
                     '<tr><td style="font-weight:600;">' + escapeHtml(c.campaign) + '</td>' +
@@ -2960,8 +3079,19 @@
         }
 
         function exportReportCsv() {
-            const days = $('exportRange').value;
-            window.open(API + '/reports/export?days=' + days, '_blank');
+            const rangeVal = $('exportRange') ? $('exportRange').value : '30';
+            const params = new URLSearchParams();
+            if (selectedWorkspaceObj) params.set('workspace_id', selectedWorkspaceObj.id);
+
+            if (rangeVal === 'custom') {
+                const sDate = $('exportStartDate') ? $('exportStartDate').value : '';
+                const eDate = $('exportEndDate') ? $('exportEndDate').value : '';
+                if (sDate) params.set('start_date', sDate);
+                if (eDate) params.set('end_date', eDate);
+            } else {
+                params.set('days', rangeVal);
+            }
+            window.open(API + '/reports/export?' + params.toString(), '_blank');
         }
 
         // ---------- Connections ----------

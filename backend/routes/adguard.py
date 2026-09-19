@@ -306,6 +306,9 @@ def list_leads(
     account_ids: Optional[str] = None,
     verdict: Optional[str] = None,
     search: Optional[str] = None,
+    days: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     limit: int = 200,
     offset: int = 0,
     db: Session = Depends(get_db),
@@ -327,6 +330,31 @@ def list_leads(
             q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     elif workspace_id:
         q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+
+    if end_date:
+        try:
+            if len(end_date) == 10:
+                ed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1, microseconds=-1)
+            else:
+                ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            q = q.filter(AdGuardLead.received_at <= ed)
+        except Exception:
+            pass
+    if start_date:
+        try:
+            if len(start_date) == 10:
+                sd = datetime.strptime(start_date, "%Y-%m-%d")
+            else:
+                sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            q = q.filter(AdGuardLead.received_at >= sd)
+        except Exception:
+            pass
+    elif days and not start_date:
+        try:
+            sd = datetime.utcnow() - timedelta(days=int(days))
+            q = q.filter(AdGuardLead.received_at >= sd)
+        except Exception:
+            pass
 
     if account_ids:
         raw_ids = [s.strip() for s in account_ids.split(",") if s.strip()]
@@ -493,14 +521,50 @@ def cleanup_test_leads(req: TestLeadCleanupRequest, db: Session = Depends(get_db
 
 
 @router.get("/leads/export")
-def export_leads_csv(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """CSV export of leads. Admin: all. Customer: own workspace only."""
+def export_leads_csv(
+    workspace_id: Optional[int] = None,
+    days: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
+    """CSV export of leads. Admin: all or workspace_id. Customer: own workspace only."""
     _require_adguard_access(user)
     q = db.query(AdGuardLead)
-    ids = _scoped_lead_ids(db, user)
-    if ids is not None:
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ids))
-    rows = q.order_by(AdGuardLead.received_at.desc()).limit(5000).all()
+    if user.role not in ("admin", "superadmin"):
+        ids = _scoped_lead_ids(db, user)
+        if ids is not None:
+            q = q.filter(AdGuardLead.adguard_account_id.in_(ids))
+    elif workspace_id:
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+
+    if end_date:
+        try:
+            if len(end_date) == 10:
+                ed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1, microseconds=-1)
+            else:
+                ed = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            q = q.filter(AdGuardLead.received_at <= ed)
+        except Exception:
+            pass
+    if start_date:
+        try:
+            if len(start_date) == 10:
+                sd = datetime.strptime(start_date, "%Y-%m-%d")
+            else:
+                sd = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            q = q.filter(AdGuardLead.received_at >= sd)
+        except Exception:
+            pass
+    elif days and not start_date:
+        try:
+            sd = datetime.utcnow() - timedelta(days=int(days))
+            q = q.filter(AdGuardLead.received_at >= sd)
+        except Exception:
+            pass
+
+    rows = q.order_by(AdGuardLead.received_at.desc()).limit(10000).all()
 
     buf = io.StringIO()
     writer = csv.writer(buf)

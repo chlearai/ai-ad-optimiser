@@ -593,20 +593,51 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
 # REPORTS
 # ---------------------------------------------------------------------------
 
-def _parse_range(days: int):
-    days = max(1, min(days, 365))
+def _parse_range(days: Optional[int] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
     end = datetime.utcnow()
-    start = end - timedelta(days=days)
+    if end_date:
+        try:
+            if len(end_date) == 10:
+                end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1, microseconds=-1)
+            else:
+                end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+        except Exception:
+            end = datetime.utcnow()
+
+    if start_date:
+        try:
+            if len(start_date) == 10:
+                start = datetime.strptime(start_date, "%Y-%m-%d")
+            else:
+                start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+        except Exception:
+            d = days or 7
+            start = end - timedelta(days=d)
+    else:
+        d = max(1, min(days or 7, 730))
+        start = end - timedelta(days=d)
     return start, end
 
 
 @router.get("/reports/campaigns")
-def campaign_report(days: int = 7, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+def campaign_report(
+    days: Optional[int] = 7,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    workspace_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
     """Per-campaign junk report: totals, verified, flagged, junk %, estimated recovered spend."""
     _require_adguard_access(user)
-    start, end = _parse_range(days)
-    q = db.query(AdGuardLead.campaign_name, AdGuardLead.verdict).filter(AdGuardLead.received_at >= start)
-    if user.role not in ("admin", "superadmin"):
+    start, end = _parse_range(days=days, start_date=start_date, end_date=end_date)
+    q = db.query(AdGuardLead.campaign_name, AdGuardLead.verdict).filter(
+        AdGuardLead.received_at >= start,
+        AdGuardLead.received_at <= end,
+    )
+    if workspace_id and user.role in ("admin", "superadmin"):
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+    elif user.role not in ("admin", "superadmin"):
         ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
         q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     rows = q.all()
@@ -631,16 +662,34 @@ def campaign_report(days: int = 7, db: Session = Depends(get_db), user: User = D
             "recovered_spend_inr": b["flagged"] * 350,
         })
     out.sort(key=lambda r: r["leads"], reverse=True)
-    return {"days": days, "campaigns": out}
+    return {
+        "days": days,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "campaigns": out,
+    }
 
 
 @router.get("/reports/flags")
-def flag_breakdown(days: int = 7, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+def flag_breakdown(
+    days: Optional[int] = 7,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    workspace_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
     """Waste-type breakdown: count of each flag reason in the window."""
     _require_adguard_access(user)
-    start, end = _parse_range(days)
-    q = db.query(AdGuardLead).filter(AdGuardLead.verdict == "flagged", AdGuardLead.received_at >= start)
-    if user.role not in ("admin", "superadmin"):
+    start, end = _parse_range(days=days, start_date=start_date, end_date=end_date)
+    q = db.query(AdGuardLead).filter(
+        AdGuardLead.verdict == "flagged",
+        AdGuardLead.received_at >= start,
+        AdGuardLead.received_at <= end,
+    )
+    if workspace_id and user.role in ("admin", "superadmin"):
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+    elif user.role not in ("admin", "superadmin"):
         ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
         q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     counts: dict = {}
@@ -654,11 +703,19 @@ def flag_breakdown(days: int = 7, db: Session = Depends(get_db), user: User = De
             counts[f] = counts.get(f, 0) + 1
         total_flagged += 1
     breakdown = [{"flag": k, "count": v} for k, v in sorted(counts.items(), key=lambda kv: -kv[1])]
-    return {"days": days, "total_flagged": total_flagged, "breakdown": breakdown}
+    return {
+        "days": days,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "total_flagged": total_flagged,
+        "breakdown": breakdown,
+    }
 
 
 class ReportExportRequest(BaseModel):
-    days: int = 30
+    days: Optional[int] = 30
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
     columns: Optional[list] = None  # subset of default columns
 
 
@@ -670,16 +727,24 @@ REPORT_COLUMNS = [
 
 @router.get("/reports/export")
 def report_export(
-    days: int = 30,
+    days: Optional[int] = 30,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    workspace_id: Optional[int] = None,
     columns: Optional[str] = Query(default=None, description="comma-separated column names"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_required),
 ):
     """CSV export with date range + column selection (Connection/reports UX standard)."""
     _require_adguard_access(user)
-    start, end = _parse_range(days)
-    q = db.query(AdGuardLead).filter(AdGuardLead.received_at >= start)
-    if user.role not in ("admin", "superadmin"):
+    start, end = _parse_range(days=days, start_date=start_date, end_date=end_date)
+    q = db.query(AdGuardLead).filter(
+        AdGuardLead.received_at >= start,
+        AdGuardLead.received_at <= end,
+    )
+    if workspace_id and user.role in ("admin", "superadmin"):
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+    elif user.role not in ("admin", "superadmin"):
         ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
         q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
     cols = [c.strip() for c in columns.split(",")] if columns else REPORT_COLUMNS
@@ -693,10 +758,11 @@ def report_export(
         data = l.to_dict()
         writer.writerow([json.dumps(data.get(c)) if isinstance(data.get(c), list) else (data.get(c) or "") for c in cols])
     buf.seek(0)
+    filename = f"adguard_report_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=adguard_report_{days}d.csv"},
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

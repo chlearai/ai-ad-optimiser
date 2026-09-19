@@ -273,6 +273,7 @@
                 </div>
                 <div class="nav-section-items">
                     <div class="nav-item active" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
+                    <div class="nav-item" id="navAdminReports" onclick="showMasterView('reports')">📈 Reports &amp; Fraud Trends</div>
                     <div class="nav-item" id="navGlobalLeads" onclick="showMasterView('global_leads')">🛡️ Global Lead Stream</div>
                     <div class="nav-item" id="navCleanup" onclick="showMasterView('cleanup')">🧹 Test Lead Cleanup</div>
                     <div class="nav-item" id="navSupport" onclick="showMasterView('support')">💬 Support Inbox <span class="badge badge-red" id="openTicketsBadge" style="display:none;">0</span></div>
@@ -449,12 +450,67 @@
                 </div>
             </div>
 
+            <!-- ADMIN: REPORTS & FRAUD TRENDS CARD -->
+            <div class="card hidden admin-only" id="adminReportsCard">
+                <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <span class="card-title">📈 Campaign Junk Reports &amp; Fraud Waste Analysis</span>
+                    <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <select class="filter-select" id="adminReportSub" onchange="loadAdminReports()" title="Filter report by subscriber">
+                            <option value="">All Subscribers</option>
+                        </select>
+                        <select class="filter-select" id="adminReportRange" onchange="onAdminReportRangeChange()">
+                            <option value="1">Last 24 hours</option>
+                            <option value="7" selected>Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last 365 days</option>
+                            <option value="custom">📅 Custom date range</option>
+                        </select>
+                        <div id="adminReportCustomDates" style="display:none;align-items:center;gap:6px;background:var(--color-bg-page);padding:3px 8px;border-radius:6px;border:1px solid var(--color-border);">
+                            <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">From:</label>
+                            <input type="date" id="adminReportStartDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                            <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">To:</label>
+                            <input type="date" id="adminReportEndDate" class="filter-input" style="font-size:12px;padding:3px 6px;cursor:pointer;">
+                            <button class="btn btn-primary btn-sm" onclick="loadAdminReports()" style="padding:3px 10px;font-size:11px;">Apply</button>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="loadAdminReports()">Refresh</button>
+                        <button class="btn btn-secondary btn-sm" onclick="exportAdminReportCsv()">⬇ Export CSV</button>
+                    </div>
+                </div>
+                <div class="table-wrap" style="margin-top:10px;">
+                    <table>
+                        <thead><tr>
+                            <th>Campaign</th><th>Leads</th><th>Verified</th><th>Blocked</th><th>Junk %</th><th>Recovered Spend</th>
+                        </tr></thead>
+                        <tbody id="adminReportCampaignBody"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:18px;">
+                    <h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--color-text-primary);">🚩 Waste Analysis — why leads were blocked</h4>
+                    <div id="adminFlagsBreakdown"></div>
+                </div>
+            </div>
+
             <!-- LIVE LEAD FEED (Admin: only when a specific subscriber selected; Customer: always) -->
             <div class="card hidden" id="leadFeedCard">
-                <div class="card-header">
+                <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                     <span class="card-title" id="leadFeedTitle">Live Lead Feed</span>
-                    <div class="filters">
+                    <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <select class="filter-select" id="feedSubscriberFilter" onchange="onFeedSubscriberChange()" style="display:none;"></select>
+                        <select class="filter-select" id="adminFeedRange" onchange="onAdminFeedRangeChange()">
+                            <option value="all">All Time</option>
+                            <option value="1">Last 24 hours</option>
+                            <option value="7" selected>Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="custom">📅 Custom date range</option>
+                        </select>
+                        <div id="adminFeedCustomDates" style="display:none;align-items:center;gap:4px;background:var(--color-bg-page);padding:2px 8px;border-radius:6px;border:1px solid var(--color-border);">
+                            <input type="date" id="adminFeedStartDate" class="filter-input" style="padding:2px 6px;font-size:11px;cursor:pointer;">
+                            <span style="font-size:11px;color:var(--color-text-muted);">to</span>
+                            <input type="date" id="adminFeedEndDate" class="filter-input" style="padding:2px 6px;font-size:11px;cursor:pointer;">
+                            <button class="btn btn-primary btn-xs" onclick="loadLeads()" style="padding:2px 8px;font-size:10px;">Apply</button>
+                        </div>
                         <input class="filter-input" placeholder="Search name / email / phone / campaign..." id="leadSearch" oninput="loadLeads()">
                         <select class="filter-select" id="verdictFilter" onchange="loadLeads()">
                             <option value="">All Leads</option>
@@ -1042,6 +1098,7 @@
             $('quotaAlertBanner').classList.add('hidden');
             // Hide ALL content cards first (mutually exclusive)
             $('adminSubscribersCard').classList.add('hidden');
+            if ($('adminReportsCard')) $('adminReportsCard').classList.add('hidden');
             $('cleanupCard').classList.add('hidden');
             $('supportCard').classList.add('hidden');
             $('leadFeedCard').classList.add('hidden');
@@ -1054,6 +1111,12 @@
                 $('adminSubscribersCard').classList.remove('hidden');
                 $('pageTitle').innerHTML = '<span>All Subscribers Master</span>';
                 loadAdminSubscribers();
+            } else if (view === 'reports') {
+                if ($('navAdminReports')) $('navAdminReports').classList.add('active');
+                if ($('adminReportsCard')) $('adminReportsCard').classList.remove('hidden');
+                $('pageTitle').innerHTML = '<span>Executive Reports &amp; Fraud Trends</span>';
+                populateAdminReportSubscribers();
+                loadAdminReports();
             } else if (view === 'global_leads') {
                 $('navGlobalLeads').classList.add('active');
                 $('leadFeedCard').classList.remove('hidden');
@@ -1382,7 +1445,20 @@
         }
 
         function exportCsv() {
-            fetch(API + '/leads/export', { headers: { 'Authorization': 'Bearer ' + token } })
+            const params = new URLSearchParams();
+            if (selectedClientId) params.set('workspace_id', selectedClientId);
+
+            const rVal = $('adminFeedRange') ? $('adminFeedRange').value : '7';
+            if (rVal === 'custom') {
+                const s = $('adminFeedStartDate') ? $('adminFeedStartDate').value : '';
+                const e = $('adminFeedEndDate') ? $('adminFeedEndDate').value : '';
+                if (s) params.set('start_date', s);
+                if (e) params.set('end_date', e);
+            } else if (rVal && rVal !== 'all') {
+                params.set('days', rVal);
+            }
+
+            fetch(API + '/leads/export?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } })
                 .then(r => { if (!r.ok) throw new Error('Export failed'); return r.blob(); })
                 .then(blob => {
                     const a = document.createElement('a');
@@ -1757,13 +1833,126 @@
         }
 
         // ---------- Leads & KPIs ----------
+        // ---------- Admin Reports & Trends Functions ----------
+        function populateAdminReportSubscribers() {
+            const sel = $('adminReportSub');
+            if (!sel) return;
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">All Subscribers</option>' +
+                (workspaces || []).map(w => `<option value="${w.id}">${escapeHtml(w.display_name || w.owner_email)} (#${w.id})</option>`).join('');
+            if (cur) sel.value = cur;
+        }
+
+        function onAdminReportRangeChange() {
+            const val = $('adminReportRange') ? $('adminReportRange').value : '7';
+            const wrap = $('adminReportCustomDates');
+            if (wrap) {
+                wrap.style.display = val === 'custom' ? 'flex' : 'none';
+                if (val === 'custom') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const past = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+                    if (!$('adminReportStartDate').value) $('adminReportStartDate').value = past;
+                    if (!$('adminReportEndDate').value) $('adminReportEndDate').value = today;
+                }
+            }
+            if (val !== 'custom') {
+                loadAdminReports();
+            }
+        }
+
+        function onAdminFeedRangeChange() {
+            const val = $('adminFeedRange') ? $('adminFeedRange').value : '7';
+            const wrap = $('adminFeedCustomDates');
+            if (wrap) {
+                wrap.style.display = val === 'custom' ? 'flex' : 'none';
+                if (val === 'custom') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const past = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+                    if (!$('adminFeedStartDate').value) $('adminFeedStartDate').value = past;
+                    if (!$('adminFeedEndDate').value) $('adminFeedEndDate').value = today;
+                }
+            }
+            if (val !== 'custom') {
+                loadLeads();
+            }
+        }
+
+        async function loadAdminReports() {
+            const rVal = $('adminReportRange') ? $('adminReportRange').value : '7';
+            const subId = $('adminReportSub') ? $('adminReportSub').value : '';
+            const params = new URLSearchParams();
+            if (subId) params.set('workspace_id', subId);
+
+            if (rVal === 'custom') {
+                const s = $('adminReportStartDate') ? $('adminReportStartDate').value : '';
+                const e = $('adminReportEndDate') ? $('adminReportEndDate').value : '';
+                if (s) params.set('start_date', s);
+                if (e) params.set('end_date', e);
+            } else {
+                params.set('days', rVal);
+            }
+
+            try {
+                const [camp, flags] = await Promise.all([
+                    api('GET', '/reports/campaigns?' + params.toString()),
+                    api('GET', '/reports/flags?' + params.toString()),
+                ]);
+
+                $('adminReportCampaignBody').innerHTML = (camp.campaigns || []).map(c =>
+                    '<tr><td style="font-weight:600;">' + escapeHtml(c.campaign) + '</td>' +
+                    '<td>' + c.leads + '</td><td style="color:var(--color-success-text);">' + c.verified + '</td>' +
+                    '<td style="color:var(--color-danger-text);">' + c.flagged + '</td>' +
+                    '<td>' + (c.junk_pct >= 40 ? '<b style="color:var(--color-danger);">' : '') + c.junk_pct + '%' + (c.junk_pct >= 40 ? ' ⚠️' : '') + '</td>' +
+                    '<td style="font-weight:600;">₹' + c.recovered_spend_inr.toLocaleString('en-IN') + '</td></tr>'
+                ).join('') || '<tr><td colspan="6"><div class="empty-state"><h3>No leads in this period</h3></div></td></tr>';
+
+                const fb = flags.breakdown || [];
+                const maxCount = Math.max(1, ...fb.map(f => f.count));
+                $('adminFlagsBreakdown').innerHTML = fb.length ? fb.map(f =>
+                    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+                    '<div style="width:240px;font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(f.flag.replace(/_/g, ' ')) + '</div>' +
+                    '<div style="flex:1;background:var(--color-border);border-radius:4px;height:8px;overflow:hidden;"><div style="width:' + Math.round(100 * f.count / maxCount) + '%;height:100%;background:var(--color-danger);border-radius:4px;"></div></div>' +
+                    '<div style="width:50px;text-align:right;font-weight:600;font-size:12px;">' + f.count + '</div></div>'
+                ).join('') : '<div class="empty-state"><h3>Nothing blocked yet</h3><p>Flagged leads and reasons will appear here.</p></div>';
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function exportAdminReportCsv() {
+            const rVal = $('adminReportRange') ? $('adminReportRange').value : '30';
+            const subId = $('adminReportSub') ? $('adminReportSub').value : '';
+            const params = new URLSearchParams();
+            if (subId) params.set('workspace_id', subId);
+
+            if (rVal === 'custom') {
+                const s = $('adminReportStartDate') ? $('adminReportStartDate').value : '';
+                const e = $('adminReportEndDate') ? $('adminReportEndDate').value : '';
+                if (s) params.set('start_date', s);
+                if (e) params.set('end_date', e);
+            } else {
+                params.set('days', rVal);
+            }
+            window.open(API + '/reports/export?' + params.toString(), '_blank');
+        }
+
         async function loadLeads() {
             try {
                 const params = new URLSearchParams();
-                const v = $('verdictFilter').value;
-                const s = $('leadSearch').value.trim();
+                if (selectedClientId) params.set('workspace_id', selectedClientId);
+                const v = $('verdictFilter') ? $('verdictFilter').value : '';
+                const s = $('leadSearch') ? $('leadSearch').value.trim() : '';
                 if (v) params.set('verdict', v);
                 if (s) params.set('search', s);
+
+                const rVal = $('adminFeedRange') ? $('adminFeedRange').value : '7';
+                if (rVal === 'custom') {
+                    const sd = $('adminFeedStartDate') ? $('adminFeedStartDate').value : '';
+                    const ed = $('adminFeedEndDate') ? $('adminFeedEndDate').value : '';
+                    if (sd) params.set('start_date', sd);
+                    if (ed) params.set('end_date', ed);
+                } else if (rVal && rVal !== 'all') {
+                    params.set('days', rVal);
+                }
+
                 params.set('limit', '500');
                 const data = await api('GET', '/leads?' + params.toString());
                 allLeads = data.leads || [];
