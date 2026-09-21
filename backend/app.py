@@ -82,25 +82,25 @@ app.include_router(billing.router)
 
 
 
-# Initialize database tables only at import time; scheduler starts lazily on first request
-init_db()
-_scheduler_started = False
+import threading
 
+@app.on_event("startup")
+def on_startup():
+    try:
+        init_db()
+    except Exception as e:
+        logger.error(f"Failed to init DB on startup: {e}")
+    try:
+        threading.Thread(target=start_scheduler, daemon=True).start()
+    except Exception as e:
+        logger.error(f"Failed to start scheduler thread: {e}")
 
-def ensure_scheduler():
-    global _scheduler_started
-    if not _scheduler_started:
-        try:
-            start_scheduler()
-            _scheduler_started = True
-        except Exception as e:
-            logger.error(f"Failed to start scheduler: {e}")
-
-
-@app.middleware("http")
-async def lazy_start_scheduler(request, call_next):
-    ensure_scheduler()
-    return await call_next(request)
+@app.on_event("shutdown")
+def on_shutdown():
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.warning(f"Error stopping scheduler: {e}")
 
 
 @app.get("/health")
