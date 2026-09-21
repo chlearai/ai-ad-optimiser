@@ -204,6 +204,132 @@
             color: #ffffff;
         }
 
+        .container-wrap {
+            width: 100%;
+            max-width: 960px;
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 860px) {
+            .container-wrap {
+                grid-template-columns: 1fr;
+                max-width: 460px;
+            }
+        }
+
+        .admin-card {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 32px 28px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px);
+            position: relative;
+        }
+
+        .embed-card {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            padding: 28px 26px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px);
+            position: relative;
+        }
+
+        .embed-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .embed-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #34d399;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .code-box {
+            background: #090d16;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 14px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 12px;
+            color: #a7f3d0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+            position: relative;
+            margin: 12px 0;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+        }
+
+        .code-keyword { color: #f472b6; }
+        .code-attr { color: #93c5fd; }
+        .code-str { color: #fde047; }
+        .code-tag { color: #60a5fa; }
+
+        .btn-copy {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-copy:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #34d399;
+            color: #ffffff;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 14px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.45;
+        }
+        .feature-list strong {
+            color: var(--text-primary);
+        }
+
+        .tag-pill {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: #f1f5f9;
+        }
+
         .footer-note {
             margin-top: 24px;
             text-align: center;
@@ -224,33 +350,84 @@
 </head>
 <body>
 
-    <div class="admin-card">
-        <div class="admin-header">
-            <div class="admin-shield">🛡️</div>
-            <div class="admin-badge">Admin Access Only</div>
-            <h1>AdGuard Admin Portal</h1>
-            <p class="subtitle">Platform administration, subscriber account management, and global heuristic controls.</p>
+    <div class="container-wrap">
+        <!-- LEFT: ADMIN LOGIN FORM -->
+        <div class="admin-card">
+            <div class="admin-header">
+                <div class="admin-shield">🛡️</div>
+                <div class="admin-badge">Admin Access Only</div>
+                <h1>AdGuard Admin Portal</h1>
+                <p class="subtitle">Platform administration, subscriber management, and conversion signal controls.</p>
+            </div>
+
+            <div id="loginError" class="error-alert"></div>
+
+            <form id="adminLoginForm" onsubmit="event.preventDefault(); doAdminLogin();">
+                <div class="form-group">
+                    <label>Admin Email</label>
+                    <input type="email" id="adminEmail" placeholder="admin@adoptima.ai" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="adminPassword" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn-submit" id="adminSubmitBtn">Sign In to Admin Console →</button>
+            </form>
+
+            <div class="quick-demo">
+                <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:8px;">Fast Evaluation Access:</span>
+                <button class="btn-ghost" onclick="fillAdminDemo()">Fill Admin Demo Credentials</button>
+            </div>
         </div>
 
-        <div id="loginError" class="error-alert"></div>
-
-        <form id="adminLoginForm" onsubmit="event.preventDefault(); doAdminLogin();">
-            <div class="form-group">
-                <label>Admin Email</label>
-                <input type="email" id="adminEmail" placeholder="admin@adoptima.ai" required autofocus>
+        <!-- RIGHT: CLIENT LANDING PAGE EMBED SCRIPT REFERENCE (Never Forget) -->
+        <div class="embed-card">
+            <div class="embed-header">
+                <div class="embed-title">
+                    <span>⚡ Client Landing Page Embed Tag</span>
+                </div>
+                <button type="button" class="btn-copy" id="copyEmbedBtn" onclick="copyLoginEmbedSnippet()">
+                    📋 Copy Script
+                </button>
             </div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="adminPassword" placeholder="••••••••" required>
+            <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                Add this pre-submit interceptor tag directly to client landing pages (WordPress, Webflow, Shopify, GTM, Elementor, React). It runs asynchronously (&lt;15 KB) to stop junk leads before ad algorithms optimize on them.
+            </p>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                <label style="font-size:11px;margin:0;white-space:nowrap;color:var(--text-muted);">Workspace ID:</label>
+                <input type="text" id="scriptWsInput" value="demo_workspace" placeholder="Enter Workspace ID" 
+                       style="padding:5px 10px;font-size:12px;border-radius:6px;background:rgba(255,255,255,0.06);" 
+                       oninput="updateLoginScriptTag()">
             </div>
 
-            <button type="submit" class="btn-submit" id="adminSubmitBtn">Sign In to Admin Console →</button>
-        </form>
+            <div class="code-box" id="scriptCodeBlock">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
+&lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="demo_workspace"&gt;&lt;/script&gt;</div>
 
-        <div class="quick-demo">
-            <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:8px;">Fast Evaluation Access:</span>
-            <button class="btn-ghost" onclick="fillAdminDemo()">Fill Admin Demo Credentials</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;">
+                <span class="tag-pill">✓ Fail-Open (2.0s max timeout)</span>
+                <span class="tag-pill">✓ WebGL/Canvas Fingerprinting</span>
+                <span class="tag-pill">✓ Inline OTP Step-Up</span>
+                <span class="tag-pill">✓ Meta CAPI &amp; Google GCLID</span>
+            </div>
+
+            <ul class="feature-list">
+                <li>
+                    <span>🛡️</span>
+                    <div><strong>Pre-Submit Interception:</strong> Pauses form submit for ~200ms to verify bot/device signals before CRM or conversion dispatch.</div>
+                </li>
+                <li>
+                    <span>🚦</span>
+                    <div><strong>3-Band Traffic Action:</strong> <b>Green</b> passes instantly; <b>Grey</b> triggers SMS OTP popup; <b>Red</b> silent quarantine.</div>
+                </li>
+                <li>
+                    <span>📍</span>
+                    <div><strong>Installation Location:</strong> Paste inside the <code>&lt;head&gt;</code> or right before <code>&lt;/body&gt;</code> of the landing page.</div>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -260,6 +437,34 @@
     </div>
 
     <script>
+        function updateLoginScriptTag() {
+            var host = window.location.origin;
+            if (!host || host.indexOf('http') !== 0) host = 'http://127.0.0.1:8000';
+            var wsId = document.getElementById('scriptWsInput').value.trim() || 'YOUR_WORKSPACE_ID';
+            var code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
+                       '<script async src="' + host + '/api/v1/tag/adguard.js" data-account-id="' + wsId + '"><\/script>';
+            document.getElementById('scriptCodeBlock').textContent = code;
+        }
+
+        // Initialize on load
+        updateLoginScriptTag();
+
+        function copyLoginEmbedSnippet() {
+            var text = document.getElementById('scriptCodeBlock').textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                var btn = document.getElementById('copyEmbedBtn');
+                var orig = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                btn.style.background = 'rgba(16, 185, 129, 0.4)';
+                setTimeout(function() {
+                    btn.innerHTML = orig;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(function() {
+                alert('Copied snippet to clipboard');
+            });
+        }
+
         function fillAdminDemo() {
             document.getElementById('adminEmail').value = 'admin@adoptima.ai';
             document.getElementById('adminPassword').value = 'Admin@123';

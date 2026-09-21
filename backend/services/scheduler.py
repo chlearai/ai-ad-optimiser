@@ -51,8 +51,39 @@ def start_scheduler():
     # AdGuard Shield Layer 1: push FraudGraph exclusions to platforms (weekly, Mon 4:00 AM UTC)
     if os.getenv("ADGUARD_EXCLUSION_SYNC_ENABLED", "true").lower() in ("true", "1", "yes"):
         _scheduler.add_job(_run_adguard_exclusion_sync, 'cron', day_of_week='mon', hour=4, minute=0, id='adguard_exclusion_sync', replace_existing=True)
+    # AdGuard V1: Conversion Signal Firewall dispatcher (every 1 minute)
+    _scheduler.add_job(_run_adguard_conversion_dispatcher, 'interval', minutes=1, id='adguard_conversion_dispatcher', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(seconds=15))
+    # AdGuard V1: Shared Fraud Network score decay (daily at midnight UTC)
+    _scheduler.add_job(_run_adguard_network_score_decay, 'cron', hour=0, minute=0, id='adguard_network_score_decay', replace_existing=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
+
+
+def _run_adguard_conversion_dispatcher():
+    """Flush pending conversion events via Conversion Signal Firewall (Meta CAPI + Google)."""
+    try:
+        from backend.services.adguard_firewall import flush_pending_conversions
+        db = SessionLocal()
+        try:
+            flush_pending_conversions(db, limit=50)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"[Scheduler] Conversion dispatcher error: {e}")
+
+
+def _run_adguard_network_score_decay():
+    """Decay inactive threat scores in the Shared Fraud Network."""
+    try:
+        from backend.services.adguard_shared_network import run_network_score_decay
+        db = SessionLocal()
+        try:
+            run_network_score_decay(db)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"[Scheduler] Network score decay error: {e}")
+
 
 
 def _run_adguard_exclusion_sync():

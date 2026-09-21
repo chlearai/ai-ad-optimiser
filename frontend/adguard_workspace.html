@@ -855,6 +855,33 @@
                     </p>
                 </div>
 
+                <!-- PRE-SUBMIT INTERCEPTOR SCRIPT TAG (CLIENT LANDING PAGES) -->
+                <div class="card" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
+                    <div class="card-header" style="margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:22px;">⚡</span>
+                            <div>
+                                <span class="card-title" style="color:var(--color-accent);font-size:15px;">Pre-Submit Interceptor Tag for Landing Pages</span>
+                                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">
+                                    Embed this async tag (&lt;15 KB) on your landing pages &amp; websites to screen out bot/fraud leads before conversion pixels report to Meta CAPI &amp; Google Ads.
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedDash" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedDash')">📋 Copy Script Tag</button>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;position:relative;" id="wsEmbedCodeBoxDash">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
+&lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-muted);">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <span>🛡️ <b>Canvas &amp; Device Telemetry</b></span>
+                            <span>⏱️ <b>2.0s Fail-Open Guarantee</b></span>
+                            <span>🚦 <b>3-Band Gating (Green/Grey/Red)</b></span>
+                            <span>📲 <b>Inline SMS / WhatsApp OTP</b></span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="openWsEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide (GTM / Webflow / WP) →</a>
+                    </div>
+                </div>
+
                 <!-- ADGUARD CORE VALUE KPI CARDS (Audited, Verified, Blocked, Recovered Spend) -->
                 <div class="ryze-kpi-grid" id="ryzeKpiGrid">
                     <!-- Card 1: Leads Audited -->
@@ -1027,6 +1054,33 @@
 
             <!-- ============ TAB: CONNECTIONS ============ -->
             <div id="tab-connections" class="hidden">
+                <!-- PRE-SUBMIT INTERCEPTOR SCRIPT TAG -->
+                <div class="card" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
+                    <div class="card-header" style="margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:22px;">⚡</span>
+                            <div>
+                                <span class="card-title" style="color:var(--color-accent);font-size:15px;">Landing Page &amp; Website Pre-Submit Interceptor Tag</span>
+                                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">
+                                    Install this lightweight async script (&lt;15 KB) on your landing page forms to verify visitors and screen out junk before conversion events fire.
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedConn" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedConn')">📋 Copy Script Tag</button>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;position:relative;" id="wsEmbedCodeBoxConn">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
+&lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-muted);">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <span>🛡️ <b>Canvas &amp; WebGL Signals</b></span>
+                            <span>⏱️ <b>2.0s Fail-Open Safety</b></span>
+                            <span>🚦 <b>3-Band Gating (Green/Grey/Red)</b></span>
+                            <span>📲 <b>Inline SMS / WhatsApp OTP</b></span>
+                        </div>
+                        <a href="javascript:void(0)" onclick="openWsEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide (GTM / Webflow / WP) →</a>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">🔗 Connected Ad Accounts</span>
@@ -1346,6 +1400,51 @@
         </div>
     </div>
 
+    <!-- WORKSPACE EMBED GUIDE MODAL -->
+    <div id="wsEmbedGuideOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:120;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:26px;width:680px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--color-border);padding-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:22px;">⚡</span>
+                    <h2 style="font-family:'DM Sans',sans-serif;font-size:17px;color:var(--color-text-primary);">How to Embed AdGuard on Your Landing Pages</h2>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsEmbedGuideOverlay').style.display='none'">✕</button>
+            </div>
+
+            <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:16px;">
+                AdGuard's Pre-Submit Interceptor runs client-side in &lt;15 KB to verify visitors before native form submissions reach your CRM and conversion pixels.
+            </div>
+
+            <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">1. Standard HTML / Landing Page (Direct Embed)</h3>
+            <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:6px;">Paste inside the <code>&lt;head&gt;</code> or right before <code>&lt;/body&gt;</code> tag:</p>
+            <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:10px 12px;font-family:Consolas,monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;margin-bottom:14px;" id="wsModalEmbedSnippet"></div>
+
+            <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">2. WordPress / Elementor / Divi</h3>
+            <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;">
+                Navigate to <b>Elementor → Custom Code</b> (or WP Admin → Header and Footer Scripts plugin). Create a new snippet, set location to <b>&lt;head&gt;</b> or <b>Body - End</b>, and paste the code above.
+            </p>
+
+            <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">3. Google Tag Manager (GTM)</h3>
+            <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;">
+                Create a <b>Custom HTML Tag</b> in GTM, paste the code snippet, and set trigger to <b>All Pages (Page View)</b>. AdGuard will automatically intercept all form submit events.
+            </p>
+
+            <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">4. Webflow / Shopify / Unbounce</h3>
+            <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:16px;">
+                Go to <b>Project Settings → Custom Code</b> → Paste in <b>Head Code</b> or <b>Footer Code</b>.
+            </p>
+
+            <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--color-text-primary);margin-bottom:16px;">
+                <strong>💡 Pre-Submit Fail-Open Guarantee:</strong> If the visitor is on an ultra-slow connection or AdGuard server latency exceeds 2.0s, AdGuard gracefully <em>fails open</em> and allows native form submission, ensuring 0% lead loss.
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('wsEmbedGuideOverlay').style.display='none'">Close</button>
+                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">📋 Copy Script Tag</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = '/api/adguard';
         const AUTH = '/api/auth';
@@ -1358,6 +1457,39 @@
         const simWsId = new URLSearchParams(window.location.search).get('ws');
 
         function $(id) { return document.getElementById(id); }
+
+        function updateWorkspaceEmbedSnippet() {
+            const host = window.location.origin || 'http://127.0.0.1:8000';
+            const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : (currentUser ? currentUser.email : 'YOUR_WORKSPACE_ID');
+            const code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
+                         '<script async src="' + host + '/api/v1/tag/adguard.js" data-account-id="' + escapeHtml(wsId) + '"><\/script>';
+            if ($('wsEmbedCodeBoxDash')) $('wsEmbedCodeBoxDash').textContent = code;
+            if ($('wsEmbedCodeBoxConn')) $('wsEmbedCodeBoxConn').textContent = code;
+            if ($('wsModalEmbedSnippet')) $('wsModalEmbedSnippet').textContent = code;
+        }
+
+        function copyWorkspaceEmbedSnippet(btnId) {
+            const code = $('wsEmbedCodeBoxDash') ? $('wsEmbedCodeBoxDash').textContent : ($('wsEmbedCodeBoxConn') ? $('wsEmbedCodeBoxConn').textContent : '');
+            if (!code) return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                    toast('📋 Script tag copied to clipboard! Paste into <head> or <body>', 'success');
+                    const btn = btnId ? $(btnId) : null;
+                    if (btn) {
+                        const orig = btn.innerHTML;
+                        btn.innerHTML = '✅ Copied!';
+                        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+                    }
+                }).catch(() => {
+                    toast('Script copied to clipboard');
+                });
+            }
+        }
+
+        function openWsEmbedGuideModal() {
+            updateWorkspaceEmbedSnippet();
+            $('wsEmbedGuideOverlay').style.display = 'flex';
+        }
 
         async function api(method, path, body) {
             const opts = { method, headers: { 'Authorization': 'Bearer ' + token } };
@@ -1447,6 +1579,7 @@
                 renderConnectorButtons();
                 renderConnPills();
                 renderClientAccountsList();
+                updateWorkspaceEmbedSnippet();
                 await loadWorkspaceCampaigns();
                 renderCrmPreference();
                 renderShield(selectedWorkspaceObj);

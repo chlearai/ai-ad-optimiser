@@ -13,7 +13,9 @@ from backend.routes import config, campaigns, search_terms, negatives, optimizat
 from backend.routes import crashclub
 from backend.routes import adguard
 from backend.routes import adguard_support
+from backend.routes import adguard_v1
 from backend.routes import billing
+from fastapi.staticfiles import StaticFiles
 
 from backend.db.database import init_db
 from backend.services.scheduler import start_scheduler, stop_scheduler
@@ -22,6 +24,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("AdOptima")
 
 app = FastAPI(title="AdOptima AI - Google Ads Optimization")
+
+# Mount static files directory for AdGuard tag and assets
+static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -69,7 +77,9 @@ app.include_router(activity_log.router)
 app.include_router(crashclub.router)
 app.include_router(adguard.router)
 app.include_router(adguard_support.router)
+app.include_router(adguard_v1.router)
 app.include_router(billing.router)
+
 
 
 # Initialize database tables only at import time; scheduler starts lazily on first request

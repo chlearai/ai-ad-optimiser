@@ -1018,13 +1018,12 @@ class AdGuardAccount(Base):
     # Cached discovered campaigns and pages map: { "<account_id>": [ { id, name, type, platform, status } ] }
     cached_campaigns = Column(Text, nullable=True)
 
-    # Per-workspace settings
-    timezone = Column(String(50), default="Asia/Kolkata")
-    alert_emails = Column(Text, nullable=True)  # JSON list of emails for alerts/reports
-    protection_mode = Column(String(20), default="monitor")  # monitor | protect
-
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Conversion value mappings: {"lead": 500, "qualified": 2000, "site_visit": 10000, "appointment": 10000, "converted": 10000}
+    conversion_values = Column(Text, nullable=True)
+    # SMS/OTP provider settings: {"provider": "mock|msg91|twilio|generic", "api_key": "...", ...}
+    otp_settings = Column(Text, nullable=True)
+    # Bot-caller settings: {"enabled": true, "max_attempts": 3, "delay_minutes": 5, ...}
+    bot_caller_settings = Column(Text, nullable=True)
 
     def to_dict(self):
         return {
@@ -1064,59 +1063,143 @@ class AdGuardAccount(Base):
             "timezone": self.timezone,
             "alert_emails": json.loads(self.alert_emails) if self.alert_emails else [],
             "protection_mode": self.protection_mode,
+            "conversion_values": json.loads(self.conversion_values) if self.conversion_values else {"lead": 500, "qualified": 2000, "site_visit": 10000, "appointment": 10000, "converted": 10000},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class AdGuardSession(Base):
+    """AdGuard V1 — Landing page session and pre-submit device telemetry."""
+    __tablename__ = "adguard_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+    session_uuid = Column(String, nullable=False, unique=True, index=True)
+
+    fingerprint_hash = Column(String, nullable=True, index=True)
+    ip = Column(String, nullable=True, index=True)
+    asn = Column(String, nullable=True)
+    is_datacenter = Column(Boolean, default=False)
+    gclid = Column(String, nullable=True, index=True)
+    fbclid = Column(String, nullable=True, index=True)
+    utm_source = Column(String, nullable=True)
+    utm_medium = Column(String, nullable=True)
+    utm_campaign = Column(String, nullable=True)
+    utm_content = Column(String, nullable=True)
+    utm_term = Column(String, nullable=True)
+    page_url = Column(Text, nullable=True)
+    referrer = Column(Text, nullable=True)
+    device_info = Column(Text, nullable=True)  # JSON
+    behaviour_json = Column(Text, nullable=True)  # JSON
+
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "session_uuid": self.session_uuid,
+            "adguard_account_id": self.adguard_account_id,
+            "fingerprint_hash": self.fingerprint_hash,
+            "ip": self.ip,
+            "asn": self.asn,
+            "is_datacenter": self.is_datacenter,
+            "gclid": self.gclid,
+            "fbclid": self.fbclid,
+            "utm_campaign": self.utm_campaign,
+            "page_url": self.page_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class AdGuardVerdict(Base):
+    """AdGuard V1 — Pre-submit risk score & verdict."""
+    __tablename__ = "adguard_verdicts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("adguard_sessions.id"), nullable=True, index=True)
+    session_uuid = Column(String, nullable=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+
+    risk_score = Column(Integer, default=0)  # 0-100 (high = fraud)
+    verdict = Column(String, default="green", index=True)  # green | grey | red
+    reasons = Column(Text, nullable=True)  # JSON list
+    gemini_score = Column(Integer, nullable=True)
+    otp_status = Column(String, default="none")  # none | required | sent | verified | failed
+    otp_code = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "session_uuid": self.session_uuid,
+            "risk_score": self.risk_score,
+            "verdict": self.verdict,
+            "reasons": json.loads(self.reasons) if self.reasons else [],
+            "gemini_score": self.gemini_score,
+            "otp_status": self.otp_status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
 class AdGuardLead(Base):
-    """AdGuard — Google Ads lead form intake with integrity scoring.
-
-    Every incoming lead is scored by the Lead Integrity Gatekeeper
-    (disposable email, phone format, geo-mismatch, Gemini legitimacy).
-    - Verified leads  -> pushed to LeadSquared and stored here for audit trail.
-    - Flagged leads   -> stored here ONLY (never pushed to LSQ), with reasons.
-    """
+    """AdGuard — Unified lead intake, integrity scoring, and lifecycle stages."""
     __tablename__ = "adguard_leads"
 
     id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("adguard_sessions.id"), nullable=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
     gclid = Column(String, nullable=True, index=True)
+    fbclid = Column(String, nullable=True, index=True)
     form_id = Column(String, nullable=True)
     campaign_name = Column(String, nullable=True, default="")
-    lead_type = Column(String, nullable=True, default="")  # e.g. google_lead_form
+    lead_type = Column(String, nullable=True, default="")  # e.g. web_interceptor, google_lead_form, meta_leadgen
 
     full_name = Column(String, nullable=True, default="")
     email = Column(String, nullable=True, default="")
     phone = Column(String, nullable=True, default="")
+    phone_hash = Column(String, nullable=True, index=True)
+    email_hash = Column(String, nullable=True, index=True)
     city = Column(String, nullable=True, default="")
     state = Column(String, nullable=True, default="")
     country = Column(String, nullable=True, default="")
     postal_code = Column(String, nullable=True, default="")
 
-    raw_payload = Column(Text, nullable=True)  # full webhook JSON for traceability
+    raw_payload = Column(Text, nullable=True)
 
-    # Gatekeeper output
-    integrity_score = Column(Integer, nullable=False, default=0)  # 0-100
-    verdict = Column(String, nullable=False, default="pending")  # verified | flagged
+    # Gatekeeper & Verdict outputs
+    integrity_score = Column(Integer, nullable=False, default=0)  # 0-100 (100 - risk_score)
+    verdict = Column(String, nullable=False, default="pending", index=True)  # green | grey | red | verified | flagged
     email_valid = Column(Boolean, default=True)
     disposable_email = Column(Boolean, default=False)
     phone_valid = Column(Boolean, default=False)
     geo_match = Column(Boolean, default=True)
     ai_legitimacy_score = Column(Integer, nullable=True)  # 0-100 from Gemini
     ai_reason = Column(Text, nullable=True)
-    flags = Column(Text, nullable=True)  # JSON list of flag strings
+    flags = Column(Text, nullable=True)  # JSON list
 
-    # LSQ outcome
-    lsq_status = Column(String, nullable=True, default="not_pushed")  # not_pushed | pushed | failed | skipped_flagged
+    # Lifecycle & CRM outcomes
+    stage = Column(String, default="submitted", index=True)  # submitted | verified | qualified | site_visit | converted | rejected
+    crm_id = Column(String, nullable=True)
+    lsq_status = Column(String, nullable=True, default="not_pushed")
     lsq_prospect_id = Column(String, nullable=True)
     lsq_error = Column(Text, nullable=True)
+
+    # AI Bot-caller loop
+    bot_call_status = Column(String, default="none", index=True)  # none | queued | calling | verified | not_interested | wrong_person | unreachable | failed
+    bot_call_summary = Column(Text, nullable=True)
+    bot_call_attempts = Column(Integer, default=0)
+    verified_at = Column(DateTime, nullable=True)
 
     received_at = Column(DateTime, default=datetime.utcnow, index=True)
     processed_at = Column(DateTime, nullable=True)
 
     account = relationship("Account")
     adguard_account = relationship("AdGuardAccount")
+    session = relationship("AdGuardSession")
 
     def to_dict(self):
         customer_id = self.account.external_id if self.account and self.account.external_id else None
@@ -1140,12 +1223,14 @@ class AdGuardLead(Base):
                 pass
         return {
             "id": self.id,
+            "session_id": self.session_id,
             "account_id": self.account_id,
             "account_name": self.account.name if self.account else None,
             "customer_id": customer_id,
             "external_id": self.account.external_id if self.account else None,
             "adguard_account_id": self.adguard_account_id,
             "gclid": self.gclid,
+            "fbclid": self.fbclid,
             "form_id": self.form_id,
             "campaign_name": self.campaign_name,
             "campaign_id": campaign_id,
@@ -1163,6 +1248,10 @@ class AdGuardLead(Base):
             "postal_code": self.postal_code,
             "integrity_score": self.integrity_score,
             "verdict": self.verdict,
+            "stage": self.stage,
+            "bot_call_status": self.bot_call_status,
+            "bot_call_summary": self.bot_call_summary,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
             "email_valid": self.email_valid,
             "disposable_email": self.disposable_email,
             "phone_valid": self.phone_valid,
@@ -1175,6 +1264,127 @@ class AdGuardLead(Base):
             "lsq_error": self.lsq_error,
             "received_at": self.received_at.isoformat() if self.received_at else None,
             "processed_at": self.processed_at.isoformat() if self.processed_at else None,
+        }
+
+
+class AdGuardConversionEvent(Base):
+    """AdGuard V1 — Server-side conversion events for Meta CAPI & Google Offline Conversions."""
+    __tablename__ = "adguard_conversion_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lead_id = Column(Integer, ForeignKey("adguard_leads.id"), nullable=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+    platform = Column(String, nullable=False, index=True)  # meta | google
+    event_name = Column(String, nullable=False)  # Lead | QualifiedLead | SiteVisit | Appointment | Converted
+    value = Column(Float, default=0.0)
+    currency = Column(String, default="INR")
+    gclid = Column(String, nullable=True)
+    fbclid = Column(String, nullable=True)
+    status = Column(String, default="held", index=True)  # held | sent | retracted | failed
+    sent_at = Column(DateTime, nullable=True)
+    platform_response = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    lead = relationship("AdGuardLead")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "lead_id": self.lead_id,
+            "adguard_account_id": self.adguard_account_id,
+            "platform": self.platform,
+            "event_name": self.event_name,
+            "value": self.value,
+            "currency": self.currency,
+            "status": self.status,
+            "sent_at": self.sent_at.isoformat() if self.sent_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class AdGuardExclusionMember(Base):
+    """AdGuard V1 — Pre-bid exclusion lists (Meta Custom Audience, Google Customer Match, IP Exclusions)."""
+    __tablename__ = "adguard_exclusion_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+    list_type = Column(String, nullable=False, index=True)  # meta_custom_audience | google_customer_match | google_ip_exclusion | meta_reject_pixel
+    entity_hash = Column(String, nullable=False, index=True)
+    entity_type = Column(String, nullable=False)  # phone | email | ip | fingerprint
+    source = Column(String, default="red_verdict")  # red_verdict | honeypot | shared_network
+    status = Column(String, default="pending_sync", index=True)  # pending_sync | synced | removed
+    synced_at = Column(DateTime, nullable=True)
+    added_at = Column(DateTime, default=datetime.utcnow, index=True)
+    removed_at = Column(DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "adguard_account_id": self.adguard_account_id,
+            "list_type": self.list_type,
+            "entity_hash": self.entity_hash,
+            "entity_type": self.entity_type,
+            "source": self.source,
+            "status": self.status,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+            "added_at": self.added_at.isoformat() if self.added_at else None,
+        }
+
+
+class AdGuardNetworkEntity(Base):
+    """AdGuard V1 — Shared Fraud Network pooled threat repository."""
+    __tablename__ = "adguard_network_entities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_hash = Column(String, nullable=False, unique=True, index=True)
+    entity_type = Column(String, nullable=False, index=True)  # phone | email | ip_subnet | fingerprint
+    trust_score = Column(Integer, default=50)  # 0-100 (high = high fraud risk)
+    accounts_flagged = Column(Integer, default=1)
+    offence_count = Column(Integer, default=1)
+    last_offence_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "entity_hash": self.entity_hash,
+            "entity_type": self.entity_type,
+            "trust_score": self.trust_score,
+            "accounts_flagged": self.accounts_flagged,
+            "offence_count": self.offence_count,
+            "last_offence_at": self.last_offence_at.isoformat() if self.last_offence_at else None,
+        }
+
+
+class AdGuardClickReconciliation(Base):
+    """AdGuard V1 — Invalid-click audit log matching Google Click View vs Session Logs."""
+    __tablename__ = "adguard_click_reconciliations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    adguard_account_id = Column(Integer, ForeignKey("adguard_accounts.id"), nullable=True, index=True)
+    gclid = Column(String, nullable=False, index=True)
+    campaign_id = Column(String, nullable=True)
+    campaign_name = Column(String, nullable=True)
+    cost = Column(Float, default=0.0)
+    click_time = Column(DateTime, nullable=True, index=True)
+    session_found = Column(Boolean, default=False)
+    classification = Column(String, default="clean", index=True)  # no_session | bot_verdict | datacenter_ip | burst | clean
+    claim_id = Column(String, nullable=True)
+    claim_status = Column(String, default="unclaimed")  # unclaimed | generated | submitted | refunded | rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "adguard_account_id": self.adguard_account_id,
+            "gclid": self.gclid,
+            "campaign_name": self.campaign_name,
+            "cost": self.cost,
+            "click_time": self.click_time.isoformat() if self.click_time else None,
+            "session_found": self.session_found,
+            "classification": self.classification,
+            "claim_status": self.claim_status,
         }
 
 
@@ -1240,3 +1450,4 @@ class AdGuardTicketMessage(Base):
             "body": self.body,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+

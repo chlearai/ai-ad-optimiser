@@ -860,17 +860,138 @@
             margin-left: 6px;
         }
 
+        /* --- LANDING PAGE EMBED TAG SECTION --- */
+        .embed-section-box {
+            background: linear-gradient(145deg, rgba(18, 24, 38, 0.95), rgba(15, 23, 42, 0.98));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: var(--radius-lg);
+            padding: 36px 32px;
+            box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(16, 185, 129, 0.1);
+            margin-top: 24px;
+        }
+
+        .embed-tag-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .embed-code-container {
+            background: #070a11;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 13px;
+            color: #a7f3d0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.6;
+            margin: 16px 0;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+            border-left: 4px solid var(--primary);
+        }
+
+        .platform-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .platform-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .platform-tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.35);
+            color: #34d399;
+        }
+
+        .platform-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        .platform-content.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .band-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .band-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .band-card.green {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.04);
+        }
+
+        .band-card.grey {
+            border-color: rgba(245, 158, 11, 0.35);
+            background: rgba(245, 158, 11, 0.04);
+        }
+
+        .band-card.red {
+            border-color: rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.04);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* Responsive */
         @media (max-width: 992px) {
             .hero h1 { font-size: 40px; }
-            .steps-grid, .features-grid, .pricing-grid { grid-template-columns: 1fr 1fr; }
+            .steps-grid, .features-grid, .pricing-grid, .band-cards-grid { grid-template-columns: 1fr 1fr; }
             .calc-box { grid-template-columns: 1fr; }
             .lead-sim-grid { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 640px) {
             .hero h1 { font-size: 32px; }
-            .steps-grid, .features-grid, .pricing-grid { grid-template-columns: 1fr; }
+            .steps-grid, .features-grid, .pricing-grid, .band-cards-grid { grid-template-columns: 1fr; }
             .nav-links { display: none; }
             .form-row-2 { grid-template-columns: 1fr; }
         }
@@ -887,6 +1008,7 @@
             </a>
             <ul class="nav-links">
                 <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#embed-tag">Landing Page Embed</a></li>
                 <li><a href="#features">Capabilities</a></li>
                 <li><a href="#comparison">Why AdGuard</a></li>
                 <li><a href="#calculator">ROI Calculator</a></li>
@@ -997,6 +1119,178 @@
                     <div class="step-icon">🎯</div>
                     <h3>CRM Delivery &amp; Proof</h3>
                     <p>Only verified leads (≥ 70 score) push to your CRM. Garbage is blocked, giving you proof of recovered ad spend.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- LANDING PAGE EMBED TAG & PRE-SUBMIT CONVERSION FIREWALL -->
+    <section class="section" id="embed-tag" style="background: rgba(0,0,0,0.3); border-top: 1px solid var(--border-glass); border-bottom: 1px solid var(--border-glass);">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">⚡ 1-Line Pre-Submit Protection</div>
+                <h2>How to Embed on Client Landing Pages</h2>
+                <p>Prevent bot farms, fake phone numbers, and invalid clicks from ever poisoning Meta CAPI and Google Smart Bidding. Lightweight (&lt;15 KB), asynchronous, with an unconditional 2.0s fail-open safety guarantee.</p>
+            </div>
+
+            <div class="embed-section-box">
+                <div class="embed-tag-header">
+                    <div>
+                        <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; display:flex; align-items:center; gap:8px;">
+                            <span>⚡</span> <span>Pre-Submit Interceptor Script Tag</span>
+                        </h3>
+                        <p style="font-size: 13px; color: var(--text-muted);">Paste this script into your landing page HTML, WordPress header, Webflow, or GTM container.</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.06); padding:4px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+                            <label style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-muted); margin:0;">Workspace ID:</label>
+                            <input type="text" id="landingWsIdInput" value="my_workspace" placeholder="Enter Workspace ID" 
+                                   style="background:transparent; border:none; color:#34d399; font-weight:700; font-size:12px; outline:none; width:120px;" 
+                                   oninput="updateLandingEmbedSnippet()">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnCopyLandingSnippet" onclick="copyLandingEmbedSnippet()">
+                            📋 Copy Script Tag
+                        </button>
+                    </div>
+                </div>
+
+                <div class="embed-code-container" id="landingScriptCodeBlock">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
+&lt;script async src="https://ai-ad-optimiser-production-dd12.up.railway.app/api/v1/tag/adguard.js" data-account-id="my_workspace"&gt;&lt;/script&gt;</div>
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 24px;">
+                    <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:600;">✓ &lt;15 KB Async Footprint</span>
+                    <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:600;">✓ 2.0s Strict Fail-Open Guarantee</span>
+                    <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:600;">✓ Canvas &amp; WebGL Fingerprinting</span>
+                    <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:600;">✓ Inline SMS / WhatsApp OTP Step-Up</span>
+                    <span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:600;">✓ Meta CAPI &amp; Google Offline Conversions</span>
+                </div>
+
+                <!-- PLATFORM TABS -->
+                <h4 style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Installation Guides by Platform
+                </h4>
+                
+                <div class="platform-tabs">
+                    <button class="platform-tab-btn active" onclick="switchPlatformTab('elementor', this)">🧩 WordPress &amp; Elementor</button>
+                    <button class="platform-tab-btn" onclick="switchPlatformTab('gtm', this)">🏷️ Google Tag Manager (GTM)</button>
+                    <button class="platform-tab-btn" onclick="switchPlatformTab('webflow', this)">🎨 Webflow &amp; Shopify</button>
+                    <button class="platform-tab-btn" onclick="switchPlatformTab('html', this)">🌐 Custom HTML / React / Next.js</button>
+                </div>
+
+                <!-- Elementor Content -->
+                <div class="platform-content active" id="tab-content-elementor">
+                    <ol style="margin-left: 20px; display:flex; flex-direction:column; gap:8px;">
+                        <li>Navigate to your WordPress Admin dashboard → <b>Elementor → Custom Code</b> (or install the free <i>WPCode / Header &amp; Footer Scripts</i> plugin).</li>
+                        <li>Click <b>Add New Custom Code</b>, name it <code>AdGuard Pre-Submit Firewall</code>.</li>
+                        <li>Set Location to <b>&lt;head&gt;</b> or <b>&lt;body&gt; - End</b> with Priority <code>1</code>.</li>
+                        <li>Paste the AdGuard <code>&lt;script&gt;</code> tag snippet above and click <b>Publish</b> (Entire Site or Landing Pages).</li>
+                        <li>All forms (Elementor Forms, Gravity Forms, WPForms, Contact Form 7) are now automatically intercepted!</li>
+                    </ol>
+                </div>
+
+                <!-- GTM Content -->
+                <div class="platform-content" id="tab-content-gtm">
+                    <ol style="margin-left: 20px; display:flex; flex-direction:column; gap:8px;">
+                        <li>Open your <b>Google Tag Manager (GTM)</b> container.</li>
+                        <li>Click <b>Tags → New → Tag Configuration</b> → Choose <b>Custom HTML Tag</b>.</li>
+                        <li>Paste the AdGuard <code>&lt;script&gt;</code> code snippet into the HTML box.</li>
+                        <li>Under <b>Triggering</b>, select <b>All Pages (Page View)</b> or your specific Landing Page triggers.</li>
+                        <li>Click <b>Save</b> and <b>Submit / Publish</b> your container. AdGuard begins real-time telemetry instantly.</li>
+                    </ol>
+                </div>
+
+                <!-- Webflow / Shopify Content -->
+                <div class="platform-content" id="tab-content-webflow">
+                    <ol style="margin-left: 20px; display:flex; flex-direction:column; gap:8px;">
+                        <li><b>Webflow:</b> Open <b>Project Settings → Custom Code</b> → Paste into the <b>Head Code</b> or <b>Footer Code</b> box → Click <b>Save &amp; Publish</b>.</li>
+                        <li><b>Shopify:</b> Go to <b>Online Store → Themes → Edit Code</b> → Open <code>theme.liquid</code> → Paste right before <code>&lt;/head&gt;</code> → Save.</li>
+                        <li><b>Unbounce / Leadpages:</b> Open the landing page builder → Javascripts → Add New → Placement: <b>Before Body End Tag</b> → Paste snippet → Save.</li>
+                    </ol>
+                </div>
+
+                <!-- Custom HTML / React Content -->
+                <div class="platform-content" id="tab-content-html">
+                    <ol style="margin-left: 20px; display:flex; flex-direction:column; gap:8px;">
+                        <li><b>HTML / PHP:</b> Paste the <code>&lt;script async src="..."&gt;&lt;/script&gt;</code> tag into your base template inside <code>&lt;head&gt;</code> or before <code>&lt;/body&gt;</code>.</li>
+                        <li><b>Next.js / React:</b> In your root layout (e.g. <code>app/layout.tsx</code> or <code>_document.js</code>), add:
+                            <pre style="background:#090d16; padding:10px; border-radius:6px; margin:6px 0; font-size:12px; color:#a7f3d0;">&lt;Script src="https://ai-ad-optimiser-production-dd12.up.railway.app/api/v1/tag/adguard.js" data-account-id="my_workspace" strategy="lazyOnload" /&gt;</pre>
+                        </li>
+                        <li>AdGuard automatically attaches to all form submit listeners without breaking React state or standard POST actions.</li>
+                    </ol>
+                </div>
+
+                <!-- 3-BAND DECISION ENGINE BREAKDOWN -->
+                <div style="margin-top: 32px; border-top: 1px solid var(--border-glass); padding-top: 24px;">
+                    <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px;">
+                        🚦 How the 3-Band Pre-Submit Conversion Controller Operates
+                    </h4>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                        AdGuard intercepts submissions in ~200ms and issues an intelligent verdict to protect your conversion pixels:
+                    </p>
+
+                    <div class="band-cards-grid">
+                        <!-- Green Band -->
+                        <div class="band-card green">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <span style="font-size:18px;">🟢</span>
+                                    <h5 style="font-size:14px; font-weight:700; color:#34d399;">Green Band (Clean Lead)</h5>
+                                </div>
+                                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#34d399; margin-bottom:6px;">Score ≥ 70 · Instant Pass</div>
+                                <p style="font-size:12px; color:var(--text-sub); line-height:1.5;">
+                                    Form submits seamlessly without delay. AdGuard queues server-side Meta CAPI and Google Offline Conversions with revenue weight tiers (₹500 / ₹2,000 / ₹10,000).
+                                </p>
+                            </div>
+                            <div style="margin-top:12px; font-size:11px; color:#34d399; font-weight:600;">✓ Clean Conversion Fired</div>
+                        </div>
+
+                        <!-- Grey Band -->
+                        <div class="band-card grey">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <span style="font-size:18px;">🟡</span>
+                                    <h5 style="font-size:14px; font-weight:700; color:#fbbf24;">Grey Band (Suspicious / Ambiguous)</h5>
+                                </div>
+                                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#fbbf24; margin-bottom:6px;">Score 40–69 · OTP Step-Up</div>
+                                <p style="font-size:12px; color:var(--text-sub); line-height:1.5;">
+                                    Suspicious behavior triggers an instant branded inline SMS / WhatsApp OTP modal. Once verified, the lead upgrades to Green. Abandoned attempts are safely discarded.
+                                </p>
+                            </div>
+                            <div style="margin-top:12px; font-size:11px; color:#fbbf24; font-weight:600;">✓ OTP Step-Up Gating</div>
+                        </div>
+
+                        <!-- Red Band -->
+                        <div class="band-card red">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                    <span style="font-size:18px;">🔴</span>
+                                    <h5 style="font-size:14px; font-weight:700; color:#f87171;">Red Band (Bot / Fraud Farm)</h5>
+                                </div>
+                                <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#f87171; margin-bottom:6px;">Score &lt; 40 · Silent Quarantine</div>
+                                <p style="font-size:12px; color:var(--text-sub); line-height:1.5;">
+                                    Quarantined silently to deceive the bot. Conversion pixels are strictly blocked, preventing ad algorithms from training on garbage.
+                                </p>
+                            </div>
+                            <div style="margin-top:12px; font-size:11px; color:#f87171; font-weight:600;">✓ Ad Algorithm Protected</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAIL OPEN CALLOUT -->
+                <div style="margin-top:24px; background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:24px;">🛡️</span>
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:#fff;">Unconditional 2.0s Fail-Open Guarantee</div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                If a user is on slow 2G mobile internet or network latency exceeds 2.0s, AdGuard fails open and permits native submission. <b>0% lead loss, guaranteed.</b>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openAuthModal('signup', 'trial')">
+                        Deploy on Landing Pages →
+                    </button>
                 </div>
 
             </div>
@@ -1956,8 +2250,51 @@
             }
         }
 
-        // Initialize calculator on page load
+        // Landing page embed snippet logic
+        function updateLandingEmbedSnippet() {
+            var host = window.location.origin;
+            if (!host || host.indexOf('http') !== 0) host = 'https://ai-ad-optimiser-production-dd12.up.railway.app';
+            var wsIdInput = document.getElementById('landingWsIdInput');
+            var wsId = (wsIdInput && wsIdInput.value.trim()) || 'my_workspace';
+            var code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
+                       '<script async src="' + host + '/api/v1/tag/adguard.js" data-account-id="' + wsId + '"><\/script>';
+            var box = document.getElementById('landingScriptCodeBlock');
+            if (box) box.textContent = code;
+        }
+
+        function copyLandingEmbedSnippet() {
+            var box = document.getElementById('landingScriptCodeBlock');
+            var code = box ? box.textContent : '';
+            if (!code) return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(function() {
+                    var btn = document.getElementById('btnCopyLandingSnippet');
+                    if (btn) {
+                        var orig = btn.innerHTML;
+                        btn.innerHTML = '✅ Copied to Clipboard!';
+                        btn.style.background = 'linear-gradient(135deg, #059669, #047857)';
+                        setTimeout(function() {
+                            btn.innerHTML = orig;
+                            btn.style.background = '';
+                        }, 2500);
+                    }
+                }).catch(function() {
+                    alert('Copied script tag to clipboard');
+                });
+            }
+        }
+
+        function switchPlatformTab(tabId, btnEl) {
+            document.querySelectorAll('.platform-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelectorAll('.platform-content').forEach(function(c) { c.classList.remove('active'); });
+            if (btnEl) btnEl.classList.add('active');
+            var target = document.getElementById('tab-content-' + tabId);
+            if (target) target.classList.add('active');
+        }
+
+        // Initialize calculator and embed snippet on page load
         updateCalc();
+        updateLandingEmbedSnippet();
     </script>
 </body>
 </html>

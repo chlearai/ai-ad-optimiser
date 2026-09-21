@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdOptimiser — Theme Showcase</title>
+<style>
+  :root {
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 22px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #050807;
+    color: #e8edf2;
+    min-height: 100vh;
+  }
+
+  /* ============ THEME DEFINITIONS ============ */
+  /* Emerald (AdGuard current) */
+  .theme-emerald {
+    --accent: #10d97e;
+    --accent-strong: #0eb868;
+    --accent-glow: rgba(16, 217, 126, 0.35);
+    --accent-grad: linear-gradient(90deg, #34e89e, #0ac770);
+    --accent-soft: rgba(16, 217, 126, 0.12);
+    --accent-text: #7cf5c0;
+    --bg-card: #0a0f0d;
+    --bg-card2: #0d1411;
+    --border: rgba(255,255,255,0.07);
+    --danger: #ff5470;
+    --danger-bg: rgba(255,84,112,0.12);
+  }
+  /* Ocean Blue */
+  .theme-ocean {
+    --accent: #3b9eff;
+    --accent-strong: #2f86e0;
+    --accent-glow: rgba(59, 158, 255, 0.35);
+    --accent-grad: linear-gradient(90deg, #6db6ff, #2f7fe8);
+    --accent-soft: rgba(59, 158, 255, 0.12);
+    --accent-text: #9ccdff;
+    --bg-card: #080d14;
+    --bg-card2: #0c1219;
+    --border: rgba(255,255,255,0.07);
+    --danger: #ff5470;
+    --danger-bg: rgba(255,84,112,0.12);
+  }
+  /* Royal Purple */
+  .theme-royal {
+    --accent: #a78bfa;
+    --accent-strong: #8b6cf7;
+    --accent-glow: rgba(167, 139, 250, 0.35);
+    --accent-grad: linear-gradient(90deg, #c4a5ff, #8b5cf6);
+    --accent-soft: rgba(167, 139, 250, 0.12);
+    --accent-text: #d5c8ff;
+    --bg-card: #0c0a14;
+    --bg-card2: #110e1b;
+    --border: rgba(255,255,255,0.07);
+    --danger: #ff5470;
+    --danger-bg: rgba(255,84,112,0.12);
+  }
+  /* Amber Gold */
+  .theme-amber {
+    --accent: #f5b83d;
+    --accent-strong: #e09c1a;
+    --accent-glow: rgba(245, 184, 61, 0.35);
+    --accent-grad: linear-gradient(90deg, #ffd166, #e89b1c);
+    --accent-soft: rgba(245, 184, 61, 0.12);
+    --accent-text: #ffd98a;
+    --bg-card: #0f0c07;
+    --bg-card2: #14100a;
+    --border: rgba(255,255,255,0.07);
+    --danger: #ff5470;
+    --danger-bg: rgba(255,84,112,0.12);
+  }
+
+  /* ============ SHOWCASE LAYOUT ============ */
+  .showcase-header {
+    text-align: center;
+    padding: 48px 24px 8px;
+  }
+  .showcase-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .showcase-header p {
+    color: #8b95a5;
+    margin-top: 8px;
+    font-size: 0.95rem;
+  }
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 28px;
+    max-width: 1500px;
+    margin: 32px auto 60px;
+    padding: 0 24px;
+  }
+  .variant {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #07090c;
+    position: relative;
+  }
+  .variant-label {
+    position: absolute;
+    top: 14px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #aab4c4;
+  }
+  .frame {
+    padding: 0;
+    scale: 0.62;
+    transform-origin: top center;
+    width: 160%;
+    margin-left: -30%;
+    height: 560px;
+    pointer-events: none;
+  }
+  .choose {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px;
+    background: #0a0d12;
+    border-top: 1px solid var(--border);
+  }
+  .choose button {
+    padding: 9px 22px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: #cfd6e0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all .18s;
+  }
+  .choose button:hover { border-color: var(--accent); color: var(--accent-text); }
+
+  /* ============ MOCK APP UI (inside each frame) ============ */
+  .app {
+    background:
+      radial-gradient(1200px 500px at 50% -10%, var(--accent-glow), transparent 60%),
+      linear-gradient(180deg, #06090b 0%, #050708 100%);
+    min-height: 940px;
+    font-size: 16px;
+  }
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 44px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(4,6,8,0.7);
+    backdrop-filter: blur(10px);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
+  .brand-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent-grad);
+    display: grid; place-items: center;
+    box-shadow: 0 0 18px var(--accent-glow);
+    color: #041008; font-size: 1rem; font-weight: 900;
+  }
+  .nav-links { display: flex; gap: 26px; color: #97a1b2; font-size: 0.9rem; font-weight: 500; }
+  .nav-links span.on { color: var(--accent-text); }
+  .nav-actions { display: flex; gap: 10px; }
+  .btn-ghost {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); color: #dbe2ea;
+    font-weight: 600; font-size: 0.85rem; background: rgba(255,255,255,0.02);
+  }
+  .btn-primary {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    background: var(--accent-grad); color: #06130b; font-weight: 800;
+    font-size: 0.85rem; box-shadow: 0 4px 20px var(--accent-glow);
+    border: none;
+  }
+
+  .hero { text-align: center; padding: 60px 40px 30px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 999px;
+    border: 1px solid var(--accent-soft);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: 0.8rem; font-weight: 700;
+  }
+  .hero h1 {
+    margin-top: 20px;
+    font-size: 3rem; font-weight: 850; letter-spacing: -0.03em; line-height: 1.1;
+  }
+  .hero h1 .grad {
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .hero p { color: #8b95a5; max-width: 620px; margin: 16px auto 0; line-height: 1.6; font-size: 0.98rem; }
+  .hero-cta { margin-top: 26px; display: flex; gap: 14px; justify-content: center; }
+
+  .panel {
+    margin: 40px auto 0;
+    max-width: 1050px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .panel-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card2);
+    font-size: 0.85rem; color: #aab4c4; font-weight: 600;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .live { color: var(--accent-text); font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
+  .live::before { content:''; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); }
+  .kpi {
+    background: var(--bg-card2); padding: 20px 22px;
+  }
+  .kpi .k-label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: #79828f; font-weight: 700; }
+  .kpi .k-value { font-size: 1.55rem; font-weight: 800; margin-top: 8px; letter-spacing: -0.02em; }
+  .kpi .k-delta { font-size: 0.78rem; margin-top: 6px; font-weight: 600; }
+  .up { color: var(--accent); }
+  .down { color: var(--danger); }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 22px; }
+  .mini-card {
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-card2);
+  }
+  .mini-card.blocked { border-color: rgba(255,84,112,0.4); }
+  .tag {
+    display: inline-block; padding: 5px 12px; border-radius: 7px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em;
+  }
+  .tag-block { background: var(--danger); color: #fff; }
+  .tag-ok { background: var(--accent); color: #06130b; }
+  .kv { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.88rem; }
+  .kv .k { color: #8b95a5; }
+  .kv .v { font-weight: 700; }
+  .score-good { color: var(--accent); font-weight: 800; }
+  .score-bad { color: var(--danger); font-weight: 800; }
+
+  .table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .table th {
+    text-align: left; padding: 12px 20px;
+    font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #79828f; border-bottom: 1px solid var(--border);
+    background: var(--bg-card2); font-weight: 700;
+  }
+  .table td { padding: 13px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .table tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge {
+    padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+  }
+  .badge.live { background: var(--accent-soft); color: var(--accent-text); border: 1px solid var(--accent-soft); }
+  .badge.pause { background: rgba(245,184,61,0.12); color: #ffd98a; }
+  .badge.crit { background: var(--danger-bg); color: #ff8ba0; }
+  .accent-text { color: var(--accent-text); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="showcase-header">
+  <h1>AdOptimiser Theme Showcase</h1>
+  <p>Pick a color direction for the full app redesign — same layout, four moods.</p>
+</div>
+
+<div class="variants" id="variants"></div>
+
+<script>
+const themes = [
+  { id: 'emerald', name: 'Emerald (current AdGuard)' },
+  { id: 'ocean',   name: 'Ocean Blue' },
+  { id: 'royal',   name: 'Royal Purple' },
+  { id: 'amber',   name: 'Amber Gold' },
+];
+
+function appHTML() {
+  return `
+  <div class="app">
+    <div class="nav">
+      <div class="brand"><div class="brand-icon">A</div>AdOptimiser</div>
+      <div class="nav-links"><span class="on">Dashboard</span><span>AdPulse</span><span>InsightDesk</span><span>RevenueOps</span></div>
+      <div class="nav-actions"><div class="btn-ghost">Reports</div><div class="btn-primary">Sync Now</div></div>
+    </div>
+
+    <div class="hero">
+      <div class="pill">⚡ AI-Powered Ad Optimization Suite</div>
+      <h1>Your Ad Accounts,<br><span class="grad">Optimized Automatically.</span></h1>
+      <p>Live health monitoring, MIS reporting, and budget tracking across Google & Meta — all in one dark, focused command center.</p>
+      <div class="hero-cta">
+        <div class="btn-primary">Open Dashboard</div>
+        <div class="btn-ghost">View Reports</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-bar">
+        <span><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span></span>
+        <span>AdOptimiser — Live Overview</span>
+        <span class="live">Active Monitoring</span>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k-label">Total Spend</div><div class="k-value">₹9.8L</div><div class="k-delta up">▲ 12.4% vs last week</div></div>
+        <div class="kpi"><div class="k-label">Leads</div><div class="k-value">1,938</div><div class="k-delta up">▲ 8.1% vs last week</div></div>
+        <div class="kpi"><div class="k-label">Avg CPL</div><div class="k-value">₹511</div><div class="k-delta down">▼ 3.2% vs last week</div></div>
+        <div class="kpi"><div class="k-label">Health</div><div class="k-value">87<span style="font-size:0.9rem;color:#79828f">/100</span></div><div class="k-delta up">2 accounts need attention</div></div>
+      </div>
+      <div class="cards">
+        <div class="mini-card block">
+          <span class="tag tag-block">✕ BUDGET CRITICAL</span>
+          <div class="kv"><span class="k">Account:</span><span class="v">DSU — Google Ads</span></div>
+          <div class="kv"><span class="k">Budget used:</span><span class="v score-bad">75.9%</span></div>
+          <div class="kv"><span class="k">Runway:</span><span class="v">4 days left</span></div>
+        </div>
+        <div class="mini-card">
+          <span class="tag tag-ok">✓ LEAD FLOW HEALTHY</span>
+          <div class="kv"><span class="k">Account:</span><span class="v">DSI — LSQ Mirror</span></div>
+          <div class="kv"><span class="k">Synced:</span><span class="v score-good">2 min ago</span></div>
+          <div class="kv"><span class="k">Today's leads:</span><span class="v">88</span></div>
+        </div>
+      </div>
+      <table class="table">
+        <thead><tr><th>Account</th><th>Platform</th><th class="num">Spend (30d)</th><th class="num">Leads</th><th class="num">CPL</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>DSU</td><td>Google</td><td class="num">₹9,91,048</td><td class="num">1,938</td><td class="num">₹511</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>DSI</td><td>Google + LSQ</td><td class="num">₹1,05,226</td><td class="num">290</td><td class="num">₹363</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Crash Club</td><td>Meta</td><td class="num">₹52,129</td><td class="num">131</td><td class="num">₹398</td><td><span class="badge pause">PAUSED</span></td></tr>
+          <tr><td>Sparsh</td><td>Google</td><td class="num">₹18,510</td><td class="num">42</td><td class="num">₹441</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Shyam Steel</td><td>Meta</td><td class="num">₹7,541</td><td class="num">198</td><td class="num">₹38</td><td><span class="badge live">LIVE</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+const host = document.getElementById('variants');
+host.innerHTML = themes.map(t => `
+  <div class="variant">
+    <div class="variant-label">${t.name}</div>
+    <div class="frame"><div class="theme-${t.id}" id="v-${t.id}">${appHTML()}</div></div>
+    <div class="choose">
+      <button onclick="pick('${t.id}')">Use ${t.name}</button>
+      <button onclick="openFull('${t.id}')">Open Full Preview</button>
+    </div>
+  </div>
+`).join('');
+
+function pick(id) {
+  localStorage.setItem('adoptima_theme_pick', id);
+  document.querySelectorAll('.choose button').forEach(b => b.style.opacity = 0.5);
+  event.target.style.opacity = 1;
+  event.target.textContent = '✓ Selected ' + id;
+}
+function openFull(id) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>AdOptimiser — ${id}</title><style>${document.querySelector('style').innerHTML}</style></head><body class="theme-${id}" style="margin:0"><script>${appHTML.toString()}<\/script><script>document.body.innerHTML = appHTML();<\/script></body></html>`);
+  w.document.close();
+}
+</script>
+</body>
+</html>

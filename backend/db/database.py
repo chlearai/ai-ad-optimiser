@@ -247,7 +247,14 @@ def init_db():
             run_adguard_cached_campaigns_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard cached_campaigns migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard V1 schema columns
+        try:
+            from backend.migrations.add_adguard_v1_schema import run_migration as run_adguard_v1_schema_migration
+            run_adguard_v1_schema_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard V1 schema migration skipped/failed: {me}")
     except Exception as e:
+
         logger.error(f"Database initialization failed: {e}")
         raise
 
