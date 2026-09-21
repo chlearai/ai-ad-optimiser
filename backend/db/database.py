@@ -32,7 +32,7 @@ def _create_sqlite_engine():
 def _create_postgres_engine(url):
     return create_engine(
         url,
-        connect_args={"sslmode": "require", "connect_timeout": 10},
+        connect_args={"sslmode": "require", "connect_timeout": 2},
         pool_pre_ping=True,
         pool_recycle=300,
     )
