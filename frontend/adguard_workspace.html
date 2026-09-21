@@ -1028,9 +1028,39 @@
                     <div id="flagsBreakdown"></div>
                 </div>
 
+                <!-- FORENSIC EVIDENCE & CONVERSION DISPATCH PANEL -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                    <!-- Card 1: Invalid Click Evidence -->
+                    <div class="card" style="margin-bottom:0;border:1px solid rgba(14, 165, 233, 0.3);background:linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
+                        <div class="card-header" style="margin-bottom:8px;">
+                            <span class="card-title" style="color:var(--color-info);font-size:14px;">📑 Invalid-Click Refund Evidence</span>
+                        </div>
+                        <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
+                            Court-admissible, timestamped forensic click-to-submission reconciliation logs. Use this packet to submit formal Google Ads Invalid Click Credit claims.
+                        </p>
+                        <div style="display:flex;gap:8px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('json')">⬇ Evidence (JSON)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('csv')">⬇ Evidence (CSV)</button>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Conversion Signal Dispatch -->
+                    <div class="card" style="margin-bottom:0;border:1px solid rgba(16, 185, 129, 0.3);background:linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
+                        <div class="card-header" style="margin-bottom:8px;">
+                            <span class="card-title" style="color:var(--color-accent);font-size:14px;">🎯 Conversion Signal Firewall Status</span>
+                        </div>
+                        <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
+                            Gated Meta CAPI &amp; Google Offline signals. Junk leads blocked from ad training; high-value signals (₹500 / ₹2,000 / ₹10,000) dispatched.
+                        </p>
+                        <div style="display:flex;gap:8px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadRealizedSavingsModal()">📊 View Signal Dispatch Log</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">⬇ Export</span>
+                        <span class="card-title">⬇ Export Lead Data</span>
                         <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <select class="filter-select" id="exportRange" onchange="onExportRangeChange()">
                                 <option value="7">Last 7 days</option>
@@ -1445,6 +1475,23 @@
         </div>
     </div>
 
+    <!-- WORKSPACE SAVINGS & CONVERSION SIGNAL MODAL -->
+    <div id="wsSavingsOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:120;align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:26px;width:640px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--color-border);padding-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:22px;">🎯</span>
+                    <h2 style="font-family:'DM Sans',sans-serif;font-size:17px;color:var(--color-text-primary);">Conversion Signal Dispatch &amp; Realized Spend</h2>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsSavingsOverlay').style.display='none'">✕</button>
+            </div>
+
+            <div id="wsSavingsContent" style="font-size:13px;line-height:1.6;">
+                <div style="text-align:center;padding:20px;color:var(--color-text-muted);">Loading signal dispatch statistics...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = '/api/adguard';
         const AUTH = '/api/auth';
@@ -1457,6 +1504,69 @@
         const simWsId = new URLSearchParams(window.location.search).get('ws');
 
         function $(id) { return document.getElementById(id); }
+
+        async function downloadInvalidClickEvidence(format) {
+            const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : (currentUser ? currentUser.email : '');
+            if (!wsId) return toast('Workspace not selected', 'error');
+            try {
+                const res = await fetch('/api/v1/accounts/' + wsId + '/evidence?format=' + format, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) throw new Error('Failed to generate evidence');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `adguard_evidence_ws_${wsId}_${Date.now()}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                toast('Forensic Evidence downloaded successfully (' + format.toUpperCase() + ')', 'success');
+            } catch (e) {
+                toast(e.message || 'Evidence download failed', 'error');
+            }
+        }
+
+        async function loadRealizedSavingsModal() {
+            const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : (currentUser ? currentUser.email : '');
+            if (!wsId) return toast('Workspace not selected', 'error');
+            $('wsSavingsOverlay').style.display = 'flex';
+            $('wsSavingsContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--color-text-muted);">Fetching signal logs...</div>';
+            try {
+                const res = await fetch('/api/v1/accounts/' + wsId + '/savings', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) throw new Error('Failed to fetch savings data');
+                const data = await res.json();
+                $('wsSavingsContent').innerHTML = `
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                        <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
+                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Realized ₹ Budget Saved</div>
+                            <div style="font-size:24px;font-weight:800;color:var(--color-success);margin-top:2px;">₹${(data.realized_savings_inr || 0).toLocaleString('en-IN')}</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Blocked junk × ₹${data.avg_cpl_inr || 350} estimated CPL</div>
+                        </div>
+                        <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
+                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Gated Conversion Signals</div>
+                            <div style="font-size:24px;font-weight:800;color:var(--color-accent);margin-top:2px;">${data.conversions_dispatched || 0}</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Meta CAPI &amp; Google Offline events sent</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px 14px;font-size:12px;margin-bottom:12px;">
+                        <strong>🚦 Conversion Value Tier Strategy Active:</strong>
+                        <ul style="margin:6px 0 0 18px;line-height:1.6;">
+                            <li><b>₹500 Weight:</b> Clean Lead Submitted (Green Band Verdict)</li>
+                            <li><b>₹2,000 Weight:</b> CRM Stage Advanced (Appointment / Qualified)</li>
+                            <li><b>₹10,000 Weight:</b> Customer Converted / Won</li>
+                        </ul>
+                    </div>
+                    <div style="font-size:12px;color:var(--color-text-muted);">
+                        Total Leads Processed: <b>${data.total_leads || 0}</b> · Flagged Garbage: <b>${data.flagged_junk || 0}</b>
+                    </div>
+                `;
+            } catch (e) {
+                $('wsSavingsContent').innerHTML = '<div style="color:var(--color-danger);padding:16px;">' + escapeHtml(e.message) + '</div>';
+            }
+        }
 
         function updateWorkspaceEmbedSnippet() {
             const host = window.location.origin || 'http://127.0.0.1:8000';
