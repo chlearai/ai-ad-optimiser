@@ -587,9 +587,31 @@ def _fetch_dsi_lsq_leads(start_date: str, end_date: str) -> List[Dict[str, Any]]
 
 
 def _fetch_dsi_lsq_leads_direct(start_date: str, end_date: str) -> List[Dict[str, Any]]:
-    """Direct API fallback for DSI leads (cold-start / mirror rebuild)."""
+    """Direct API fallback for DSI leads (cold-start / mirror rebuild).
+
+    BOUNDED: caps the fetch window at 45 days back from end_date and pages at
+    20 (20k records). The unbounded version paged up to 100k+ records which
+    blocked the request long enough to trigger gateway 502s on Railway.
+    A proper full rebuild happens via the scheduled mirror sync instead.
+    """
     import requests
+    from datetime import date as _date, timedelta as _timedelta
     from backend.services.config import load_config
+
+    # Bound the range: never page more than 45 days of RecentlyModified data
+    try:
+        e_dt = date.fromisoformat(end_date)
+        s_dt = date.fromisoformat(start_date)
+    except Exception:
+        s_dt, e_dt = None, None
+    min_bound = (date.today() - _timedelta(days=45)).isoformat()
+    if s_dt and s_dt < date.fromisoformat(min(end_date, (date.today() - _timedelta(days=45)).isoformat())):
+        logger.warning(
+            f"DSI direct fallback: start {start_date} is older than 45 days; "
+            f"clamping to {max(start_date, (date.today() - _timedelta(days=45)).isoformat())} to stay responsive. "
+            f"Older data will appear once the mirror sync completes."
+        )
+        start_date = max(start_date, (date.today() - _timedelta(days=45)).isoformat())
 
     access_key = ""
     secret_key = ""
@@ -624,7 +646,7 @@ def _fetch_dsi_lsq_leads_direct(start_date: str, end_date: str) -> List[Dict[str
 
     all_leads = []
     page = 1
-    max_pages = 100
+    max_pages = 20
     total_records = None
 
     while page <= max_pages:

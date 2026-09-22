@@ -410,7 +410,8 @@ def _fetch_lsq_leads_direct(start_date: str, end_date: str, account_id: int = No
     url = f"{base_url}/LeadManagement.svc/Leads.RecentlyModified"
     course_leads = defaultdict(int)
     page = 1
-    max_pages = 100
+    # Bounded to prevent gateway 502s on Railway when the mirror is empty
+    max_pages = 20
     total_records = None
     total_fetched = 0
 
@@ -626,7 +627,9 @@ def _fetch_lsq_lead_details_direct(start_date: str, end_date: str, account_id: i
     url = f"{base_url}/LeadManagement.svc/Leads.RecentlyModified"
     all_leads = []
     page = 1
-    max_pages = 100
+    # Bounded: 20 pages x 1000 records. Unbounded paging blocked requests long
+    # enough to trigger gateway 502s on Railway when the mirror was empty.
+    max_pages = 20
     total_records = None
     total_fetched = 0
 
