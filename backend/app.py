@@ -198,6 +198,17 @@ def get_adguard_admin_login(request: Request):
     return HTMLResponse(content="<h1>AdGuard Admin Login not found.</h1>")
 
 
+@app.get("/adguard/login", response_class=HTMLResponse)
+@app.get("/adguard-login", response_class=HTMLResponse)
+def get_adguard_customer_login(request: Request):
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    html_path = os.path.join(frontend_dir, "adguard_login.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>AdGuard Customer Login not found.</h1>")
+
+
 @app.get("/adguard-workspace", response_class=HTMLResponse)
 def get_adguard_workspace(request: Request):
     frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")

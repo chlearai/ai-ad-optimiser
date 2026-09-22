@@ -1608,7 +1608,7 @@
             if (res.status === 401) {
                 token = '';
                 localStorage.removeItem('adoptima_token');
-                window.location.href = '/adguard-landing';
+                window.location.href = '/adguard/login';
                 throw new Error('Session expired');
             }
             if (!res.ok) {
@@ -1619,12 +1619,12 @@
         }
 
         async function checkAuth() {
-            if (!token) { window.location.href = '/adguard-landing'; return; }
+            if (!token) { window.location.href = '/adguard/login'; return; }
             try {
                 currentUser = await fetch(AUTH + '/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
-            } catch (e) { window.location.href = '/adguard-landing'; return; }
+            } catch (e) { window.location.href = '/adguard/login'; return; }
             const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
-            if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/adguard-landing'; return; }
+            if (!isAdmin && !currentUser.access_adguard) { window.location.href = '/adguard/login'; return; }
 
             // STRICT ROLE ISOLATION:
             // Admins belong exclusively in the Admin Cockpit (/adguard).
@@ -1652,7 +1652,7 @@
 
         function logout() {
             localStorage.removeItem('adoptima_token');
-            window.location.href = '/adguard-landing';
+            window.location.href = '/adguard/login';
         }
 
         // ---------- Workspace + Quota ----------

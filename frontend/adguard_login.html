@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard — Customer Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #080c14;
+            --bg-card: rgba(15, 23, 42, 0.8);
+            --border-card: rgba(255, 255, 255, 0.1);
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --danger-bg: rgba(220, 38, 38, 0.15);
+            --danger-text: #fca5a5;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.14) 0%, transparent 60%),
+                radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.08) 0%, transparent 50%);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px);
+        }
+
+        .login-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .shield {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(14, 165, 233, 0.15));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin-bottom: 16px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+        }
+
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        p.subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .form-group { margin-bottom: 18px; }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(2, 6, 23, 0.6);
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: var(--accent); }
+
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 6px;
+        }
+        .btn-login:hover { background: var(--accent-hover); }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .error-box {
+            display: none;
+            background: var(--danger-bg);
+            color: var(--danger-text);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .footer-note {
+            margin-top: 22px;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .footer-note a { color: #a5b4fc; text-decoration: none; font-weight: 600; }
+        .footer-note a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <div class="shield">🛡️</div>
+            <h1>AdGuard Sign In</h1>
+            <p class="subtitle">Access your lead integrity workspace.</p>
+        </div>
+
+        <div class="error-box" id="loginError"></div>
+
+        <div class="form-group">
+            <label for="custEmail">Business Email</label>
+            <input type="email" id="custEmail" placeholder="you@company.com" autocomplete="username" autofocus>
+        </div>
+        <div class="form-group">
+            <label for="custPassword">Password</label>
+            <input type="password" id="custPassword" placeholder="Your password" autocomplete="current-password">
+        </div>
+
+        <button class="btn-login" id="custSubmitBtn" onclick="doCustLogin()">Sign In to Workspace</button>
+    </div>
+
+    <div class="footer-note">
+        <span>New to AdGuard? </span>
+        <a href="/adguard-landing">Create an account →</a>
+    </div>
+
+    <script>
+        // Prefill email from ?email= query param (registration / invite flows)
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const email = params.get('email');
+            if (email) document.getElementById('custEmail').value = email;
+            // Already logged in? Go straight to workspace.
+            if (localStorage.getItem('adoptima_token')) {
+                window.location.href = '/adguard-workspace';
+            }
+        })();
+
+        async function doCustLogin() {
+            const email = document.getElementById('custEmail').value.trim();
+            const password = document.getElementById('custPassword').value;
+            const errBox = document.getElementById('loginError');
+            const btn = document.getElementById('custSubmitBtn');
+
+            errBox.style.display = 'none';
+            if (!email || !password) {
+                errBox.textContent = 'Please enter your email and password.';
+                errBox.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Signing In...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Login failed. Please check your credentials.');
+                }
+
+                const role = (data.user && data.user.role) || '';
+                if (role === 'admin' || role === 'superadmin') {
+                    // Admins belong to the admin portal
+                    localStorage.setItem('adoptima_token', data.access_token);
+                    window.location.href = '/adguard-admin-login';
+                    return;
+                }
+
+                localStorage.setItem('adoptima_token', data.access_token);
+                window.location.href = '/adguard-workspace';
+            } catch (err) {
+                errBox.textContent = err.message;
+                errBox.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Sign In to Workspace';
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') doCustLogin();
+        });
+    </script>
+</body>
+</html>
