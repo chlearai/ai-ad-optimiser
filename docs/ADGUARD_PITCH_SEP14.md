@@ -1,6 +1,6 @@
 # AdGuard — The 3-Layer Money Shield (Pitch Document)
 **Target date: Sep 14 · Audience: management / paying customers**
-**Motto: "Stop paying for garbage leads."**
+**Motto: "Stop buying fake leads."**
 
 ---
 
@@ -75,12 +75,12 @@ AdGuard's answer: **both. Three layers. Spend prevented at source, filtered at c
 | "So you filter my loss after I pay for it?" (the CFO kill-shot on filter-only tools) | Layer 1: excluded scammers' impressions are never served — spend prevented at source. Layers 2–3 protect CRM + prove savings. |
 | "Why not build in-house?" | The value is the FraudGraph network data, not the code. In-house = one account's fingerprints. AdGuard = every customer's scammer pre-blocked for you from day one. |
 | "What if it blocks real customers?" | Every block carries reason chips + CSV export + admin review. One-click unarchive. Shield is auditable. |
-| "How are you different from ClickCease/Lunio?" | They block clicks (one layer, USD 250–420/mo). AdGuard does prevention + filtering + proof at Indian pricing, with a transparent 0–100 Integrity Score instead of a black box, delivers to ANY CRM (they deliver to none), and every customer's blocked scammer protects the whole network. |
+| "How are you different from standard click-fraud tools?" | They block clicks (one layer, USD 250–420/mo). AdGuard does prevention + filtering + proof at Indian pricing, with a transparent 0–100 Integrity Score instead of a black box, delivers to ANY CRM (they deliver to none), and every customer's blocked scammer protects the whole network. |
 
 ---
 
 ## Live Evidence Sources (pull before pitching)
-- `/adguard` admin KPIs: Leads Audited · Verified & Pushed · Blocked Garbage · Recovered Spend (₹)
+- `/adguard` admin KPIs: Leads Audited · Verified & Pushed · Blocked Bots · Recovered Spend (₹)
 - `/leads/export` CSV for campaign-level breakdown
 - Landing page fraud visualizer for the demo moment
 

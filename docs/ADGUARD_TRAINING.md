@@ -8,9 +8,9 @@
 
 ## Motto (preserve verbatim)
 
-**"Stop paying for garbage leads."**
+**"Stop buying fake leads."**
 
-Every rupee of ad spend should buy a real customer — not a bot, duplicate, or junk form-fill.
+Every rupee of ad spend should buy a real customer — not a bot, duplicate, or fake form-fill.
 
 ---
 
@@ -99,7 +99,7 @@ Every rupee of ad spend should buy a real customer — not a bot, duplicate, or 
 > The **Recovered ₹ Spend Audit Log** is the accountant-verifiable calculation of **exact ad budget saved by blocking fraudulent form-fills before they waste sales bandwidth and ad spend**.
 
 * **Calculation Formula**:
-  $$\text{Recovered ₹ Spend} = \text{Blocked Garbage Leads} \times \text{Campaign Cost-Per-Lead (CPL)}$$
+  $$\text{Recovered ₹ Spend} = \text{Blocked Fake Leads} \times \text{Campaign Cost-Per-Lead (CPL)}$$
 * **Example**: If your campaign CPL is ₹350, and AdGuard intercepts 40 fake/bot leads in a week, your Recovered ₹ Spend is **₹14,000**.
 * **Audit Trail**: Every blocked lead is stored in the database with timestamp, campaign ID, integrity score (< 70), specific failure reason chips (e.g., `disposable_email`, `bad_phone_carrier`), and the rupee value saved. This data is available in live dashboard KPIs, downloadable as CSV, and delivered via the **Weekly Monday Executive Report Email**.
 

@@ -11,7 +11,7 @@
 AdGuard is an AI-powered **Lead Integrity Gatekeeper & Ad Budget Recovery Platform** for performance marketers running Google Ads and Meta Ads campaigns. 
 
 ### Why Our Pricing is Disruptive
-1. **Priced in Indian Rupees (INR)**: Traditional click-fraud tools (ClickCease, CHEQ, DataDome) charge exorbitant USD rates ($80 to $400+/mo) and only inspect IP addresses. AdGuard provides deep lead content inspection, AI intent scoring, and CRM delivery gatekeeping at domestic Indian price points starting at ₹4,999/mo.
+1. **Priced in Indian Rupees (INR)**: Traditional click-fraud tools charge exorbitant USD rates ($80 to $400+/mo) and only inspect IP addresses. AdGuard provides deep lead content inspection, AI intent scoring, and CRM delivery gatekeeping at domestic Indian price points starting at ₹4,999/mo.
 2. **Math-Proven ROI**: At an average cost-per-lead (CPL) of ₹250–₹500 in India (real estate, edtech, healthcare, BFSI), blocking just **15–20 junk leads a month completely pays for the Starter subscription**. Any additional junk blocked is pure recovered profit.
 3. **Predictable Lead Volume Tiers**: Simple, transparent tiers based on lead volume with zero hidden per-seat or per-campaign charges.
 
@@ -23,9 +23,9 @@ AdGuard is an AI-powered **Lead Integrity Gatekeeper & Ad Budget Recovery Platfo
 +---------------------------------------------------------------------------------------------------------+
 |                                    ADGUARD SUBSCRIPTION TIERS                                           |
 +---------------------+---------------------+-------------------------------+-----------------------------+
-| 1. TRIAL            | 2. STARTER          | 3. PRO (MOST POPULAR)         | 4. AGENCY                   |
+| 1. SHADOW MODE      | 2. STARTER          | 3. PRO (MOST POPULAR)         | 4. ENTERPRISE               |
 | Free / 14 Days      | ₹4,999 / month      | ₹14,999 / month               | ₹39,999 / month             |
-| 100 Leads Quota     | 1,000 Leads / mo    | 5,000 Leads / mo              | Unlimited Leads Quota       |
+| 1,000 Leads Quota   | 1,000 Leads / mo    | 5,000 Leads / mo              | Unlimited Leads Quota       |
 +---------------------+---------------------+-------------------------------+-----------------------------+
 ```
 
@@ -232,10 +232,10 @@ AdGuard delivers professional, multi-tier customer support integrated directly i
 
 ### Recovered ₹ Spend Audit Log
 > **Definition**: The accountant-verifiable rupee calculation of ad budget saved by blocking fraudulent form-fills before they waste sales bandwidth and ad spend:
-> $$\text{Recovered ₹ Spend} = \text{Blocked Garbage Leads} \times \text{Campaign Cost-Per-Lead (CPL)}$$
+> $$\text{Recovered ₹ Spend} = \text{Blocked Fake Leads} \times \text{Campaign Cost-Per-Lead (CPL)}$$
 > 
 > **Verification & Auditability**: Every blocked lead is stamped with an immutable timestamp, campaign reference, integrity score (< 70), specific failure reason chips (e.g., `disposable_email`, `bad_phone_carrier`), and the exact rupee amount saved. Downloadable via CSV anytime and delivered in the **Weekly Monday Executive Report Email**.
 
 ### Integrity Score (0–100)
-> **Definition**: A composite score calculated in real-time evaluating 14 fraud vectors. A score of **70 or higher** is classified as **Verified** and automatically routed downstream to your CRM. A score **below 70** is classified as **Flagged Garbage** and halted.
+> **Definition**: A composite score calculated in real-time evaluating 14 fraud vectors. A score of **70 or higher** is classified as **Verified** and automatically routed downstream to your CRM. A score **below 70** is classified as **Flagged** and halted.
 

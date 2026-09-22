@@ -217,7 +217,7 @@ def _build_adguard_payloads(recipient_email: str, full_name: str, setup_link: st
             <div style="padding:28px 24px;">
                 <p style="margin:0 0 12px;">Hi {full_name or 'there'},</p>
                 <p style="margin:0 0 8px;"><strong>Your AdGuard workspace is ready.</strong></p>
-                <p style="margin:0 0 16px; color:#57534e;">Stop paying for garbage leads — every lead from your Google &amp; Meta ads gets scored for integrity before it reaches your team.</p>
+                <p style="margin:0 0 16px; color:#57534e;">Stop buying fake leads — every lead from your Google &amp; Meta ads gets scored for integrity before it reaches your team.</p>
                 <p style="margin:0 0 20px;">
                     <a href="{setup_link}" style="display:inline-block;padding:12px 28px;background:#d97706;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;">
                         Activate My Workspace
@@ -228,7 +228,7 @@ def _build_adguard_payloads(recipient_email: str, full_name: str, setup_link: st
                 <p style="font-size:13px;color:#a8a29e;">This link expires in 72 hours. If you didn't expect this invitation, ignore this email.</p>
             </div>
             <div style="padding:14px 24px;background:#fafaf9;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e;">
-                © 2026 AdGuard · Built by Chlear Digital
+                © 2026 AdGuard · Built by CHLEAR
             </div>
         </div>
     </body>
@@ -241,11 +241,11 @@ Your AdGuard workspace is ready.
 Activate it (set your password):
 {setup_link}
 
-Stop paying for garbage leads — every lead from your Google & Meta ads gets scored for integrity before it reaches your team.
+Stop buying fake leads — every lead from your Google & Meta ads gets scored for integrity before it reaches your team.
 
 This link expires in 72 hours.
 
-— AdGuard, built by Chlear Digital
+— AdGuard, built by CHLEAR
 """
     return {"subject": subject, "html": html_body, "text": plain_body}
 

@@ -251,7 +251,7 @@ def get_terms(request: Request):
 </head>
 <body>
     <h1>Terms of Service</h1>
-    <p><strong>AdGuard</strong> (&ldquo;AdGuard&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a lead-quality protection service operated by ChlearSakhaaOps AI. By creating an account or connecting an advertising account, you agree to these terms.</p>
+    <p><strong>AdGuard</strong> (&ldquo;AdGuard&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a lead-quality protection service operated by CHLEAR (CHL Marketing Solutions Pvt. Ltd.). By creating an account or connecting an advertising account, you agree to these terms.</p>
     <h2>1. The Service</h2>
     <p>AdGuard connects to your Google Ads and/or Meta Ads accounts (via your authorisation) to audit incoming leads, flag low-quality or fraudulent leads, exclude flagged audiences from future ad delivery, and produce reports on wasted ad spend.</p>
     <h2>2. Your Account</h2>
@@ -273,7 +273,7 @@ def get_terms(request: Request):
     <h2>10. Governing Law</h2>
     <p>These terms are governed by the laws of India, with courts in Bengaluru, Karnataka having exclusive jurisdiction.</p>
     <h2>11. Contact</h2>
-    <p>Questions: <a href="mailto:shekharraju6@gmail.com">shekharraju6@gmail.com</a></p>
+    <p>Questions: <a href="mailto:support@chlear.in">support@chlear.in</a></p>
     <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Last updated: September 2026</p>
 </body>
 </html>""")
@@ -282,15 +282,15 @@ def get_terms(request: Request):
 @app.get("/privacy", response_class=HTMLResponse)
 def get_privacy(request: Request):
     return HTMLResponse(content="""<!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
-    <title>Privacy Policy - ChlearSakhaaOps AI</title>
+    <meta charset="UTF-8">
+    <title>Privacy Policy - AdGuard</title>
     <style>body{font-family:Arial,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#333}</style>
 </head>
 <body>
     <h1>Privacy Policy</h1>
-    <p><strong>ChlearSakhaaOps AI</strong> (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) operates the ChlearSakhaaOps AI advertising-optimisation platform.</p>
+    <p><strong>AdGuard</strong> by CHLEAR (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) operates the AdGuard advertising lead protection platform.</p>
     <h2>1. Information We Collect</h2>
     <p>We collect information you provide when registering an account, connecting advertising accounts (Google Ads, Meta Ads), and configuring integrations. This may include account IDs, OAuth tokens, campaign metrics, and CRM data.</p>
     <h2>2. How We Use Information</h2>
@@ -304,8 +304,8 @@ def get_privacy(request: Request):
     <h2>6. Changes</h2>
     <p>We may update this policy. Continued use after changes constitutes acceptance.</p>
     <h2>7. Contact</h2>
-    <p>For privacy questions, contact <a href=\"mailto:shekharraju6@gmail.com\">shekharraju6@gmail.com</a>.</p>
-    <p style=\"margin-top:2rem;color:#666;font-size:0.9rem;\">Last updated: June 2026</p>
+    <p>For privacy questions, contact <a href="mailto:support@chlear.in">support@chlear.in</a>.</p>
+    <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Last updated: September 2026</p>
 </body>
 </html>""")
 

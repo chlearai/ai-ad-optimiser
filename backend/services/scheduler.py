@@ -220,7 +220,7 @@ def _run_adguard_weekly_reports():
                           <tr style="background:#f5f5f4;"><th style="padding:6px 10px;border:1px solid #e7e5e4;text-align:left;">Campaign</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Leads</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Blocked</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Junk %</th><th style="padding:6px 10px;border:1px solid #e7e5e4;">Recovered ₹</th></tr>
                           {html_rows}
                         </table>
-                        <p style="font-size:11px;color:#a8a29e;margin-top:16px;">Stop paying for garbage leads. — AdGuard</p>
+                        <p style="font-size:11px;color:#a8a29e;margin-top:16px;">Stop buying fake leads. — AdGuard</p>
                       </div>
                     </div></body></html>"""
                     if not cfg.get("error"):

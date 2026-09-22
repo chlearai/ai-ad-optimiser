@@ -6,7 +6,7 @@
     <title>AdGuard — Stop Meta & Google From Buying Fake Leads</title>
     <meta name="description" content="Your ad platforms learn from every fake lead. AdGuard verifies leads before Meta and Google count them, blocks bots before they submit, and cuts your cost per real lead.">
     <meta property="og:title" content="Your ads are learning from fake leads. Fix that.">
-    <meta property="og:description" content="Stop Meta & Google from learning on fake leads. AdGuard verifies leads before ad platforms count them, blocks bots before submit, and cuts real CPL.">
+    <meta property="og:description" content="Your ad platforms learn from every fake lead. AdGuard verifies leads before Meta and Google count them, blocks bots before they submit, and cuts your cost per real lead.">
     <meta property="og:type" content="website">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -107,6 +107,16 @@
             background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .desktop-br {
+            display: inline;
+        }
+
+        @media (max-width: 640px) {
+            .desktop-br {
+                display: none;
+            }
         }
 
         /* --- BUTTONS --- */
@@ -261,7 +271,7 @@
         .hero-title {
             font-size: 64px;
             font-weight: 800;
-            line-height: 1.1;
+            line-height: 1.15;
             margin-bottom: 20px;
             max-width: 960px;
             margin-left: auto;
@@ -1155,7 +1165,7 @@
             font-size: 13px;
             color: #34d399;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             min-height: 38px;
         }
 
@@ -1165,6 +1175,33 @@
             line-height: 1.6;
             margin-bottom: 24px;
             flex-grow: 1;
+        }
+
+        .plan-bullets {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .plan-bullets li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-body);
+            line-height: 1.5;
+        }
+
+        .plan-bullets li::before {
+            content: "✓";
+            color: #34d399;
+            font-weight: 800;
+            font-size: 13px;
+            flex-shrink: 0;
+            margin-top: 1px;
         }
 
         .pricing-footer-note {
@@ -1484,7 +1521,8 @@
             </div>
 
             <h1 class="hero-title">
-                Your ads are learning from fake leads.<br>
+                Your ads are learning<br class="desktop-br">
+                from fake leads.<br class="desktop-br">
                 <span class="gradient-text">AdGuard stops them.</span>
             </h1>
 
@@ -1516,8 +1554,8 @@
                     <div class="proof-label">to AI-verify a real person by phone</div>
                 </div>
                 <div class="proof-item">
-                    <div class="proof-stat">1 bot caught</div>
-                    <div class="proof-label">blocked across every AdGuard account</div>
+                    <div class="proof-stat">Caught once</div>
+                    <div class="proof-label">flagged across every AdGuard account</div>
                 </div>
             </div>
 
@@ -1820,7 +1858,10 @@
                 <div class="dash-topbar">
                     <div>
                         <span style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;">Live Campaign Telemetry</span>
-                        <div style="font-size:16px;font-weight:700;color:#ffffff;margin-top:2px;">Performance &amp; Lead Integrity Hub</div>
+                        <div style="font-size:16px;font-weight:700;color:#ffffff;margin-top:2px;display:flex;align-items:center;gap:8px;">
+                            <span>Performance &amp; Lead Integrity Hub</span>
+                            <span class="chip chip-neutral" style="font-size:11px;padding:2px 8px;font-weight:600;text-transform:none;">Sample dashboard</span>
+                        </div>
                     </div>
                     <span class="chip chip-success">🛡️ Active Protection · 2.0s Fail-Open</span>
                 </div>
@@ -1864,10 +1905,14 @@
                             <strong>Audience Network</strong>
                             <span style="color:#f87171;font-weight:700;">62% Junk</span>
                         </div>
-                        <div style="color:var(--text-dim);font-size:12px;">Saved ₹66,000 · Placements auto-flagged</div>
+                        <div style="color:var(--text-dim);font-size:12px;">Saved ₹66,000 · Bots auto-excluded</div>
                     </div>
                 </div>
             </div>
+
+            <p style="text-align:center;font-size:12px;color:var(--text-dim);margin-top:14px;">
+                Illustrative data. Your dashboard shows your own campaigns.
+            </p>
         </div>
     </section>
 
@@ -2054,8 +2099,8 @@
     <!-- 9. PROOF, TEAM AND TRUST -->
     <section class="section-highlight">
         <div class="container">
-            <!-- 9a. CASE STUDY CARD -->
-            <div class="case-study-card">
+            <!-- 9a. CASE STUDY CARD (Hidden component behind SHOW_CASE_STUDY flag) -->
+            <div class="case-study-card" id="pilotCaseStudyCard" style="display:none;">
                 <div class="eyebrow">PILOT RESULT</div>
                 <h3 style="font-size:22px;font-weight:800;color:#ffffff;margin-bottom:8px;">
                     EdTech &amp; Real Estate Brands, Bengaluru: cost per verified lead down 34% in 21 days.
@@ -2147,10 +2192,15 @@
                         <div class="plan-price">Free, 14 days</div>
                         <div class="plan-tagline">See your real junk rate first</div>
                         <div class="plan-features-list">
-                            Watches up to 1,000 leads · Nothing blocked · Personal Junk Report in ₹ · Google &amp; Meta connection
+                            <ul class="plan-bullets">
+                                <li>Watches up to 1,000 leads</li>
+                                <li>Nothing blocked</li>
+                                <li>Personal Junk Report in ₹</li>
+                                <li>Google &amp; Meta connection</li>
+                            </ul>
                         </div>
                     </div>
-                    <button onclick="openShadowModeModal()" class="btn btn-outline-green" style="width:100%;">
+                    <button onclick="handlePlanSelect('shadow_mode')" class="btn btn-outline-green" style="width:100%;">
                         Start free
                     </button>
                 </div>
@@ -2162,10 +2212,17 @@
                         <div class="plan-price">₹4,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Stop bots at the door</div>
                         <div class="plan-features-list">
-                            1,000 leads/month · Pre-Submit Interceptor · WhatsApp OTP for borderline leads · Contributes to and protected by FraudGraph · Proof in ₹ dashboard · CRM delivery (Zoho, HubSpot, Salesforce, webhook)
+                            <ul class="plan-bullets">
+                                <li>1,000 leads/month</li>
+                                <li>Pre-Submit Interceptor</li>
+                                <li>WhatsApp OTP for borderline leads</li>
+                                <li>Contributes to and protected by FraudGraph</li>
+                                <li>Proof in ₹ dashboard</li>
+                                <li>CRM delivery (Zoho, HubSpot, Salesforce, webhook)</li>
+                            </ul>
                         </div>
                     </div>
-                    <button onclick="openShadowModeModal()" class="btn btn-outline-green" style="width:100%;">
+                    <button onclick="handlePlanSelect('starter')" class="btn btn-outline-green" style="width:100%;">
                         Choose Starter
                     </button>
                 </div>
@@ -2178,11 +2235,17 @@
                         <div class="plan-price">₹14,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Make Meta &amp; Google buy better</div>
                         <div class="plan-features-list">
-                            <strong>Everything in Starter, plus:</strong><br>
-                            5,000 leads/month · Conversion Firewall · AI call verification (500 calls included) · Exclusion audiences on all campaigns · AI intent scoring
+                            <strong>Everything in Starter, plus:</strong>
+                            <ul class="plan-bullets">
+                                <li>5,000 leads/month</li>
+                                <li>Conversion Firewall</li>
+                                <li>AI call verification (up to 500 calls/month)</li>
+                                <li>Exclusion audiences on all campaigns</li>
+                                <li>AI intent scoring</li>
+                            </ul>
                         </div>
                     </div>
-                    <button onclick="openShadowModeModal()" class="btn btn-primary" style="width:100%;">
+                    <button onclick="handlePlanSelect('pro')" class="btn btn-primary" style="width:100%;">
                         Choose Pro
                     </button>
                 </div>
@@ -2194,8 +2257,15 @@
                         <div class="plan-price">₹39,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Multiple brands, maximum protection</div>
                         <div class="plan-features-list">
-                            <strong>Everything in Pro, plus:</strong><br>
-                            Unlimited leads · Bot Traps · Google invalid-click evidence packs · Multiple brands and ad accounts · Custom CRM stage mapping · Dedicated account manager
+                            <strong>Everything in Pro, plus:</strong>
+                            <ul class="plan-bullets">
+                                <li>Unlimited leads</li>
+                                <li>Bot Traps</li>
+                                <li>Google invalid-click evidence packs</li>
+                                <li>Multiple brands and ad accounts</li>
+                                <li>Custom CRM stage mapping</li>
+                                <li>Dedicated account manager</li>
+                            </ul>
                         </div>
                     </div>
                     <button onclick="openDemoModal()" class="btn btn-outline-green" style="width:100%;">
@@ -2205,7 +2275,7 @@
             </div>
 
             <p class="pricing-footer-note">
-                Prices exclude GST. Extra AI verification calls billed at ₹4 per call.
+                Prices exclude GST. Extra AI verification calls billed at ₹<span id="extraCallPriceSpan">4</span> per call.
             </p>
         </div>
     </section>
@@ -2338,7 +2408,7 @@
                         <span class="brand-text">AdGuard</span>
                     </a>
                     <p>
-                        The end-to-end Pre-Bid Firewall &amp; Conversion Signal Controller that stops Meta and Google ad platforms from learning on fake leads.
+                        Pre-spend protection that stops Meta and Google from learning on fake leads.
                     </p>
                 </div>
 
@@ -2391,9 +2461,9 @@
             <button class="modal-close" onclick="closeShadowModeModal()">✕</button>
             <div style="text-align:center;margin-bottom:20px;">
                 <span class="chip chip-success" style="margin-bottom:8px;">14 Days Free · Zero Risk</span>
-                <h3 style="font-size:22px;color:#ffffff;margin-top:4px;">Start Free in Shadow Mode</h3>
+                <h3 style="font-size:22px;color:#ffffff;margin-top:4px;">Start free in Shadow Mode</h3>
                 <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">
-                    Watch your live campaigns for 14 days. Nothing is blocked; see your exact junk rate in ₹.
+                    14 days · up to 1,000 leads watched · nothing blocked · no credit card
                 </p>
             </div>
 
@@ -2401,6 +2471,10 @@
                 <div class="form-group">
                     <label>Full Name</label>
                     <input type="text" class="form-input" id="smName" placeholder="e.g. Rahul Sharma" required>
+                </div>
+                <div class="form-group">
+                    <label>Company name</label>
+                    <input type="text" class="form-input" id="smCompany" placeholder="e.g. Acme Media" required>
                 </div>
                 <div class="form-group">
                     <label>Work Email</label>
@@ -2444,6 +2518,10 @@
                     <input type="text" class="form-input" id="dmName" placeholder="e.g. Priya Nair" required>
                 </div>
                 <div class="form-group">
+                    <label>Company name</label>
+                    <input type="text" class="form-input" id="dmCompany" placeholder="e.g. Brand Solutions" required>
+                </div>
+                <div class="form-group">
                     <label>Work Email</label>
                     <input type="email" class="form-input" id="dmEmail" placeholder="priya@brand.in" required>
                 </div>
@@ -2465,8 +2543,23 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // CONFIGURABLE BRAND IDENTIFIER
+        // CONFIGURABLE BRAND & PRICING IDENTIFIERS
         const BRAND_NAME = 'AdGuard';
+        const EXTRA_AI_CALL_PRICE = 4; // Configurable extra AI verification call price in ₹
+        const SHOW_CASE_STUDY = false; // Flag to toggle pilot case study component
+        const RAZORPAY_MODE = 'none'; // 'live' for real payment checkout, 'none' or 'test' redirects to signup flow
+
+        // Set dynamic extra call price in pricing footnote
+        const extraCallSpan = document.getElementById('extraCallPriceSpan');
+        if (extraCallSpan) {
+            extraCallSpan.innerText = EXTRA_AI_CALL_PRICE;
+        }
+
+        // Toggle case study card based on flag
+        const caseStudyCard = document.getElementById('pilotCaseStudyCard');
+        if (caseStudyCard) {
+            caseStudyCard.style.display = SHOW_CASE_STUDY ? 'block' : 'none';
+        }
 
         // 1. DYNAMIC CALCULATOR (WASTED SPEND ESTIMATOR)
         function formatINR(val) {
@@ -2513,7 +2606,7 @@
             }
         }
 
-        // 3. MODAL CONTROLS
+        // 3. MODAL CONTROLS & PLAN HANDLER
         function openShadowModeModal() {
             document.getElementById('shadowModal').style.display = 'flex';
         }
@@ -2530,6 +2623,16 @@
             document.getElementById('demoModal').style.display = 'none';
         }
 
+        function handlePlanSelect(planKey) {
+            if (RAZORPAY_MODE === 'live') {
+                // Live Razorpay integration when live mode is configured
+                window.location.href = '/adguard/subscribe?plan=' + encodeURIComponent(planKey);
+            } else {
+                // Free trial / Shadow mode signup flow
+                openShadowModeModal();
+            }
+        }
+
         // 4. SIGNUP / DEMO HANDLERS
         async function handleShadowSignup(e) {
             e.preventDefault();
@@ -2538,6 +2641,7 @@
             btn.disabled = true;
 
             const name = document.getElementById('smName').value;
+            const company = document.getElementById('smCompany') ? document.getElementById('smCompany').value : '';
             const email = document.getElementById('smEmail').value;
             const phone = document.getElementById('smPhone').value;
             const channels = document.getElementById('smChannels').value;
@@ -2549,6 +2653,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: name,
+                        company_name: company,
                         email: email,
                         phone: phone,
                         plan: 'shadow_mode',
