@@ -350,14 +350,27 @@ def _ensure_mirror_fresh(db, account_id: int, end_date: str) -> None:
     if age_minutes <= 90:
         return
 
+    # Run the pre-report sync in a BACKGROUND thread so the report request is
+    # never blocked. An inline sync here took minutes on Railway (source-field
+    # scans against the slow LSQ API) and blew past the gateway timeout -> 502.
     logger.info(
         f"LSQ mirror for account {account_id} is {age_minutes:.0f} minutes old; "
-        f"triggering incremental sync before report view"
+        f"triggering background sync (report served from current mirror data)"
     )
-    try:
-        sync_account_leads(account_id, db=db)
-    except Exception as e:
-        logger.warning(f"Pre-report LSQ sync failed for account {account_id}: {e}")
+    import threading
+
+    def _bg_sync():
+        from backend.db.database import SessionLocal as _SL
+        bg_db = _SL()
+        try:
+            sync_account_leads(account_id, db=bg_db)
+            logger.info(f"Background LSQ sync for account {account_id} completed")
+        except Exception as e:
+            logger.warning(f"Background LSQ sync failed for account {account_id}: {e}")
+        finally:
+            bg_db.close()
+
+    threading.Thread(target=_bg_sync, daemon=True).start()
 
 
 def _fetch_lsq_leads_direct(start_date: str, end_date: str, account_id: int = None) -> Dict[str, int]:
@@ -619,6 +632,19 @@ def _fetch_lsq_lead_details_direct(start_date: str, end_date: str, account_id: i
     base_url = base_url.rstrip("/")
     if not base_url.endswith("/v2"):
         base_url = base_url + "/v2"
+
+    # Bounded window: clamp to the last 45 days. Requesting 8+ months of
+    # RecentlyModified data inline blew past gateway timeouts on Railway.
+    try:
+        if date.fromisoformat(start_date) < date.today() - timedelta(days=45):
+            logger.warning(
+                f"LSQ lead-details fallback: clamping start {start_date} to "
+                f"{(date.today() - timedelta(days=45)).isoformat()} (45-day bound). "
+                f"Older data appears once the mirror sync completes."
+            )
+            start_date = (date.today() - timedelta(days=45)).isoformat()
+    except Exception:
+        pass
 
     today_str = (date.today() + timedelta(days=1)).isoformat()
     search_from = start_date
