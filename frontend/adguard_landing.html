@@ -17,8 +17,8 @@
         :root {
             --bg-dark: #070a11;
             --bg-surface: #0c111d;
-            --bg-card: rgba(15, 23, 42, 0.75);
-            --bg-card-hover: rgba(26, 38, 64, 0.9);
+            --bg-card: rgba(13, 19, 33, 0.94);
+            --bg-card-hover: rgba(22, 32, 54, 0.98);
             --bg-highlight: rgba(16, 185, 129, 0.05);
             --bg-highlight-border: rgba(16, 185, 129, 0.2);
 
@@ -71,10 +71,11 @@
             line-height: 1.65;
             overflow-x: hidden;
             background-image: 
-                radial-gradient(circle at 20% 12%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 45%),
-                radial-gradient(circle at 50% 75%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
-            background-attachment: fixed;
+                radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 85% 25%, rgba(139, 92, 246, 0.07) 0%, transparent 45%),
+                radial-gradient(circle at 15% 55%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 85% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 45%);
+            background-repeat: no-repeat;
         }
 
         h1, h2, h3, h4, .font-heading {
@@ -470,15 +471,13 @@
 
         /* --- SECTION HIGHLIGHT BANDS --- */
         .section-highlight {
-            background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, rgba(12, 17, 29, 0.8) 50%, rgba(16, 185, 129, 0.03) 100%);
-            border-top: 1px solid rgba(16, 185, 129, 0.15);
-            border-bottom: 1px solid rgba(16, 185, 129, 0.15);
-            padding: 88px 0;
+            background: linear-gradient(180deg, rgba(16, 185, 129, 0.03) 0%, rgba(12, 17, 29, 0.65) 20%, rgba(12, 17, 29, 0.65) 80%, rgba(16, 185, 129, 0.02) 100%);
+            padding: 96px 0;
             position: relative;
         }
 
         .section-standard {
-            padding: 88px 0;
+            padding: 96px 0;
             position: relative;
         }
 
@@ -1101,22 +1100,23 @@
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            max-width: 1160px;
-            margin: 0 auto 24px;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto 28px;
             align-items: stretch;
         }
 
         .pricing-card {
-            background: var(--bg-card);
+            background: rgba(13, 19, 33, 0.94);
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-xl);
-            padding: 32px 24px;
+            padding: 32px 24px 28px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             position: relative;
             transition: all 0.25s ease;
+            height: 100%;
+            box-sizing: border-box;
         }
 
         .pricing-card:hover {
@@ -1126,8 +1126,15 @@
 
         .pricing-card.popular {
             border: 1px solid #10b981;
-            background: linear-gradient(180deg, rgba(16, 185, 129, 0.09) 0%, rgba(15, 23, 42, 0.9) 100%);
+            background: linear-gradient(180deg, rgba(16, 185, 129, 0.12) 0%, rgba(13, 19, 33, 0.96) 100%);
             box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+        }
+
+        .pricing-card-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            margin-bottom: 24px;
         }
 
         .popular-badge {
@@ -1167,41 +1174,59 @@
             font-weight: 600;
             margin-bottom: 16px;
             min-height: 38px;
+            line-height: 1.4;
         }
 
         .plan-features-list {
             font-size: 13px;
             color: var(--text-body);
             line-height: 1.6;
-            margin-bottom: 24px;
             flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .plan-features-list strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
         }
 
         .plan-bullets {
             list-style: none;
             padding: 0;
-            margin: 8px 0 0 0;
+            margin: 6px 0 0 0;
             display: flex;
             flex-direction: column;
-            gap: 9px;
+            gap: 10px;
         }
 
         .plan-bullets li {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
+            gap: 9px;
             font-size: 13px;
             color: var(--text-body);
             line-height: 1.5;
+            word-break: normal;
+            overflow: visible;
         }
 
         .plan-bullets li::before {
             content: "✓";
             color: #34d399;
             font-weight: 800;
-            font-size: 13px;
+            font-size: 14px;
             flex-shrink: 0;
-            margin-top: 1px;
+            margin-top: 0px;
+            line-height: 1.4;
+        }
+
+        .pricing-card .btn {
+            margin-top: auto;
+            width: 100%;
         }
 
         .pricing-footer-note {
@@ -1448,10 +1473,11 @@
 
         @media (max-width: 768px) {
             .hero-title {
-                font-size: 40px;
+                font-size: 38px;
+                line-height: 1.18;
             }
             .hero-subhead {
-                font-size: 16px;
+                font-size: 15px;
             }
             .proof-strip {
                 grid-template-columns: 1fr;
@@ -1474,6 +1500,29 @@
             }
             body {
                 padding-bottom: 60px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .nav-actions .btn-ghost {
+                display: none;
+            }
+            .nav-actions .btn {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+            .hero-title {
+                font-size: 32px;
+            }
+            .section-title {
+                font-size: 26px;
+            }
+            .pricing-card {
+                padding: 26px 20px;
+            }
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 28px;
             }
         }
 
@@ -2187,7 +2236,7 @@
             <div class="pricing-grid">
                 <!-- Plan 1: Shadow Mode -->
                 <div class="pricing-card">
-                    <div>
+                    <div class="pricing-card-content">
                         <div class="plan-name">Shadow Mode</div>
                         <div class="plan-price">Free, 14 days</div>
                         <div class="plan-tagline">See your real junk rate first</div>
@@ -2200,14 +2249,14 @@
                             </ul>
                         </div>
                     </div>
-                    <button onclick="handlePlanSelect('shadow_mode')" class="btn btn-outline-green" style="width:100%;">
+                    <button onclick="handlePlanSelect('shadow_mode')" class="btn btn-outline-green">
                         Start free
                     </button>
                 </div>
 
                 <!-- Plan 2: Starter -->
                 <div class="pricing-card">
-                    <div>
+                    <div class="pricing-card-content">
                         <div class="plan-name">Starter</div>
                         <div class="plan-price">₹4,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Stop bots at the door</div>
@@ -2222,7 +2271,7 @@
                             </ul>
                         </div>
                     </div>
-                    <button onclick="handlePlanSelect('starter')" class="btn btn-outline-green" style="width:100%;">
+                    <button onclick="handlePlanSelect('starter')" class="btn btn-outline-green">
                         Choose Starter
                     </button>
                 </div>
@@ -2230,7 +2279,7 @@
                 <!-- Plan 3: Pro (Most popular) -->
                 <div class="pricing-card popular">
                     <div class="popular-badge">Most popular</div>
-                    <div>
+                    <div class="pricing-card-content">
                         <div class="plan-name">Pro</div>
                         <div class="plan-price">₹14,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Make Meta &amp; Google buy better</div>
@@ -2245,14 +2294,14 @@
                             </ul>
                         </div>
                     </div>
-                    <button onclick="handlePlanSelect('pro')" class="btn btn-primary" style="width:100%;">
+                    <button onclick="handlePlanSelect('pro')" class="btn btn-primary">
                         Choose Pro
                     </button>
                 </div>
 
                 <!-- Plan 4: Enterprise -->
                 <div class="pricing-card">
-                    <div>
+                    <div class="pricing-card-content">
                         <div class="plan-name">Enterprise</div>
                         <div class="plan-price">₹39,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Multiple brands, maximum protection</div>
@@ -2268,7 +2317,7 @@
                             </ul>
                         </div>
                     </div>
-                    <button onclick="openDemoModal()" class="btn btn-outline-green" style="width:100%;">
+                    <button onclick="openDemoModal()" class="btn btn-outline-green">
                         Book a demo
                     </button>
                 </div>
