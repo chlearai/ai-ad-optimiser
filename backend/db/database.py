@@ -25,6 +25,8 @@ else:
     os.makedirs(ROOT_DIR, exist_ok=True)
 
 
+import socket
+
 def _create_sqlite_engine():
     return create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
@@ -38,36 +40,70 @@ def _create_postgres_engine(url):
     )
 
 
-def _test_connection(eng):
+def _test_postgres_fast(url):
+    """
+    Fast pre-test for PostgreSQL connectivity (max 2 seconds total).
+    Prevents psycopg2 from hanging for 45-60s on multi-IP DNS resolution if PostgreSQL/Supabase is down.
+    """
+    if not url:
+        return None, False
     try:
-        with eng.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return True
+        import psycopg2
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        port = parsed.port or 5432
+        ip = None
+        if hostname:
+            # 1. Resolve to single IPv4 to prevent multi-IP cascading timeout
+            ips = [i[4][0] for i in socket.getaddrinfo(hostname, port, socket.AF_INET)]
+            if ips:
+                ip = ips[0]
+                s = socket.create_connection((ip, port), timeout=1.5)
+                s.close()
+
+        # 2. Test actual direct DB connection with strict 2s timeout
+        conn_kwargs = {
+            "dbname": parsed.path.lstrip("/"),
+            "user": parsed.username,
+            "password": parsed.password,
+            "host": hostname,
+            "port": port,
+            "connect_timeout": 2,
+            "sslmode": "require",
+        }
+        if ip:
+            conn_kwargs["hostaddr"] = ip
+        test_conn = psycopg2.connect(**conn_kwargs)
+        test_conn.close()
+
+        # 3. Connection is valid, return full SQLAlchemy engine
+        eng = _create_postgres_engine(url)
+        return eng, True
     except Exception as e:
-        logger.warning(f"DB connection test failed: {e}")
-        return False
+        logger.warning(f"PostgreSQL connection test failed: {e}")
+        return None, False
 
 
 engine = None
 active_db = "unknown"
 
 if DATABASE_URL:
-    # Try PostgreSQL first
-    pg_engine = _create_postgres_engine(DATABASE_URL)
-    if _test_connection(pg_engine):
-        engine = pg_engine
+    # Try primary PostgreSQL URL
+    eng, ok = _test_postgres_fast(DATABASE_URL)
+    if ok:
+        engine = eng
         active_db = "postgresql"
         logger.info("Using PostgreSQL database")
     else:
-        # Try Supabase transaction pooler (port 6543) as fallback
+        # Try Supabase transaction pooler (port 6543) as fallback if port was 5432
         try:
             parsed = urlparse(DATABASE_URL)
             if parsed.port == 5432:
                 pooler_parts = parsed._replace(netloc=f"{parsed.username}:{parsed.password}@{parsed.hostname}:6543")
                 pooler_url = urlunparse(pooler_parts)
-                pooler_engine = _create_postgres_engine(pooler_url)
-                if _test_connection(pooler_engine):
-                    engine = pooler_engine
+                eng_pooler, ok_pooler = _test_postgres_fast(pooler_url)
+                if ok_pooler:
+                    engine = eng_pooler
                     active_db = "postgresql-pooler"
                     logger.info("Using Supabase connection pooler")
         except Exception as e:
