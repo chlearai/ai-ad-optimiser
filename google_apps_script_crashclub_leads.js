@@ -47,6 +47,20 @@ const ROUTES = [
     }
   },
   {
+    // NEW Goa campaign (store-visit form; no email question)
+    campaign: "CHLEAR_crash.club_LeadGen_Forms_BLR_GoaOffer_StoreVisit_20260920",
+    tab: "JUNE - SEPT 2026 - Goa Leads",
+    // D=STORE E=Purchase Timeline F=BUDGET (E/F swapped vs old form, per client's new headers)
+    fields: {
+      D: ["which_store_will_you_visit"],
+      E: ["when_will_you_visit"],
+      F: ["planned_purchase_budget"],
+      G: [],
+      H: ["full_name", "name"],
+      I: ["phone_number", "phone"]
+    }
+  },
+  {
     campaign: "CHLEAR_crash.club_LeadGen_Forms_BLR_Magnificent_Wedding_20260702",
     tab: "JUNE - SEPT 2026 - MW Leads",
     fields: {
@@ -72,6 +86,7 @@ function setupCrashClub() {
     .addItem("Enable 5-min Auto", "setupCrashClub")
     .addItem("Backfill 60 Days", "backfill60Days")
     .addSeparator()
+    .addItem("Repair Empty Columns", "repairEmptyColumns")
     .addItem("Reset Sync State (re-pull leads)", "resetState")
     .addToUi();
   Logger.log("SETUP COMPLETE â€” auto-sync every 5 minutes is LIVE.");
@@ -242,6 +257,99 @@ function buildRow_(lead, route) {
   const I = pick(cols.I);
 
   return [rawCreated, istDateTime, platform, D, E, F, G, H, I];
+}
+
+/* ============ REPAIR EMPTY COLUMNS (no row deletion) ============ */
+// Fills D/E/F (and G/H/I if blank) in EXISTING rows that were appended by the
+// old mapping, by matching the row's phone number against the Meta lead data.
+// Nothing is deleted; monthly division stays intact.
+function repairEmptyColumns() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let fixed = 0, checked = 0;
+  for (const route of ROUTES) {
+    const sheet = ss.getSheetByName(route.tab);
+    if (!sheet) continue;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) continue;
+
+    const phoneKey = route.fields.I[0];
+    const nameKey = (route.fields.H && route.fields.H[0]) || "full_name";
+    const dKeys = route.fields.D || [];
+    const eKeys = route.fields.E || [];
+    const fKeys = route.fields.F || [];
+
+    // fetch ALL leads for this campaign (state-independent)
+    const since = Math.floor(Date.now() / 1000) - 365 * 86400;
+    const result = fetchLeadsCampaign_(route.campaign, since);
+    if (result.error) { Logger.log("Meta API error for " + route.campaign + ": " + result.error); continue; }
+
+    // index meta leads by phone + name
+    const byKey = {};
+    for (const x of result.leads) {
+      const f = {};
+      for (const item of x.lead.field_data || []) f[item.name] = (item.values || []).join("; ");
+      const ph = normPhone_(f[phoneKey] || "");
+      const nm = String(f[nameKey] || f["full_name"] || f["full name"] || "").trim().toLowerCase();
+      if (ph) byKey[ph] = f;
+      if (nm) byKey[nm] = f;
+    }
+
+    // read existing rows: I=phone(9), H=name(8), D/E/F columns 4-6
+    const numRows = lastRow - 1;
+    const phones = sheet.getRange(2, 9, numRows, 1).getValues();
+    const names = sheet.getRange(2, 8, numRows, 1).getValues();
+    const data = sheet.getRange(2, 4, numRows, 3).getValues(); // D,E,F
+
+    for (let i = 0; i < numRows; i++) {
+      const phone = normPhone_(phones[i][0]);
+      const nm = String(names[i][0] || "").trim().toLowerCase();
+      const meta = byKey[phone] || byKey[nm];
+      if (!meta) continue;
+      const needs = (!data[i][0] && dKeys.length) || (!data[i][1] && eKeys.length) || (!data[i][2] && fKeys.length);
+      if (!needs) continue;
+      checked++;
+      const pick = (keys, cur) => {
+        if (cur) return cur;
+        for (const k of keys) { if (meta[k]) return meta[k]; }
+        return "";
+      };
+      data[i][0] = pick(dKeys, data[i][0]);
+      data[i][1] = pick(eKeys, data[i][1]);
+      data[i][2] = pick(fKeys, data[i][2]);
+      sheet.getRange(2 + i, 4, 1, 3).setValues([data[i]]);
+      fixed++;
+    }
+  }
+  const msg = "Repair complete. Rows updated: " + fixed;
+  Logger.log(msg);
+  try { ss.toast(msg, "Crash Club", 8); } catch (e) {}
+  return msg;
+}
+
+// fetch leads of ONE campaign (all ads) — used by repair
+function fetchLeadsCampaign_(campaign, since) {
+  const fields = "id,name,campaign{name},leads.since(" + since + "){id,created_time,field_data,platform}";
+  let url = "https://graph.facebook.com/" + API_VERSION + "/" + AD_ACCOUNT_ID + "/ads"
+    + "?fields=" + encodeURIComponent(fields)
+    + "&limit=" + PAGE_SIZE
+    + "&access_token=" + encodeURIComponent(META_TOKEN);
+  const leads = [];
+  let pages = 0;
+  while (url && pages < 60) {
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const json = JSON.parse(resp.getContentText());
+    if (json.error) return { error: json.error.message, leads: [] };
+    for (const ad of (json.data || [])) {
+      const camp = (ad.campaign && ad.campaign.name) || "";
+      if (camp !== campaign) continue;   // only this campaign's ads
+      for (const lead of (ad.leads && ad.leads.data) || []) {
+        leads.push({ lead: lead, campaign: camp });
+      }
+    }
+    url = (json.paging && json.paging.next) || null;
+    pages++;
+  }
+  return { error: null, leads: leads };
 }
 
 /* ============ RESET STATE (one-click re-pull) ============ */
