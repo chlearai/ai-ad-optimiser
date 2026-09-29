@@ -104,7 +104,6 @@ def crashclub_leads(
             "email": r.get("email") or "",
             "phone": r.get("phone") or "",
             "form_type": r.get("form_type") or "",
-            # per-form D/E/F come from raw answers stored per form_type
             "col_d": r.get("col_d", ""),
             "col_e": r.get("col_e", ""),
             "col_f": r.get("col_f", ""),

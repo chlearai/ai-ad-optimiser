@@ -249,14 +249,36 @@ function buildRow_(lead, route) {
   const platform = (platRaw === "IG") ? "IG" : (platRaw === "FB" ? "FB" : "Meta");
 
   const cols = route.fields;
-  const D = pick(cols.D);
-  const E = pick(cols.E);
-  const F = pick(cols.F);
+  // Per-LEAD form detection: store-visit form has the store question;
+  // mixed form types exist inside the StoreVisit campaign.
+  const isStoreVisitForm = f["which_store_will_you_visit"] !== undefined;
+  let D, E, F;
+  if (isStoreVisitForm) {
+    D = pick(["which_store_will_you_visit"]);
+    E = pick(["when_will_you_visit"]);
+    F = budgetLabel_(pick(["planned_purchase_budget"]));
+  } else {
+    D = pick(cols.D);
+    E = pick(cols.E);
+    F = pick(cols.F);
+  }
   const G = pick(cols.G);
-  const H = pick(cols.H);
+  const H = isStoreVisitForm ? pick(["full_name", "name"]) : pick(cols.H);
   const I = pick(cols.I);
 
   return [rawCreated, istDateTime, platform, D, E, F, G, H, I];
+}
+
+// Translate raw budget keys into the exact option text shown in the lead form
+function budgetLabel_(v) {
+  const s = String(v || "").trim().toLowerCase();
+  if (!s) return "";
+  const map = {
+    "under_99k": "Under ₹99K",
+    "99k_to_2l": "₹99K–₹2L",
+    "2l_plus": "₹2L+"
+  };
+  return map[s] || v;
 }
 
 /* ============ REPAIR EMPTY COLUMNS (no row deletion) ============ */
@@ -274,9 +296,9 @@ function repairEmptyColumns() {
 
     const phoneKey = route.fields.I[0];
     const nameKey = (route.fields.H && route.fields.H[0]) || "full_name";
-    const dKeys = route.fields.D || [];
-    const eKeys = route.fields.E || [];
-    const fKeys = route.fields.F || [];
+    const dKeysRoute = route.fields.D || [];
+    const eKeysRoute = route.fields.E || [];
+    const fKeysRoute = route.fields.F || [];
 
     // fetch ALL leads for this campaign (state-independent)
     const since = Math.floor(Date.now() / 1000) - 365 * 86400;
@@ -305,17 +327,23 @@ function repairEmptyColumns() {
       const nm = String(names[i][0] || "").trim().toLowerCase();
       const meta = byKey[phone] || byKey[nm];
       if (!meta) continue;
+      // Per-lead form detection (mixed forms inside StoreVisit campaign)
+      const isStoreVisitForm = meta["which_store_will_you_visit"] !== undefined;
+      const dKeys = isStoreVisitForm ? ["which_store_will_you_visit"] : dKeysRoute;
+      const eKeys = isStoreVisitForm ? ["when_will_you_visit"] : eKeysRoute;
+      const fKeys = isStoreVisitForm ? ["planned_purchase_budget"] : fKeysRoute;
+      const isSV = isStoreVisitForm;
       const needs = (!data[i][0] && dKeys.length) || (!data[i][1] && eKeys.length) || (!data[i][2] && fKeys.length);
       if (!needs) continue;
       checked++;
-      const pick = (keys, cur) => {
+      const pick = (keys, cur, isBudget) => {
         if (cur) return cur;
-        for (const k of keys) { if (meta[k]) return meta[k]; }
+        for (const k of keys) { if (meta[k]) return isBudget ? budgetLabel_(meta[k]) : meta[k]; }
         return "";
       };
-      data[i][0] = pick(dKeys, data[i][0]);
-      data[i][1] = pick(eKeys, data[i][1]);
-      data[i][2] = pick(fKeys, data[i][2]);
+      data[i][0] = pick(dKeys, data[i][0], false);
+      data[i][1] = pick(eKeys, data[i][1], false);
+      data[i][2] = pick(fKeys, data[i][2], isSV);
       sheet.getRange(2 + i, 4, 1, 3).setValues([data[i]]);
       fixed++;
     }

@@ -20,6 +20,20 @@ from backend.db.database import Base
 
 logger = logging.getLogger("AdOptima")
 
+BUDGET_LABELS = {
+    "under_99k": "Under ₹99K",
+    "99k_to_2l": "₹99K–₹2L",
+    "2l_plus": "₹2L+",
+    "under_₹99k": "Under ₹99K",
+}
+
+
+def budget_label(v: str) -> str:
+    s = str(v or "").strip().lower()
+    if not s:
+        return ""
+    return BUDGET_LABELS.get(s, v)
+
 
 class CrashClubLead(Base):
     __tablename__ = "crashclub_leads"
@@ -165,15 +179,18 @@ def get_leads_for_account(account_id: int, start_date: Optional[str] = None, end
                         return fields[k]
                 return ""
 
-            if (r.form_type or "") == "mw":
+            # Per-LEAD form detection: the store-visit form has the store question;
+            # mixed form types exist inside the StoreVisit campaign.
+            if "which_store_will_you_visit" in fields:
+                # store-visit form: D=STORE, E=Purchase Timeline, F=BUDGET
+                col_d = pick("which_store_will_you_visit")
+                col_e = pick("when_will_you_visit")
+                col_f = budget_label(pick("planned_purchase_budget"))
+            elif "magnificent" in (r.campaign or "").lower():
+                # MW form
                 col_d = pick("do_you_plan_to_make_a_purchase_in_the_near_future_or_before_march_31st,_2027?")
                 col_e = pick("have_you_made_a_purchase_from_c._krishniah_chetty_group_of_jewellers_or_crash.club_at_any_time_before_?")
                 col_f = pick("tentative_wedding/special_moment/corporate_events_date._*")
-            elif "StoreVisit" in (r.campaign or ""):
-                # NEW Goa store-visit form: D=STORE, E=Purchase Timeline, F=BUDGET
-                col_d = pick("which_store_will_you_visit")
-                col_e = pick("when_will_you_visit")
-                col_f = pick("planned_purchase_budget")
             else:
                 # OLD Goa form: D=Occasion, E=Budget, F=Purchase Timeline
                 col_d = pick("what's_the_occasion?")
