@@ -95,7 +95,7 @@ def save_leads(items: List[Dict[str, Any]], db=None) -> Dict[str, Any]:
                         return fields[k]
                 return ""
 
-            form_type = "mw" if "magnificent" in camp.lower() else ("goa" if "goa" in camp.lower() else "")
+            form_type = "mw" if "magnificent" in camp.lower() else ("goa" if ("goa" in camp.lower() or "storevisit" in camp.lower()) else "")
             row = CrashClubLead(
                 lead_id=lid,
                 account_id=account_id,
@@ -169,7 +169,13 @@ def get_leads_for_account(account_id: int, start_date: Optional[str] = None, end
                 col_d = pick("do_you_plan_to_make_a_purchase_in_the_near_future_or_before_march_31st,_2027?")
                 col_e = pick("have_you_made_a_purchase_from_c._krishniah_chetty_group_of_jewellers_or_crash.club_at_any_time_before_?")
                 col_f = pick("tentative_wedding/special_moment/corporate_events_date._*")
+            elif "StoreVisit" in (r.campaign or ""):
+                # NEW Goa store-visit form: D=STORE, E=Purchase Timeline, F=BUDGET
+                col_d = pick("which_store_will_you_visit")
+                col_e = pick("when_will_you_visit")
+                col_f = pick("planned_purchase_budget")
             else:
+                # OLD Goa form: D=Occasion, E=Budget, F=Purchase Timeline
                 col_d = pick("what's_the_occasion?")
                 col_e = pick("what's_your_jewellery_budget?")
                 col_f = pick("when_are_you_planning_to_purchase?")
