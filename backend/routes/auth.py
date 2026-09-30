@@ -55,6 +55,10 @@ class SubscriberSignupRequest(BaseModel):
     company_name: Optional[str] = None
     country: Optional[str] = "India"
     industry: Optional[str] = None
+    channels: Optional[str] = None  # both | meta | google | other
+    monthly_ad_spend_band: Optional[str] = None  # 1|2|3|4 (local-currency band)
+    currency: Optional[str] = None  # symbol captured at signup
+    demo_request: Optional[bool] = False
 
 
 class OnboardRequest(BaseModel):
@@ -254,6 +258,25 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
     ws.phone = (req.phone or "").strip() or ws.phone
     ws.industry = (req.industry or "").strip() or ws.industry
     ws.company_name = (req.company_name or "").strip() or ws.company_name
+    # Capture marketing-qualifier fields (append-safe into shield_actions JSON log)
+    try:
+        import json as _json
+        extra = {
+            "signup_channels": req.channels or "",
+            "signup_spend_band": req.monthly_ad_spend_band or "",
+            "signup_currency": req.currency or "",
+            "signup_country": req.country or "",
+            "demo_request": bool(req.demo_request),
+        }
+        existing_actions = []
+        try:
+            existing_actions = _json.loads(ws.shield_actions) if ws.shield_actions else []
+        except Exception:
+            existing_actions = []
+        existing_actions.append({"time": datetime.utcnow().isoformat(), "action": "signup_meta", "detail": extra})
+        ws.shield_actions = _json.dumps(existing_actions)
+    except Exception:
+        pass
     db.commit()
 
     from backend.services.onboarding_email import send_adguard_verify_email

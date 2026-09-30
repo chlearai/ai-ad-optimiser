@@ -2581,6 +2581,19 @@
                         <option>Others</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Primary Ad Channels *</label>
+                    <select class="form-input" id="suChannels" required>
+                        <option value="both">Meta Ads + Google Ads</option>
+                        <option value="meta">Meta Ads (Facebook / Instagram)</option>
+                        <option value="google">Google Ads (Search / Display / YouTube)</option>
+                        <option value="other">Other Landing Page Forms</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="su">(₹)</span> *</label>
+                    <select class="form-input" id="suSpend" required></select>
+                </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="suSubmitBtn">
                     START MY FREE TRIAL
                 </button>
@@ -2607,33 +2620,69 @@
 
             <form onsubmit="handleShadowSignup(event)">
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" class="form-input" id="smName" placeholder="e.g. Rahul Sharma" required>
+                    <label>Name *</label>
+                    <input type="text" class="form-input" id="smName" placeholder="Enter Your Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Company name</label>
-                    <input type="text" class="form-input" id="smCompany" placeholder="e.g. Acme Media" required>
+                    <label>Company *</label>
+                    <input type="text" class="form-input" id="smCompany" placeholder="Enter Company Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Work Email</label>
-                    <input type="email" class="form-input" id="smEmail" placeholder="rahul@company.com" required>
+                    <label>Email *</label>
+                    <input type="email" class="form-input" id="smEmail" placeholder="Enter Your Email ID" required>
                 </div>
                 <div class="form-group">
-                    <label>Phone Number (for OTP alert demo)</label>
-                    <input type="tel" class="form-input" id="smPhone" placeholder="98765 43210" required>
+                    <label>Phone Number *</label>
+                    <div style="display:flex;gap:8px;">
+                        <select class="form-input" id="smDialCode" style="width:110px;flex-shrink:0;padding:10px 8px;" onchange="syncCountryFromDial('sm')"></select>
+                        <input type="tel" class="form-input" id="smPhone" placeholder="Enter Your Phone Number" style="flex:1;" minlength="6" maxlength="12" pattern="[0-9]{6,12}" title="Phone number without country code (digits only)" required>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>Primary Ad Channels</label>
-                    <select class="form-input" id="smChannels">
+                    <label>Primary Country of Operation *</label>
+                    <select class="form-input" id="smCountry" onchange="syncDialFromCountry('sm'); updateSpendCurrency('sm')"></select>
+                </div>
+                <div class="form-group">
+                    <label>Industry *</label>
+                    <select class="form-input" id="smIndustry" required>
+                        <option value="" disabled selected>Select</option>
+                        <option>Hospitality</option>
+                        <option>NGO & Social Enterprises</option>
+                        <option>Food & Beverage</option>
+                        <option>Travel</option>
+                        <option>FMCG</option>
+                        <option>Education</option>
+                        <option>Marketing & Advertising</option>
+                        <option>Real Estate</option>
+                        <option>Healthcare</option>
+                        <option>Logistics</option>
+                        <option>HR & Recruitment</option>
+                        <option>BFSI & NBFC</option>
+                        <option>Manufacturing</option>
+                        <option>IT services</option>
+                        <option>Hyperlocal</option>
+                        <option>E-Commerce</option>
+                        <option>Marketplaces</option>
+                        <option>Others</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Primary Ad Channels *</label>
+                    <select class="form-input" id="smChannels" required>
                         <option value="both">Meta Ads + Google Ads</option>
                         <option value="meta">Meta Ads (Facebook / Instagram)</option>
                         <option value="google">Google Ads (Search / Display / YouTube)</option>
                         <option value="other">Other Landing Page Forms</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="sm">₹</span> *</label>
+                    <select class="form-input" id="smSpend" required></select>
+                </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="smSubmitBtn">
                     Launch Shadow Mode Trial →
                 </button>
+                <p id="smMessage" style="font-size:12.5px;color:var(--text-muted);margin-top:12px;text-align:center;line-height:1.5;"></p>
             </form>
         </div>
     </div>
@@ -2652,29 +2701,69 @@
 
             <form onsubmit="handleDemoBooking(event)">
                 <div class="form-group">
-                    <label>Your Name</label>
-                    <input type="text" class="form-input" id="dmName" placeholder="e.g. Priya Nair" required>
+                    <label>Name *</label>
+                    <input type="text" class="form-input" id="dmName" placeholder="Enter Your Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Company name</label>
-                    <input type="text" class="form-input" id="dmCompany" placeholder="e.g. Brand Solutions" required>
+                    <label>Company *</label>
+                    <input type="text" class="form-input" id="dmCompany" placeholder="Enter Company Name" required>
                 </div>
                 <div class="form-group">
-                    <label>Work Email</label>
-                    <input type="email" class="form-input" id="dmEmail" placeholder="priya@brand.in" required>
+                    <label>Email *</label>
+                    <input type="email" class="form-input" id="dmEmail" placeholder="Enter Your Email ID" required>
                 </div>
                 <div class="form-group">
-                    <label>Monthly Ad Spend (₹)</label>
-                    <select class="form-input" id="dmSpend">
-                        <option value="1L-5L">₹1,00,000 – ₹5,00,000</option>
-                        <option value="5L-15L">₹5,00,000 – ₹15,00,000</option>
-                        <option value="15L-50L">₹15,00,000 – ₹50,00,000</option>
-                        <option value="50L+">₹50,00,000+</option>
+                    <label>Phone Number *</label>
+                    <div style="display:flex;gap:8px;">
+                        <select class="form-input" id="dmDialCode" style="width:110px;flex-shrink:0;padding:10px 8px;" onchange="syncCountryFromDial('dm')"></select>
+                        <input type="tel" class="form-input" id="dmPhone" placeholder="Enter Your Phone Number" style="flex:1;" minlength="6" maxlength="12" pattern="[0-9]{6,12}" title="Phone number without country code (digits only)" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Primary Country of Operation *</label>
+                    <select class="form-input" id="dmCountry" onchange="syncDialFromCountry('dm'); updateSpendCurrency('dm')"></select>
+                </div>
+                <div class="form-group">
+                    <label>Industry *</label>
+                    <select class="form-input" id="dmIndustry" required>
+                        <option value="" disabled selected>Select</option>
+                        <option>Hospitality</option>
+                        <option>NGO & Social Enterprises</option>
+                        <option>Food & Beverage</option>
+                        <option>Travel</option>
+                        <option>FMCG</option>
+                        <option>Education</option>
+                        <option>Marketing & Advertising</option>
+                        <option>Real Estate</option>
+                        <option>Healthcare</option>
+                        <option>Logistics</option>
+                        <option>HR & Recruitment</option>
+                        <option>BFSI & NBFC</option>
+                        <option>Manufacturing</option>
+                        <option>IT services</option>
+                        <option>Hyperlocal</option>
+                        <option>E-Commerce</option>
+                        <option>Marketplaces</option>
+                        <option>Others</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Primary Ad Channels *</label>
+                    <select class="form-input" id="dmChannels" required>
+                        <option value="both">Meta Ads + Google Ads</option>
+                        <option value="meta">Meta Ads (Facebook / Instagram)</option>
+                        <option value="google">Google Ads (Search / Display / YouTube)</option>
+                        <option value="other">Other Landing Page Forms</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="dm">₹</span> *</label>
+                    <select class="form-input" id="dmSpend" required></select>
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="dmSubmitBtn">
                     Confirm 15-Min Demo →
                 </button>
+                <p id="dmMessage" style="font-size:12.5px;color:var(--text-muted);margin-top:12px;text-align:center;line-height:1.5;"></p>
             </form>
         </div>
     </div>
@@ -2807,18 +2896,21 @@
         ];
 
         function populateCountrySelectors(defDial) {
-            const dialSel = document.getElementById('suDialCode');
-            const countrySel = document.getElementById('suCountry');
-            if (!dialSel || dialSel.options.length) return;
-            COUNTRIES.forEach((c, i) => {
-                const o1 = document.createElement('option');
-                o1.value = i;
-                o1.textContent = (c.dial ? c.dial : 'N/A') + ' ' + c.flag;
-                dialSel.appendChild(o1);
-                const o2 = document.createElement('option');
-                o2.value = i;
-                o2.textContent = c.name;
-                countrySel.appendChild(o2);
+            const prefixes = ['su', 'sm', 'dm'];
+            prefixes.forEach(p => {
+                const dialSel = document.getElementById(p + 'DialCode');
+                const countrySel = document.getElementById(p + 'Country');
+                if (!dialSel || dialSel.options.length) return;
+                COUNTRIES.forEach((c, i) => {
+                    const o1 = document.createElement('option');
+                    o1.value = i;
+                    o1.textContent = (c.dial ? c.dial : 'N/A') + ' ' + c.flag;
+                    dialSel.appendChild(o1);
+                    const o2 = document.createElement('option');
+                    o2.value = i;
+                    o2.textContent = c.name;
+                    countrySel.appendChild(o2);
+                });
             });
             // Default: browser language hint, fallback India
             let defIdx = 0;
@@ -2827,18 +2919,82 @@
             const dialMatch = COUNTRIES.findIndex(c => c.dial === defDial);
             if (localeMatch >= 0) defIdx = localeMatch;
             else if (dialMatch >= 0) defIdx = dialMatch;
-            dialSel.value = String(defIdx);
-            countrySel.value = String(defIdx);
+            prefixes.forEach(p => {
+                const ds = document.getElementById(p + 'DialCode');
+                const cs = document.getElementById(p + 'Country');
+                if (ds) ds.value = String(defIdx);
+                if (cs) { cs.value = String(defIdx); updateSpendCurrency(p); }
+            });
         }
 
-        function syncCountryFromDial() {
-            const i = document.getElementById('suDialCode').value;
-            document.getElementById('suCountry').value = i;
+        function syncCountryFromDial(prefix) {
+            const i = document.getElementById(prefix + 'DialCode').value;
+            const cs = document.getElementById(prefix + 'Country');
+            cs.value = i;
+            updateSpendCurrency(prefix);
         }
 
-        function syncDialFromCountry() {
-            const i = document.getElementById('suCountry').value;
-            document.getElementById('suDialCode').value = i;
+        function syncDialFromCountry(prefix) {
+            const i = document.getElementById(prefix + 'Country').value;
+            document.getElementById(prefix + 'DialCode').value = i;
+            updateSpendCurrency(prefix);
+        }
+
+        // Currency per country (digital-marketing majors; Others -> $ as world default)
+        const CURRENCY_BY_COUNTRY = {
+            'India': '₹', 'United States': '$', 'United Kingdom': '£', 'United Arab Emirates': 'AED ',
+            'Saudi Arabia': 'SAR ', 'Singapore': 'S$', 'Australia': 'A$', 'Canada': 'C$',
+            'Germany': '€', 'Netherlands': '€', 'Ireland': '€', 'France': '€', 'Spain': '€',
+            'Italy': '€', 'Switzerland': 'CHF ', 'Sweden': 'kr ', 'Norway': 'kr ', 'Denmark': 'kr ',
+            'Finland': '€', 'Belgium': '€', 'Austria': '€', 'Poland': 'zł ', 'Portugal': '€',
+            'Israel': '₪ ', 'Qatar': 'QAR ', 'Kuwait': 'KWD ', 'Bahrain': 'BHD ', 'Oman': 'OMR ',
+            'South Africa': 'R ', 'Nigeria': '₦ ', 'Kenya': 'KSh ', 'Egypt': 'E£ ', 'Ghana': '₵ ',
+            'Indonesia': 'Rp ', 'Malaysia': 'RM ', 'Philippines': '₱ ', 'Thailand': '฿ ',
+            'Vietnam': '₫ ', 'Japan': '¥', 'South Korea': '₩ ', 'Hong Kong': 'HK$ ',
+            'New Zealand': 'NZ$ ', 'Brazil': 'R$ ', 'Mexico': 'Mex$ ', 'Argentina': 'AR$ ',
+            'Chile': 'CLP$ ', 'Colombia': 'COL$ ', 'Bangladesh': '৳ ', 'Pakistan': 'Rs ',
+            'Sri Lanka': 'Rs ', 'Nepal': 'Rs ', 'Turkey': '₺ ', 'Greece': '€', 'Romania': 'lei ',
+            'Czechia': 'Kč ', 'Ukraine': '₴ ', 'Other / Worldwide': '$'
+        };
+        // Spend bands in local currency, scaled by rough FX vs INR (INR band: 1-5L, 5-15L, 15-50L, 50L+)
+        const FX_SCALE = {
+            'India': 1, 'United States': 0.012, 'United Kingdom': 0.0095, 'United Arab Emirates': 0.044,
+            'Saudi Arabia': 0.045, 'Singapore': 0.016, 'Australia': 0.018, 'Canada': 0.016,
+            'Other / Worldwide': 0.012
+        };
+        function spendBands(country) {
+            const sym = CURRENCY_BY_COUNTRY[country] || '$';
+            const s = FX_SCALE[country];
+            const fmt = n => Math.round(n).toLocaleString('en-IN').replace(/,/g, ',');
+            if (!s) {
+                // No FX mapping: generic relative bands with symbol
+                return [
+                    { v: '1', label: sym + fmt(25000) + ' – ' + sym + fmt(125000) },
+                    { v: '2', label: sym + fmt(125000) + ' – ' + sym + fmt(375000) },
+                    { v: '3', label: sym + fmt(375000) + ' – ' + sym + fmt(1250000) },
+                    { v: '4', label: sym + fmt(1250000) + '+' }
+                ];
+            }
+            return [
+                { v: '1', label: sym + fmt(100000 * s) + ' – ' + sym + fmt(500000 * s) },
+                { v: '2', label: sym + fmt(500000 * s) + ' – ' + sym + fmt(1500000 * s) },
+                { v: '3', label: sym + fmt(1500000 * s) + ' – ' + sym + fmt(5000000 * s) },
+                { v: '4', label: sym + fmt(5000000 * s) + '+' }
+            ];
+        }
+
+        function updateSpendCurrency(prefix) {
+            const cs = document.getElementById(prefix + 'Country');
+            const spendSel = document.getElementById(prefix + 'Spend');
+            const curSpan = document.querySelector('[data-currency-for="' + prefix + '"]');
+            if (!cs || !spendSel) return;
+            const idx = parseInt(cs.value, 10);
+            const countryObj = COUNTRIES[idx] || COUNTRIES[0];
+            if (curSpan) curSpan.textContent = '(' + (CURRENCY_BY_COUNTRY[countryObj.name] || '$') + ')';
+            const selected = spendSel.value;
+            spendSel.innerHTML = '<option value="" disabled>Select</option>' +
+                spendBands(countryObj.name).map(b => '<option value="' + b.v + '">' + b.label + '</option>').join('');
+            if (selected) spendSel.value = selected;
         }
 
         // Timezone -> dial-code guess for default selection
@@ -2867,6 +3023,34 @@
             document.getElementById('signupModal').style.display = 'none';
         }
 
+        // Shared: collect identical fields from any modal (su/sm/dm prefixes)
+        function collectForm(prefix) {
+            const name = document.getElementById(prefix + 'Name').value.trim();
+            const company = document.getElementById(prefix + 'Company').value.trim();
+            const email = document.getElementById(prefix + 'Email').value.trim().toLowerCase();
+            const phoneDigits = document.getElementById(prefix + 'Phone').value.replace(/\D/g, '');
+            const idx = parseInt(document.getElementById(prefix + 'Country').value, 10);
+            const countryObj = COUNTRIES[idx] || COUNTRIES[0];
+            const fullPhone = (countryObj.dial ? countryObj.dial : '') + phoneDigits;
+            const industry = document.getElementById(prefix + 'Industry').value;
+            const channels = document.getElementById(prefix + 'Channels') ? document.getElementById(prefix + 'Channels').value : '';
+            const spendBand = document.getElementById(prefix + 'Spend') ? document.getElementById(prefix + 'Spend').value : '';
+            return {
+                full_name: name, company_name: company, email: email,
+                phone: fullPhone, country: countryObj.name, industry: industry,
+                channels: channels, monthly_ad_spend_band: spendBand,
+                currency: CURRENCY_BY_COUNTRY[countryObj.name] || '$'
+            };
+        }
+
+        function commonError(prefix, err, btn, originalText) {
+            const msg = document.getElementById(prefix + 'Message');
+            msg.style.color = '#fca5a5';
+            msg.innerText = err.message + '  ·  Need help? 80509 97977';
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+
         async function handleSignupSubmit(e) {
             e.preventDefault();
             const btn = document.getElementById('suSubmitBtn');
@@ -2875,28 +3059,13 @@
             btn.innerText = 'Creating Account...';
             btn.disabled = true;
             msg.innerText = '';
-
-            const name = document.getElementById('suName').value.trim();
-            const company = document.getElementById('suCompany').value.trim();
-            const email = document.getElementById('suEmail').value.trim().toLowerCase();
-            const phoneDigits = document.getElementById('suPhone').value.replace(/\D/g, '');
-            const countryObj = COUNTRIES[parseInt(document.getElementById('suCountry').value, 10)] || COUNTRIES[0];
-            const fullPhone = (countryObj.dial ? countryObj.dial : '') + phoneDigits;
-            const country = countryObj.name;
-            const industry = document.getElementById('suIndustry').value;
+            const d = collectForm('su');
 
             try {
                 const res = await fetch('/api/auth/signup-subscriber', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        full_name: name,
-                        company_name: company,
-                        email: email,
-                        phone: fullPhone,
-                        country: country,
-                        industry: industry
-                    })
+                    body: JSON.stringify(d)
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || 'Signup failed');
@@ -2904,7 +3073,7 @@
                 btn.innerText = '✓ Account Created';
                 msg.style.color = '#34d399';
                 if (data.email_sent) {
-                    msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + email + '</b><br>' +
+                    msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + d.email + '</b><br>' +
                         'It expires in 60 minutes. Check spam if you don\'t see it.<br>' +
                         'Customer Care: 80509 97977 · support@chlear.in';
                 } else if (data.verify_link) {
@@ -2920,10 +3089,7 @@
                     msg.innerText = '';
                 }, 9000);
             } catch (err) {
-                msg.style.color = '#fca5a5';
-                msg.innerText = err.message + '  ·  Need help? 80509 97977';
-                btn.innerText = original;
-                btn.disabled = false;
+                commonError('su', err, btn, original);
             }
         }
 
@@ -2953,58 +3119,82 @@
             }
         }
 
-        // 4. SIGNUP / DEMO HANDLERS
+        // 4. SIGNUP / DEMO HANDLERS — all three forms share identical fields
+        // Shadow Mode Modal = same signup API (trial), fields identical
         async function handleShadowSignup(e) {
             e.preventDefault();
             const btn = document.getElementById('smSubmitBtn');
+            const msg = document.getElementById('smMessage');
+            const original = btn.innerText;
             btn.innerText = 'Creating Shadow Account...';
             btn.disabled = true;
-
-            const name = document.getElementById('smName').value;
-            const company = document.getElementById('smCompany') ? document.getElementById('smCompany').value : '';
-            const email = document.getElementById('smEmail').value;
-            const phone = document.getElementById('smPhone').value;
-            const channels = document.getElementById('smChannels').value;
+            msg.innerText = '';
+            const d = collectForm('sm');
 
             try {
-                // Register workspace or lead
-                const res = await fetch('/api/auth/register', {
+                const res = await fetch('/api/auth/signup-subscriber', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        company_name: company,
-                        email: email,
-                        phone: phone,
-                        plan: 'shadow_mode',
-                        channels: channels
-                    })
+                    body: JSON.stringify(d)
                 });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Signup failed');
 
-                // Redirect to onboarding or login
+                btn.innerText = '✓ Account Created';
+                msg.style.color = '#34d399';
+                if (data.email_sent) {
+                    msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + d.email + '</b><br>' +
+                        'It expires in 60 minutes. Shadow Mode (14 days, 300 leads) starts once verified.';
+                } else if (data.verify_link) {
+                    msg.innerHTML = '<b>Email failed - use this verify link directly:</b><br>' +
+                        '<a href="' + data.verify_link + '" style="color:#34d399;word-break:break-all;">Set your password now →</a>';
+                } else {
+                    msg.innerHTML = 'Account created. ' + (data.email_error || '');
+                }
                 setTimeout(() => {
-                    alert('Shadow Mode account created! Redirecting to setup...');
-                    window.location.href = '/adguard/login?email=' + encodeURIComponent(email);
-                }, 800);
+                    closeShadowModeModal();
+                    btn.innerText = original;
+                    btn.disabled = false;
+                    msg.innerText = '';
+                }, 9000);
             } catch (err) {
-                setTimeout(() => {
-                    window.location.href = '/adguard/login?email=' + encodeURIComponent(email);
-                }, 800);
+                commonError('sm', err, btn, original);
             }
         }
 
-        function handleDemoBooking(e) {
+        // Demo booking = captured through the same signup API; team follows up to schedule
+        async function handleDemoBooking(e) {
             e.preventDefault();
             const btn = document.getElementById('dmSubmitBtn');
+            const msg = document.getElementById('dmMessage');
+            const original = btn.innerText;
             btn.innerText = 'Booking Demo...';
             btn.disabled = true;
+            msg.innerText = '';
+            const d = collectForm('dm');
+            d.demo_request = true;
 
-            setTimeout(() => {
-                alert('Thank you! Our growth engineer will connect with you in under 15 minutes.');
-                closeDemoModal();
-                btn.innerText = 'Confirm 15-Min Demo →';
-                btn.disabled = false;
-            }, 700);
+            try {
+                const res = await fetch('/api/auth/signup-subscriber', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(d)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Demo request failed');
+
+                btn.innerText = '✓ Demo Requested';
+                msg.style.color = '#34d399';
+                msg.innerHTML = '<b>Thank you! Our growth engineer will connect within 15 minutes</b> on ' + d.phone + '.';
+                setTimeout(() => {
+                    closeDemoModal();
+                    btn.innerText = original;
+                    btn.disabled = false;
+                    msg.innerText = '';
+                }, 9000);
+            } catch (err) {
+                commonError('dm', err, btn, original);
+            }
         }
 
         // 5. LIVE STREAM DEMO ANIMATION (Looping every 8s)
