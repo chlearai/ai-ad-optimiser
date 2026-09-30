@@ -2070,7 +2070,7 @@
         <div class="container">
             <div class="section-header">
                 <div class="eyebrow">WHY ADGUARD</div>
-                <h2 class="section-title">Other tools clean leads. AdGuard stops you buying junk.</h2>
+                <h2 class="section-title">Other tools clean clicks. AdGuard stops you buying junk leads.</h2>
             </div>
 
             <div class="comparison-wrap">
@@ -2078,62 +2078,69 @@
                     <table class="comp-table">
                         <thead>
                             <tr>
-                                <th style="width:30%;">What you get</th>
-                                <th class="col-adguard" style="width:25%;">AdGuard</th>
-                                <th style="width:20%;">Click-fraud tools</th>
-                                <th style="width:25%;">Captchas &amp; form checks</th>
-                                <th style="width:15%;">Doing nothing</th>
+                                <th style="width:26%;">What you get</th>
+                                <th class="col-adguard" style="width:20%;">AdGuard</th>
+                                <th style="width:18%;">ClickCease</th>
+                                <th style="width:18%;">Lunio</th>
+                                <th style="width:18%;">TrafficGuard</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td><strong>Stops bots before the form submits</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> pre-submit interceptor</td>
+                                <td>Partial <span style="color:var(--text-dim);font-size:11px;">(click-level, after the ad spend)</span></td>
+                                <td>Partial <span style="color:var(--text-dim);font-size:11px;">(invalid-click filtering)</span></td>
+                                <td>Partial <span style="color:var(--text-dim);font-size:11px;">(click-level)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Verifies the lead is a real human (AI phone call)</strong></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> AI voice verification</td>
+                                <td><span class="icon-cross">✗</span> checks clicks, not the person</td>
+                                <td><span class="icon-cross">✗</span> checks clicks, not the person</td>
+                                <td><span class="icon-cross">✗</span> checks clicks, not the person</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Verified leads pushed straight to your CRM</strong></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> LeadSquared · Zoho · HubSpot · webhook</td>
+                                <td><span class="icon-cross">✗</span></td>
+                                <td><span class="icon-cross">✗</span></td>
+                                <td><span class="icon-cross">✗</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Teaches Meta &amp; Google to avoid junk (exclusion audiences)</strong></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> Meta Custom Audiences + Google Customer Match</td>
+                                <td><span class="icon-cross">✗</span> IP blocks only</td>
+                                <td><span class="icon-check">✓</span> clean-signal feedback</td>
+                                <td>Partial</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Shared fraud network across every customer</strong></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> FraudGraph — each caught bot protects all</td>
+                                <td><span class="icon-cross">✗</span> per-account only</td>
                                 <td>Partial</td>
                                 <td>Partial</td>
-                                <td><span class="icon-cross">✗</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Teaches Meta &amp; Google to avoid junk</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>AI phone verification of every genuine lead</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Keeps bots from seeing your ads again</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span> Meta + Google</td>
-                                <td>Mostly Google</td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Shared network across businesses</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span></td>
-                                <td>Varies</td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
                             </tr>
                             <tr>
                                 <td><strong>Proof of savings in ₹ per campaign</strong></td>
-                                <td class="col-adguard"><span class="icon-check">✓</span></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> ₹ recovered, auto-computed</td>
+                                <td>Partial <span style="color:var(--text-dim);font-size:11px;">(blocked-click counts)</span></td>
                                 <td>Partial</td>
-                                <td><span class="icon-cross">✗</span></td>
-                                <td><span class="icon-cross">✗</span></td>
+                                <td>Partial <span style="color:var(--text-dim);font-size:11px;">(media reporting)</span></td>
                             </tr>
                             <tr>
                                 <td><strong>Friction for real visitors</strong></td>
                                 <td class="col-adguard"><strong>Only borderline leads see an OTP</strong></td>
                                 <td>None</td>
-                                <td>Every visitor solves a puzzle</td>
                                 <td>None</td>
+                                <td>None</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Works with your own accounts (OAuth, no script bloat)</strong></td>
+                                <td class="col-adguard"><span class="icon-check">✓</span> connects your Google/Meta — no site scripts</td>
+                                <td>Tracking script on site</td>
+                                <td>Tracking script on site</td>
+                                <td>Tracking script on site</td>
                             </tr>
                         </tbody>
                     </table>
@@ -2141,7 +2148,7 @@
             </div>
 
             <p class="table-footnote">
-                Already use a click-fraud tool? Keep it. AdGuard works on a different layer and runs alongside it.
+                Comparison based on publicly documented features of each tool (click-fraud protection layer). Already use one? Keep it — AdGuard works on a different layer (the lead itself) and runs alongside it.
             </p>
         </div>
     </section>
