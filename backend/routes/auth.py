@@ -243,7 +243,7 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
         ws = AdGuardAccount(
             owner_email=clean_email,
             display_name=display_title,
-            plan="trial", lead_quota=100,
+            plan="trial", lead_quota=300,
             verification_threshold=70, auto_push_enabled=True,
             shield_enabled=True, shield_junk_threshold=40, shield_min_leads=50,
         )

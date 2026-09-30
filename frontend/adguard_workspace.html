@@ -840,7 +840,7 @@
                 <!-- QUOTA ALERT -->
                 <div class="quota-alert-banner hidden" id="quotaAlertBanner">
                     <div>
-                        <strong>⚠️ Plan Quota Alert:</strong> You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.
+                        <strong id="quotaAlertTitle">⚠️ Plan Quota Alert:</strong> <span id="quotaAlertBody">You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.</span>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()">Upgrade Plan</button>
                 </div>
@@ -1728,9 +1728,14 @@
                 $('quotaPctText').textContent = pct + '%';
                 $('quotaBar').style.width = pct + '%';
                 $('quotaBar').className = 'quota-bar' + (pct >= 95 ? ' danger' : pct >= 80 ? ' warn' : '');
-                if (pct >= 80 && !isAdmin) {
+                if (pct >= 100 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
-                    $('alertQuotaPct').textContent = pct + '%';
+                    $('quotaAlertTitle').textContent = '🚫 Free trial used up (' + (ws.plan === 'trial' ? '300 leads audited' : 'plan limit reached') + ')';
+                    $('quotaAlertBody').textContent = ' New leads are paused. Upgrade to a paid plan to continue protection — your history stays safe.';
+                } else if (pct >= 80 && !isAdmin) {
+                    $('quotaAlertBanner').classList.remove('hidden');
+                    $('quotaAlertTitle').textContent = '⚠️ Plan Quota Alert:';
+                    $('quotaAlertBody').textContent = ' You have reached ' + pct + '% of your lead limit. Upgrade your plan to prevent lead capture interruptions.';
                 } else {
                     $('quotaAlertBanner').classList.add('hidden');
                 }

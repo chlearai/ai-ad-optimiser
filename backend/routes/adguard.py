@@ -1545,7 +1545,7 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
 # ---------------------------------------------------------------------------
 
 PLAN_LIMITS = {
-    "trial": {"lead_quota": 100, "workspaces": 1},
+    "trial": {"lead_quota": 300, "workspaces": 1},
     "starter": {"lead_quota": 1000, "workspaces": 1},
     "pro": {"lead_quota": 5000, "workspaces": 3},
     "agency": {"lead_quota": -1, "workspaces": 10},
