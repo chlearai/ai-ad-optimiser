@@ -2549,13 +2549,13 @@
                 <div class="form-group">
                     <label>Phone Number *</label>
                     <div style="display:flex;gap:8px;">
-                        <span style="display:flex;align-items:center;gap:6px;padding:10px 12px;background:rgba(2,6,23,0.6);border:1px solid var(--border-glass);border-radius:10px;color:#fff;font-size:14px;white-space:nowrap;">🇮🇳 +91</span>
-                        <input type="tel" class="form-input" id="suPhone" placeholder="Enter Your Phone Number" style="flex:1;" pattern="[0-9]{10}" title="10-digit mobile number" required>
+                        <select class="form-input" id="suDialCode" style="width:110px;flex-shrink:0;padding:10px 8px;" onchange="syncCountryFromDial()"></select>
+                        <input type="tel" class="form-input" id="suPhone" placeholder="Enter Your Phone Number" style="flex:1;" minlength="6" maxlength="12" pattern="[0-9]{6,12}" title="Phone number without country code (digits only)" required>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Primary Country of Operation *</label>
-                    <input type="text" class="form-input" id="suCountry" value="India" readonly required>
+                    <select class="form-input" id="suCountry" onchange="syncDialFromCountry()" required></select>
                 </div>
                 <div class="form-group">
                     <label>Industry *</label>
@@ -2745,6 +2745,120 @@
         }
 
         // 3. MODAL CONTROLS & PLAN HANDLER
+        // Country + dial code data (major digital-marketing markets, grouped by region)
+        const COUNTRIES = [
+            { name: 'India', dial: '+91', flag: '🇮🇳' },
+            { name: 'United States', dial: '+1', flag: '🇺🇸' },
+            { name: 'United Kingdom', dial: '+44', flag: '🇬🇧' },
+            { name: 'United Arab Emirates', dial: '+971', flag: '🇦🇪' },
+            { name: 'Saudi Arabia', dial: '+966', flag: '🇸🇦' },
+            { name: 'Singapore', dial: '+65', flag: '🇸🇬' },
+            { name: 'Australia', dial: '+61', flag: '🇦🇺' },
+            { name: 'Canada', dial: '+1', flag: '🇨🇦' },
+            { name: 'Germany', dial: '+49', flag: '🇩🇪' },
+            { name: 'Netherlands', dial: '+31', flag: '🇳🇱' },
+            { name: 'Ireland', dial: '+353', flag: '🇮🇪' },
+            { name: 'France', dial: '+33', flag: '🇫🇷' },
+            { name: 'Spain', dial: '+34', flag: '🇪🇸' },
+            { name: 'Italy', dial: '+39', flag: '🇮🇹' },
+            { name: 'Switzerland', dial: '+41', flag: '🇨🇭' },
+            { name: 'Sweden', dial: '+46', flag: '🇸🇪' },
+            { name: 'Norway', dial: '+47', flag: '🇳🇴' },
+            { name: 'Denmark', dial: '+45', flag: '🇩🇰' },
+            { name: 'Finland', dial: '+358', flag: '🇫🇮' },
+            { name: 'Belgium', dial: '+32', flag: '🇧🇪' },
+            { name: 'Austria', dial: '+43', flag: '🇦🇹' },
+            { name: 'Poland', dial: '+48', flag: '🇵🇱' },
+            { name: 'Portugal', dial: '+351', flag: '🇵🇹' },
+            { name: 'Israel', dial: '+972', flag: '🇮🇱' },
+            { name: 'Qatar', dial: '+974', flag: '🇶🇦' },
+            { name: 'Kuwait', dial: '+965', flag: '🇰🇼' },
+            { name: 'Bahrain', dial: '+973', flag: '🇧🇭' },
+            { name: 'Oman', dial: '+968', flag: '🇴🇲' },
+            { name: 'South Africa', dial: '+27', flag: '🇿🇦' },
+            { name: 'Nigeria', dial: '+234', flag: '🇳🇬' },
+            { name: 'Kenya', dial: '+254', flag: '🇰🇪' },
+            { name: 'Egypt', dial: '+20', flag: '🇪🇬' },
+            { name: 'Ghana', dial: '+233', flag: '🇬🇭' },
+            { name: 'Indonesia', dial: '+62', flag: '🇮🇩' },
+            { name: 'Malaysia', dial: '+60', flag: '🇲🇾' },
+            { name: 'Philippines', dial: '+63', flag: '🇵🇭' },
+            { name: 'Thailand', dial: '+66', flag: '🇹🇭' },
+            { name: 'Vietnam', dial: '+84', flag: '🇻🇳' },
+            { name: 'Japan', dial: '+81', flag: '🇯🇵' },
+            { name: 'South Korea', dial: '+82', flag: '🇰🇷' },
+            { name: 'Hong Kong', dial: '+852', flag: '🇭🇰' },
+            { name: 'New Zealand', dial: '+64', flag: '🇳🇿' },
+            { name: 'Brazil', dial: '+55', flag: '🇧🇷' },
+            { name: 'Mexico', dial: '+52', flag: '🇲🇽' },
+            { name: 'Argentina', dial: '+54', flag: '🇦🇷' },
+            { name: 'Chile', dial: '+56', flag: '🇨🇱' },
+            { name: 'Colombia', dial: '+57', flag: '🇨🇴' },
+            { name: 'Bangladesh', dial: '+880', flag: '🇧🇩' },
+            { name: 'Pakistan', dial: '+92', flag: '🇵🇰' },
+            { name: 'Sri Lanka', dial: '+94', flag: '🇱🇰' },
+            { name: 'Nepal', dial: '+977', flag: '🇳🇵' },
+            { name: 'Turkey', dial: '+90', flag: '🇹🇷' },
+            { name: 'Greece', dial: '+30', flag: '🇬🇷' },
+            { name: 'Romania', dial: '+40', flag: '🇷🇴' },
+            { name: 'Czechia', dial: '+420', flag: '🇨🇿' },
+            { name: 'Ukraine', dial: '+380', flag: '🇺🇦' },
+            { name: 'Other / Worldwide', dial: '', flag: '🌍' }
+        ];
+
+        function populateCountrySelectors(defDial) {
+            const dialSel = document.getElementById('suDialCode');
+            const countrySel = document.getElementById('suCountry');
+            if (!dialSel || dialSel.options.length) return;
+            COUNTRIES.forEach((c, i) => {
+                const o1 = document.createElement('option');
+                o1.value = i;
+                o1.textContent = (c.dial ? c.dial : 'N/A') + ' ' + c.flag;
+                dialSel.appendChild(o1);
+                const o2 = document.createElement('option');
+                o2.value = i;
+                o2.textContent = c.name;
+                countrySel.appendChild(o2);
+            });
+            // Default: browser language hint, fallback India
+            let defIdx = 0;
+            const lang = (navigator.language || '').toLowerCase();
+            const localeMatch = COUNTRIES.findIndex(c => lang.includes(c.name.toLowerCase().split(' ')[0]));
+            const dialMatch = COUNTRIES.findIndex(c => c.dial === defDial);
+            if (localeMatch >= 0) defIdx = localeMatch;
+            else if (dialMatch >= 0) defIdx = dialMatch;
+            dialSel.value = String(defIdx);
+            countrySel.value = String(defIdx);
+        }
+
+        function syncCountryFromDial() {
+            const i = document.getElementById('suDialCode').value;
+            document.getElementById('suCountry').value = i;
+        }
+
+        function syncDialFromCountry() {
+            const i = document.getElementById('suCountry').value;
+            document.getElementById('suDialCode').value = i;
+        }
+
+        // Timezone -> dial-code guess for default selection
+        (function guessCountry() {
+            const tzMap = [
+                { tz: 'Kolkata', dial: '+91' }, { tz: 'New_York', dial: '+1' }, { tz: 'Chicago', dial: '+1' },
+                { tz: 'Los_Angeles', dial: '+1' }, { tz: 'Toronto', dial: '+1' }, { tz: 'London', dial: '+44' },
+                { tz: 'Dubai', dial: '+971' }, { tz: 'Riyadh', dial: '+966' }, { tz: 'Singapore', dial: '+65' },
+                { tz: 'Sydney', dial: '+61' }, { tz: 'Berlin', dial: '+49' }, { tz: 'Amsterdam', dial: '+31' },
+                { tz: 'Tokyo', dial: '+81' }, { tz: 'Seoul', dial: '+82' }, { tz: 'Sao_Paulo', dial: '+55' }
+            ];
+            let defDial = '+91';
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                const hit = tzMap.find(m => tz.includes(m.tz));
+                if (hit) defDial = hit.dial;
+            } catch (e) {}
+            populateCountrySelectors(defDial);
+        })();
+
         function openSignupModal() {
             document.getElementById('signupModal').style.display = 'flex';
         }
@@ -2765,8 +2879,10 @@
             const name = document.getElementById('suName').value.trim();
             const company = document.getElementById('suCompany').value.trim();
             const email = document.getElementById('suEmail').value.trim().toLowerCase();
-            const phone = document.getElementById('suPhone').value.trim();
-            const country = document.getElementById('suCountry').value.trim() || 'India';
+            const phoneDigits = document.getElementById('suPhone').value.replace(/\D/g, '');
+            const countryObj = COUNTRIES[parseInt(document.getElementById('suCountry').value, 10)] || COUNTRIES[0];
+            const fullPhone = (countryObj.dial ? countryObj.dial : '') + phoneDigits;
+            const country = countryObj.name;
             const industry = document.getElementById('suIndustry').value;
 
             try {
@@ -2777,7 +2893,7 @@
                         full_name: name,
                         company_name: company,
                         email: email,
-                        phone: phone,
+                        phone: fullPhone,
                         country: country,
                         industry: industry
                     })
