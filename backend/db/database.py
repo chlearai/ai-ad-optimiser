@@ -34,7 +34,7 @@ def _create_sqlite_engine():
 def _create_postgres_engine(url):
     return create_engine(
         url,
-        connect_args={"sslmode": "require", "connect_timeout": 2},
+        connect_args={"sslmode": "require", "connect_timeout": 10},
         pool_pre_ping=True,
         pool_recycle=300,
     )
@@ -42,8 +42,10 @@ def _create_postgres_engine(url):
 
 def _test_postgres_fast(url):
     """
-    Fast pre-test for PostgreSQL connectivity (max 2 seconds total).
-    Prevents psycopg2 from hanging for 45-60s on multi-IP DNS resolution if PostgreSQL/Supabase is down.
+    Verify PostgreSQL connectivity. Retries up to 3 times using the psycopg2
+    connect_timeout (10s each). The old 2s budget was too tight for
+    trans-region links (e.g. Railway US -> Supabase Singapore), which made
+    every startup silently fall back to an empty SQLite database.
     """
     if not url:
         return None, False
@@ -52,33 +54,24 @@ def _test_postgres_fast(url):
         parsed = urlparse(url)
         hostname = parsed.hostname
         port = parsed.port or 5432
-        ip = None
-        if hostname:
-            # 1. Resolve to single IPv4 to prevent multi-IP cascading timeout
-            ips = [i[4][0] for i in socket.getaddrinfo(hostname, port, socket.AF_INET)]
-            if ips:
-                ip = ips[0]
-                s = socket.create_connection((ip, port), timeout=1.5)
-                s.close()
-
-        # 2. Test actual direct DB connection with strict 2s timeout
-        conn_kwargs = {
-            "dbname": parsed.path.lstrip("/"),
-            "user": parsed.username,
-            "password": parsed.password,
-            "host": hostname,
-            "port": port,
-            "connect_timeout": 2,
-            "sslmode": "require",
-        }
-        if ip:
-            conn_kwargs["hostaddr"] = ip
-        test_conn = psycopg2.connect(**conn_kwargs)
-        test_conn.close()
-
-        # 3. Connection is valid, return full SQLAlchemy engine
-        eng = _create_postgres_engine(url)
-        return eng, True
+        for attempt in range(3):
+            try:
+                conn_kwargs = {
+                    "dbname": parsed.path.lstrip("/"),
+                    "user": parsed.username,
+                    "password": parsed.password,
+                    "host": hostname,
+                    "port": port,
+                    "connect_timeout": 10,
+                    "sslmode": "require",
+                }
+                test_conn = psycopg2.connect(**conn_kwargs)
+                test_conn.close()
+                eng = _create_postgres_engine(url)
+                return eng, True
+            except Exception as e:
+                logger.warning(f"PostgreSQL connect attempt {attempt + 1}/3 failed: {e}")
+        return None, False
     except Exception as e:
         logger.warning(f"PostgreSQL connection test failed: {e}")
         return None, False
