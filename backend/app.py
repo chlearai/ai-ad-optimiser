@@ -122,6 +122,12 @@ def health_db():
         "accounts": [],
     }
     try:
+        import backend.db.database as _dbm
+        info["pg_driver"] = _dbm._pg_driver_name
+        info["pg_driver_error"] = _dbm._pg_driver_error
+    except Exception:
+        pass
+    try:
         from urllib.parse import urlparse
         u = urlparse(os.getenv("DATABASE_URL") or "")
         info["database_url_host"] = u.hostname

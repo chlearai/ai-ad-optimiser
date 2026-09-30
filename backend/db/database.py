@@ -27,11 +27,38 @@ else:
 
 import socket
 
+_pg_driver_name = None
+_pg_driver_error = None
+
+
 def _create_sqlite_engine():
     return create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
 
-def _create_postgres_engine(url):
+def _load_pg_driver():
+    """Load whichever Postgres DBAPI driver is available (psycopg2 or psycopg 3)."""
+    global _pg_driver_name, _pg_driver_error
+    if _pg_driver_name:
+        return _pg_driver_name
+    try:
+        import psycopg2  # noqa: F401
+        _pg_driver_name = "psycopg2"
+        return _pg_driver_name
+    except Exception:
+        pass
+    try:
+        import psycopg  # noqa: F401
+        _pg_driver_name = "psycopg"
+        return _pg_driver_name
+    except Exception as e:
+        _pg_driver_error = f"{type(e).__name__}: {e}"
+        return None
+
+
+def _create_postgres_engine(dbapi_name, url):
+    # psycopg 3 dialect needs an explicit +psycopg scheme
+    if dbapi_name == "psycopg":
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     return create_engine(
         url,
         connect_args={"sslmode": "require", "connect_timeout": 10},
@@ -42,38 +69,46 @@ def _create_postgres_engine(url):
 
 def _test_postgres_fast(url):
     """
-    Verify PostgreSQL connectivity. Retries up to 3 times using the psycopg2
-    connect_timeout (10s each). The old 2s budget was too tight for
-    trans-region links (e.g. Railway US -> Supabase Singapore), which made
-    every startup silently fall back to an empty SQLite database.
+    Verify PostgreSQL connectivity with whichever driver is installed.
+    Retries up to 3 times (10s connect timeout each).
     """
+    global _pg_driver_error
     if not url:
         return None, False
+    driver = _load_pg_driver()
+    if not driver:
+        logger.error(f"No PostgreSQL driver available: {_pg_driver_error}")
+        _pg_driver_error = _pg_driver_error or "No module named psycopg2 or psycopg"
+        return None, False
     try:
-        import psycopg2
         parsed = urlparse(url)
-        hostname = parsed.hostname
-        port = parsed.port or 5432
+        conn_kwargs = {
+            "dbname": parsed.path.lstrip("/"),
+            "user": parsed.username,
+            "password": parsed.password,
+            "host": parsed.hostname,
+            "port": parsed.port or 5432,
+            "connect_timeout": 10,
+            "sslmode": "require",
+        }
         for attempt in range(3):
             try:
-                conn_kwargs = {
-                    "dbname": parsed.path.lstrip("/"),
-                    "user": parsed.username,
-                    "password": parsed.password,
-                    "host": hostname,
-                    "port": port,
-                    "connect_timeout": 10,
-                    "sslmode": "require",
-                }
-                test_conn = psycopg2.connect(**conn_kwargs)
+                if driver == "psycopg2":
+                    import psycopg2
+                    test_conn = psycopg2.connect(**conn_kwargs)
+                else:
+                    import psycopg
+                    test_conn = psycopg.connect(**conn_kwargs)
                 test_conn.close()
-                eng = _create_postgres_engine(url)
+                eng = _create_postgres_engine(driver, url)
+                logger.info(f"PostgreSQL connectivity verified via driver '{driver}'")
                 return eng, True
             except Exception as e:
-                logger.warning(f"PostgreSQL connect attempt {attempt + 1}/3 failed: {e}")
+                logger.warning(f"PostgreSQL connect attempt {attempt + 1}/3 ({driver}) failed: {type(e).__name__}: {e}")
         return None, False
     except Exception as e:
-        logger.warning(f"PostgreSQL connection test failed: {e}")
+        logger.warning(f"PostgreSQL connection test failed: {type(e).__name__}: {e}")
+        _pg_driver_error = f"{type(e).__name__}: {e}"
         return None, False
 
 
