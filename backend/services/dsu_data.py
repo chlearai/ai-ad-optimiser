@@ -391,16 +391,19 @@ def _fetch_lsq_leads_direct(start_date: str, end_date: str, account_id: int = No
     base_url = ""
 
     if account_id:
-        c = _db_connect()
-        cur = c.cursor()
-        cur.execute("SELECT lsq_access_key, lsq_secret_key, lsq_base_url FROM accounts WHERE id=%s", (account_id,))
-        row = cur.fetchone()
-        c.close()
-        if row and row[0] and row[1]:
-            access_key = row[0]
-            secret_key = row[1]
-            base_url = row[2] or ""
-            logger.info(f"Using per-account LSQ creds for account_id={account_id}")
+        from backend.db.database import SessionLocal
+        from backend.db.models import Account
+
+        s = SessionLocal()
+        try:
+            acc = s.query(Account).filter(Account.id == account_id).first()
+            if acc and acc.lsq_access_key and acc.lsq_secret_key:
+                access_key = acc.lsq_access_key
+                secret_key = acc.lsq_secret_key
+                base_url = acc.lsq_base_url or ""
+                logger.info(f"Using per-account LSQ creds for account_id={account_id}")
+        finally:
+            s.close()
 
     if not access_key:
         cfg = load_config()
@@ -609,15 +612,18 @@ def _fetch_lsq_lead_details_direct(start_date: str, end_date: str, account_id: i
     base_url = ""
 
     if account_id:
-        c = _db_connect()
-        cur = c.cursor()
-        cur.execute("SELECT lsq_access_key, lsq_secret_key, lsq_base_url FROM accounts WHERE id=%s", (account_id,))
-        row = cur.fetchone()
-        c.close()
-        if row and row[0] and row[1]:
-            access_key = row[0]
-            secret_key = row[1]
-            base_url = row[2] or ""
+        from backend.db.database import SessionLocal
+        from backend.db.models import Account
+
+        s = SessionLocal()
+        try:
+            acc = s.query(Account).filter(Account.id == account_id).first()
+            if acc and acc.lsq_access_key and acc.lsq_secret_key:
+                access_key = acc.lsq_access_key
+                secret_key = acc.lsq_secret_key
+                base_url = acc.lsq_base_url or ""
+        finally:
+            s.close()
 
     if not access_key:
         cfg = load_config()
@@ -1157,7 +1163,12 @@ def fetch_dsu_monthly_summary(db_session=None) -> Dict[str, Any]:
     from datetime import timedelta
     api_end = (date_type.today() - timedelta(days=1)).isoformat()
     api_start = "2026-04-01"
-    api_spend = _fetch_google_ads_monthly_spend(api_start, api_end)
+    try:
+        api_spend = _fetch_google_ads_monthly_spend(api_start, api_end)
+    except Exception as e:
+        logger.error(f"DSU monthly spend fetch FAILED: {type(e).__name__}: {e}")
+        _spend_error_holder["message"] = f"{type(e).__name__}: {e}"
+        api_spend = {}
 
     # Step 1b: Auto-freeze completed months so historical values stop changing.
     # Any month fully in the past (before current month) is written to

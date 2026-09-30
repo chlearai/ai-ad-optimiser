@@ -570,7 +570,7 @@ def _fetch_dsi_lsq_leads(start_date: str, end_date: str) -> List[Dict[str, Any]]
         )
         if not existing:
             logger.warning("DSI LSQ mirror empty, falling back to direct API")
-            return _fetch_dsi_lsq_leads_direct(start_date, end_date)
+            return _fetch_dsi_lsq_leads_guarded(start_date, end_date)
 
         leads = get_lead_details(db, DSI_ACCOUNT_ID, start_date, end_date)
         # Enrich with department for callers that expect it
@@ -581,9 +581,18 @@ def _fetch_dsi_lsq_leads(start_date: str, end_date: str) -> List[Dict[str, Any]]
         return leads
     except Exception as e:
         logger.exception(f"DSI LSQ mirror query failed: {e}")
-        return _fetch_dsi_lsq_leads_direct(start_date, end_date)
+        return _fetch_dsi_lsq_leads_guarded(start_date, end_date)
     finally:
         db.close()
+
+
+def _fetch_dsi_lsq_leads_guarded(start_date: str, end_date: str) -> List[Dict[str, Any]]:
+    """Direct-API fallback that can never raise to the route."""
+    try:
+        return _fetch_dsi_lsq_leads_direct(start_date, end_date)
+    except Exception as e:
+        logger.exception(f"DSI direct LSQ fallback failed: {e}")
+        return []
 
 
 def _fetch_dsi_lsq_leads_direct(start_date: str, end_date: str) -> List[Dict[str, Any]]:
@@ -599,33 +608,41 @@ def _fetch_dsi_lsq_leads_direct(start_date: str, end_date: str) -> List[Dict[str
     from backend.services.config import load_config
 
     # Bound the range: never page more than 45 days of RecentlyModified data
+    s_dt, e_dt = None, None
     try:
         e_dt = date.fromisoformat(end_date)
         s_dt = date.fromisoformat(start_date)
     except Exception:
-        s_dt, e_dt = None, None
+        pass
     min_bound = (date.today() - _timedelta(days=45)).isoformat()
-    if s_dt and s_dt < date.fromisoformat(min(end_date, (date.today() - _timedelta(days=45)).isoformat())):
+    try:
+        bound = date.fromisoformat(min(end_date, min_bound))
+    except (ValueError, TypeError):
+        bound = date.fromisoformat(min_bound)
+    if s_dt and s_dt < bound:
         logger.warning(
             f"DSI direct fallback: start {start_date} is older than 45 days; "
-            f"clamping to {max(start_date, (date.today() - _timedelta(days=45)).isoformat())} to stay responsive. "
+            f"clamping to {max(start_date, min_bound)} to stay responsive. "
             f"Older data will appear once the mirror sync completes."
         )
-        start_date = max(start_date, (date.today() - _timedelta(days=45)).isoformat())
+        start_date = max(start_date, min_bound)
 
     access_key = ""
     secret_key = ""
     base_url = ""
 
-    c = _db_connect()
-    cur = c.cursor()
-    cur.execute("SELECT lsq_access_key, lsq_secret_key, lsq_base_url FROM accounts WHERE id=%s", (DSI_ACCOUNT_ID,))
-    row = cur.fetchone()
-    c.close()
-    if row and row[0] and row[1]:
-        access_key = row[0]
-        secret_key = row[1]
-        base_url = row[2] or ""
+    from backend.db.database import SessionLocal
+    from backend.db.models import Account
+
+    s = SessionLocal()
+    try:
+        acc = s.query(Account).filter(Account.id == DSI_ACCOUNT_ID).first()
+        if acc and acc.lsq_access_key and acc.lsq_secret_key:
+            access_key = acc.lsq_access_key
+            secret_key = acc.lsq_secret_key
+            base_url = acc.lsq_base_url or ""
+    finally:
+        s.close()
 
     if not access_key:
         cfg = load_config()
@@ -773,7 +790,7 @@ def fetch_dsi_daily_range(start_date: str, end_date: str) -> List[Dict[str, Any]
     All campaigns (enabled, paused, or otherwise) are included in spend.
     Returns list of {department, course, leads, cpl, spend} sorted by dept order.
     Only rows with spend > 0 or leads > 0 are included."""
-    spend_data = _fetch_dsi_google_ads_spend(start_date, end_date, live_only=False)
+    spend_data = _fetch_dsi_google_ads_spend_safe(start_date, end_date, live_only=False)
     leads = _fetch_dsi_lsq_leads(start_date, end_date)
 
     leads_by_course = defaultdict(int)
@@ -848,8 +865,16 @@ def fetch_dsi_cumulative_range(start_date: str, end_date: str) -> List[Dict[str,
     yesterday = (date_type.today() - __import__('datetime').timedelta(days=1)).isoformat()
     is_default_range = (start_date == DSI_INCEPTION and end_date == yesterday)
 
-    # Live API spend (new account, Apr-26 onwards, GST-adjusted)
-    live_spend = _fetch_dsi_google_ads_spend(DSI_NEW_ACCOUNT_START, end_date)
+    # Live API spend (new account, Apr-26 onwards, GST-adjusted).
+    # Skip the API entirely when the range ends before the new account existed,
+    # otherwise Google Ads gets an inverted BETWEEN and raises (500).
+    try:
+        if date_type.fromisoformat(end_date) < date_type.fromisoformat(DSI_NEW_ACCOUNT_START):
+            live_spend = {}
+        else:
+            live_spend = _fetch_dsi_google_ads_spend_safe(DSI_NEW_ACCOUNT_START, end_date)
+    except (ValueError, TypeError):
+        live_spend = _fetch_dsi_google_ads_spend_safe(DSI_NEW_ACCOUNT_START, end_date)
 
     # Old-account legacy spend (from Excel, Jan-26 to Mar-26, no GST)
     legacy_spend = _fetch_dsi_legacy_spend(start_date, end_date)
@@ -913,6 +938,20 @@ def _fetch_dsi_legacy_spend(start_date: str, end_date: str) -> Dict[str, float]:
         return {}
     finally:
         db.close()
+
+
+_dsi_spend_error_holder: Dict[str, Any] = {"message": None}
+
+
+def _fetch_dsi_google_ads_spend_safe(start_date: str, end_date: str, live_only: bool = False) -> Dict[str, float]:
+    """Wrapper that captures the error message so the report can degrade gracefully
+    instead of 500-ing (mirrors dsu_data._fetch_google_ads_spend_safe)."""
+    try:
+        return _fetch_dsi_google_ads_spend(start_date, end_date, live_only=live_only)
+    except Exception as e:
+        logger.error(f"DSI Google Ads spend fetch FAILED for {start_date}..{end_date}: {type(e).__name__}: {e}")
+        _dsi_spend_error_holder["message"] = f"{type(e).__name__}: {e}"
+        return {}
 
 
 # ============================================================================
