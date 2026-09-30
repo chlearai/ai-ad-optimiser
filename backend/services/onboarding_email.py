@@ -320,6 +320,225 @@ def send_adguard_invite_email(
         return {"sent": False, "error": str(e), "provider": "smtp"}
 
 
+def _ag_brand_header(title: str = "AdGuard") -> str:
+    return (
+        '<div style="background:#d97706;padding:20px 24px;display:flex;align-items:center;">'
+        '<span style="display:inline-block;width:32px;height:32px;background:#ffffff;color:#d97706;'
+        'font-weight:700;border-radius:8px;text-align:center;line-height:32px;font-size:14px;">AG</span>'
+        f'<span style="color:#ffffff;font-size:18px;font-weight:700;margin-left:10px;">{title}</span></div>'
+    )
+
+
+def _ag_brand_footer() -> str:
+    return (
+        '<div style="padding:14px 24px;background:#fafaf9;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e;">'
+        '&copy; 2026 AdGuard &middot; Built by CHLEAR &middot; '
+        '<a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a>'
+        ' &middot; Customer Care: 80509 97977</div>'
+    )
+
+
+def send_adguard_verify_email(
+    recipient_email: str,
+    full_name: str,
+    verify_link: str,
+    timeout: int = 45,
+) -> Dict[str, Any]:
+    """Email #1: Verify your account & set a password (60-min link)."""
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
+    sender_name = os.getenv("SMTP_SENDER_NAME", "AdGuard Notification").strip() or "AdGuard Notification"
+    subject = "[Quick Task] Verify your AdGuard Account & Set a Password"
+
+    html_body = f"""
+    <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1c1917;background:#fafaf9;padding:24px;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
+        {_ag_brand_header("AdGuard Notification")}
+        <div style="padding:28px 24px;">
+            <p style="margin:0 0 12px;">Hi {full_name or 'there'},</p>
+            <p style="margin:0 0 12px;">Welcome to <strong>AdGuard</strong> &mdash; the lead-integrity platform that scores every lead from your
+            Google &amp; Meta ads before it reaches your team, so you stop paying for garbage leads.</p>
+            <p style="margin:0 0 12px;">One quick step before you start: <strong>verify your account and set a password</strong>. The link below expires in <strong>60 minutes</strong>.</p>
+            <p style="margin:0 0 20px;">
+                <a href="{verify_link}" style="display:inline-block;padding:12px 28px;background:#d97706;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;">
+                    Verify &amp; Set Password
+                </a>
+            </p>
+            <p style="margin:0 0 16px;font-size:13px;color:#57534e;">Once that's done, your trial is ready. Connect your Google &amp; Meta ad accounts and watch every lead get scored in real time.</p>
+            <p style="margin:0 0 12px;font-size:13px;color:#57534e;">We'll send you a couple of short emails over the next few days with quick wins to get value faster.</p>
+            <p style="margin:0 0 6px;font-size:13px;color:#57534e;">Or paste this link in your browser:<br><a href="{verify_link}" style="font-size:12px;word-break:break-all;">{verify_link}</a></p>
+            <p style="font-size:13px;color:#a8a29e;">Need a hand? Write to <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a> or call us at <b>80509 97977</b>.</p>
+            <p style="margin-top:24px;">Regards,<br><b>Team AdGuard</b></p>
+        </div>
+        {_ag_brand_footer()}
+    </div></body></html>"""
+
+    plain_body = f"""Hi {full_name or 'there'},
+
+Welcome to AdGuard - the lead-integrity platform that scores every lead from your Google & Meta ads before it reaches your team.
+
+One quick step before you start: verify your account and set a password. The link below expires in 60 minutes.
+
+Verify & Set Password: {verify_link}
+
+Once that's done, your trial is ready. Connect your ad accounts and watch every lead get scored in real time.
+
+Need a hand? support@chlear.in or call 80509 97977.
+
+Regards,
+Team AdGuard
+"""
+    return _send_raw_email(recipient_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
+
+
+def send_adguard_password_set_confirmation(
+    recipient_email: str,
+    full_name: str,
+    timeout: int = 45,
+) -> Dict[str, Any]:
+    """Email #2: confirmation right after password set (security notice)."""
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
+    sender_name = os.getenv("SMTP_SENDER_NAME", "AdGuard Notification").strip() or "AdGuard Notification"
+    now_ist = datetime.utcnow() + __import__("datetime").timedelta(hours=5, minutes=30)
+    date_str = now_ist.strftime("%Y-%m-%d")
+    time_str = now_ist.strftime("%H:%M:%S IST")
+    subject = "Password Set Successful"
+
+    html_body = f"""
+    <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1c1917;background:#fafaf9;padding:24px;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
+        {_ag_brand_header("AdGuard Notification")}
+        <div style="padding:28px 24px;">
+            <p style="margin:0 0 12px;">Hi {full_name or 'there'},</p>
+            <p style="margin:0 0 12px;">Your <strong>AdGuard</strong> account password was set successfully on <b>{date_str}</b> at <b>{time_str}</b>.</p>
+            <p style="margin:0 0 12px;">You can now sign in anytime at your AdGuard workspace and connect your Google &amp; Meta ad accounts.</p>
+            <p style="margin:0 0 12px;">
+                <a href="#" onclick="return false;" style="display:inline-block;padding:11px 24px;background:#d97706;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Go to My Workspace</a>
+            </p>
+            <p style="font-size:13px;color:#78716c;margin-top:20px;">If you didn't make this request, please reach out to
+            <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a> or call <b>80509 97977</b> immediately.</p>
+        </div>
+        {_ag_brand_footer()}
+    </div></body></html>"""
+
+    plain_body = f"""Hi {full_name or 'there'},
+
+Your AdGuard account password was set successfully on {date_str} at {time_str}.
+
+If you didn't make this request, reach out to support@chlear.in or call 80509 97977 immediately.
+
+- Team AdGuard
+"""
+    return _send_raw_email(recipient_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
+
+
+def send_adguard_welcome_aboard(
+    recipient_email: str,
+    full_name: str,
+    is_trial: bool = True,
+    timeout: int = 45,
+) -> Dict[str, Any]:
+    """Email #3: 'Welcome Aboard! Your Toolkit to Get Started' — first steps + resources."""
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
+    sender_name = os.getenv("SMTP_SENDER_NAME", "Team AdGuard").strip() or "Team AdGuard"
+    subject = "Welcome Aboard! Your Toolkit to Get Started"
+
+    trial_note = (
+        "Your trial includes <b>100 free leads</b> to score - enough to see exactly how much junk you've been paying for."
+        if is_trial
+        else "Your subscription is active - every lead from your connected accounts is scored automatically."
+    )
+
+    html_body = f"""
+    <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1c1917;background:#fafaf9;padding:24px;">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
+        {_ag_brand_header("Team AdGuard")}
+        <div style="padding:28px 24px;">
+            <h2 style="font-size:20px;margin:0 0 6px;">Hello. Your shield is ready.</h2>
+            <p style="margin:0 0 16px;font-size:14px;color:#57534e;">Welcome to AdGuard! {trial_note}</p>
+            <p style="margin:0 0 8px;"><b>Your first steps, all free:</b></p>
+            <p style="margin:0 0 6px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Connect Your Ad Accounts</a>:</b> One-click Google &amp; Meta OAuth - no passwords shared with anyone.</p>
+            <p style="margin:0 0 6px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Turn On Money Shield</a>:</b> Auto-flag junk patterns and stop repeat fraud before it costs you.</p>
+            <p style="margin:0 0 16px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Set CRM Delivery</a>:</b> Route only verified leads to LeadSquared, Zoho, HubSpot, or a webhook.</p>
+
+            <p style="margin:0 0 8px;"><b>Resources for your journey:</b></p>
+            <p style="margin:0 0 6px;">&#127891; <b><a href="#" style="color:#d97706;text-decoration:none;">AdGuard Academy</a>:</b> Bite-sized walkthroughs to train your team.</p>
+            <p style="margin:0 0 6px;">&#128413; <b><a href="#" style="color:#d97706;text-decoration:none;">Setup Guide</a>:</b> Connect accounts + first lead in under 10 minutes.</p>
+            <p style="margin:0 0 6px;">&#63; <b><a href="#" style="color:#d97706;text-decoration:none;">Help Center</a>:</b> Solutions to common questions.</p>
+            <p style="margin:0 0 16px;">&#128200; <b><a href="#" style="color:#d97706;text-decoration:none;">Pricing</a>:</b> Upgrade when your trial runs out.</p>
+
+            <p style="margin:0 0 12px;">Need a hand? Reach out at <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a>, or call us at <b>80509 97977</b>.</p>
+            <p style="font-size:13px;color:#78716c;">Stop paying for garbage leads. - Team AdGuard</p>
+        </div>
+        {_ag_brand_footer()}
+    </div></body></html>"""
+
+    plain_body = f"""Hello,
+
+Welcome to AdGuard! {trial_note if is_trial else ''}
+
+Your first steps:
+1. Connect Your Ad Accounts (Google + Meta OAuth)
+2. Turn On Money Shield (auto-flag junk patterns)
+3. Set CRM Delivery (LeadSquared / Zoho / HubSpot / webhook)
+
+Resources:
+- AdGuard Academy: walkthroughs to train your team
+- Setup Guide: connect + first lead in under 10 minutes
+- Help Center: solutions to common questions
+- Pricing: upgrade when your trial runs out
+
+Need a hand? support@chlear.in or call 80509 97977.
+
+Stop paying for garbage leads.
+- Team AdGuard
+"""
+    return _send_raw_email(recipient_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
+
+
+def _send_raw_email(
+    recipient_email: str,
+    subject: str,
+    plain_body: str,
+    html_body: str,
+    sender_email: str,
+    sender_name: str,
+    timeout: int = 45,
+) -> Dict[str, Any]:
+    """SMTP-only raw email used by the signup journey (Gmail API path uses gmail_api when token exists)."""
+    cfg = _smtp_from_env()
+    if cfg.get("error"):
+        return {"sent": False, "error": cfg["error"], "provider": "smtp"}
+
+    message_id = make_msgid(domain=(sender_email.split("@")[-1] or "chlear.in"))
+    msg = MIMEMultipart("alternative")
+    msg["From"] = formataddr((sender_name, sender_email))
+    msg["To"] = recipient_email
+    msg["Subject"] = subject
+    msg["Message-ID"] = message_id
+    msg["Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg["Reply-To"] = sender_email
+    msg["X-Mailer"] = "AdGuardMailer/1.0"
+    msg["Precedence"] = "bulk"
+    msg["Auto-Submitted"] = "auto-generated"
+    msg.attach(MIMEText(plain_body, "plain", _charset="utf-8"))
+    msg.attach(MIMEText(html_body, "html", _charset="utf-8"))
+
+    try:
+        addrs = socket.getaddrinfo(cfg["host"], cfg["port"], socket.AF_INET, socket.SOCK_STREAM)
+        server = smtplib.SMTP(addrs[0][4][0], cfg["port"], timeout=timeout)
+        server.ehlo(cfg["host"])
+        server.starttls()
+        server.ehlo(cfg["host"])
+        server.login(cfg["user"], cfg["pass"])
+        server.sendmail(sender_email, [recipient_email], msg.as_string())
+        server.quit()
+        logger.info(f"AdGuard email '{subject}' sent to {recipient_email} via SMTP")
+        return {"sent": True, "provider": "smtp", "message_id": message_id}
+    except Exception as e:
+        logger.exception(f"AdGuard email '{subject}' failed for {recipient_email}: {e}")
+        return {"sent": False, "error": str(e), "provider": "smtp"}
+
+
 def send_adguard_support_notification(
     recipient_email: str,
     subject: str,

@@ -280,6 +280,17 @@ def get_onboard_ui(request: Request):
     return HTMLResponse(content="<h1>Onboarding UI not found.</h1>")
 
 
+@app.get("/verify", response_class=HTMLResponse)
+@app.get("/verify.html", response_class=HTMLResponse)
+def get_verify_ui(request: Request):
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    html_path = os.path.join(frontend_dir, "verify.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Verify page not found.</h1>")
+
+
 @app.get("/terms", response_class=HTMLResponse)
 def get_terms(request: Request):
     return HTMLResponse(content="""<!DOCTYPE html>

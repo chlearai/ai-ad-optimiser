@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard - Verify & Set Password</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f1a;
+            --bg-card: rgba(15, 23, 42, 0.85);
+            --border-card: rgba(255,255,255,0.12);
+            --color-primary: #f59e0b;
+            --color-success: #059669;
+            --color-danger: #dc2626;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-base); color: var(--text-main); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
+               background-image: radial-gradient(circle at 50% 0%, rgba(245,158,11,0.10) 0%, transparent 60%); }
+        .card { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 16px; padding: 2rem; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .brand { display: flex; align-items: center; gap: 0.75rem; font-size: 1.35rem; font-weight: 800; margin-bottom: 1.5rem; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #fbbf24, #d97706); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #1c1917; font-weight: 700; box-shadow: 0 0 16px rgba(245,184,61,0.4); }
+        h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.4rem; }
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem; }
+        .form-group input { width: 100%; padding: 0.7rem; border: 1px solid var(--border-card); border-radius: 8px; font-size: 0.95rem; font-family: 'Inter', sans-serif; background: rgba(2,6,23,0.6); color: var(--text-main); }
+        .form-group input:focus { outline: none; border-color: var(--color-primary); }
+        .btn { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; border: none; width: 100%; transition: 0.15s; }
+        .btn-primary { background: linear-gradient(90deg, #fbbf24, #d97706); color: #1c1917; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .info-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.4rem; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .info-row span:last-child { font-weight: 600; color: var(--text-main); }
+        .rules { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.7; }
+        .rule-ok { color: #34d399; }
+        .rule-pending { color: #94a3b8; }
+        .error { color: var(--color-danger); font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+        .success { color: var(--color-success); font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+        .hidden { display: none !important; }
+        .tick { display: inline-block; width: 16px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand"><div class="logo-icon">AG</div>AdGuard</div>
+        <div id="loading" class="subtitle">Validating your verification link...</div>
+
+        <div id="formArea" class="hidden">
+            <h2>Set Your Password</h2>
+            <p class="subtitle">Choose a strong password to activate your AdGuard account.</p>
+
+            <div class="info-row"><span>Email</span><span id="emailDisplay">-</span></div>
+            <div class="info-row"><span>Name</span><span id="nameDisplay">-</span></div>
+
+            <div class="form-group" style="margin-top:1rem;">
+                <label>New Password</label>
+                <input type="password" id="password" placeholder="Enter new password" autocomplete="new-password">
+            </div>
+            <div class="rules" id="pwRules">
+                <div id="rLen"><span class="tick">&#9675;</span> At least 8 characters</div>
+                <div id="rUp"><span class="tick">&#9675;</span> One uppercase letter (A-Z)</div>
+                <div id="rLo"><span class="tick">&#9675;</span> One lowercase letter (a-z)</div>
+                <div id="rNum"><span class="tick">&#9675;</span> One number (0-9)</div>
+                <div id="rSp"><span class="tick">&#9675;</span> One special character (!@#$%...)</div>
+            </div>
+
+            <div class="form-group" style="margin-top:0.75rem;">
+                <label>Verify Password</label>
+                <input type="password" id="confirmPassword" placeholder="Re-enter new password" autocomplete="new-password">
+            </div>
+
+            <button class="btn btn-primary" id="saveBtn" onclick="setPassword()">Verify & Activate Account</button>
+            <div id="message" class="error hidden"></div>
+        </div>
+    </div>
+
+    <script>
+    const API = '/api';
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    function $(id) { return document.getElementById(id); }
+
+    const pwRules = [
+        { id: 'rLen', test: v => v.length >= 8 },
+        { id: 'rUp',  test: v => /[A-Z]/.test(v) },
+        { id: 'rLo',  test: v => /[a-z]/.test(v) },
+        { id: 'rNum', test: v => /[0-9]/.test(v) },
+        { id: 'rSp',  test: v => /[^A-Za-z0-9]/.test(v) }
+    ];
+
+    function refreshRules() {
+        const v = $('password').value;
+        pwRules.forEach(r => {
+            const el = $(r.id);
+            const ok = r.test(v);
+            el.className = ok ? 'rule-ok' : 'rule-pending';
+            el.innerHTML = '<span class="tick">' + (ok ? '&#9959;' : '&#9675;') + '</span> ' + el.textContent.replace(/^[^\s]+\s/, '');
+        });
+    }
+    document.getElementById('password').addEventListener('input', refreshRules);
+
+    function clientValidate() {
+        const v = $('password').value;
+        const failed = pwRules.find(r => !r.test(v));
+        if (failed) {
+            const el = $(failed.id);
+            return el.textContent.replace(/^[^\s]+\s/, '');
+        }
+        return null;
+    }
+
+    function _setSaving(btn, text) {
+        if (!btn) return;
+        if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = text || 'Saving...';
+    }
+    function _resetSaving(btn) {
+        if (!btn) return;
+        btn.disabled = false;
+        if (btn.dataset.originalText) { btn.textContent = btn.dataset.originalText; delete btn.dataset.originalText; }
+    }
+
+    async function api(method, path, body) {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(API + path, opts);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || 'Request failed (' + res.status + ')');
+        return data;
+    }
+
+    async function init() {
+        if (!token) {
+            $('loading').textContent = 'Invalid verification link. Please sign up again at our landing page.';
+            return;
+        }
+        try {
+            const data = await api('GET', '/auth/onboard/' + encodeURIComponent(token));
+            $('emailDisplay').textContent = data.email || '-';
+            $('nameDisplay').textContent = data.full_name || '-';
+            $('loading').classList.add('hidden');
+            $('formArea').classList.remove('hidden');
+        } catch (e) {
+            $('loading').textContent = e.message || 'Link expired (60 minutes). Please sign up again.';
+        }
+    }
+
+    async function setPassword() {
+        const btn = (typeof event !== 'undefined' && event) ? event.target : null;
+        _setSaving(btn, 'Verifying...');
+        const msg = $('message');
+        msg.classList.add('hidden');
+        try {
+            const password = $('password').value;
+            const confirm = $('confirmPassword').value;
+            const pwErr = clientValidate();
+            if (pwErr) { throw new Error(pwErr); }
+            if (password !== confirm) { throw new Error('Passwords do not match.'); }
+            const data = await api('POST', '/auth/onboard/' + encodeURIComponent(token), { password });
+            msg.textContent = 'Account verified! Taking you to AdGuard...';
+            msg.className = 'success';
+            msg.classList.remove('hidden');
+            localStorage.setItem('adoptima_token', data.access_token);
+            const role = (data.user && data.user.role) || 'user';
+            const dest = (role === 'admin' || role === 'superadmin') ? '/adguard' : '/adguard-workspace';
+            setTimeout(() => { window.location.href = dest; }, 1200);
+        } catch (e) {
+            msg.textContent = e.message || 'Failed to set password.';
+            msg.className = 'error';
+            msg.classList.remove('hidden');
+        } finally {
+            _resetSaving(btn);
+        }
+    }
+
+    init();
+    </script>
+</body>
+</html>

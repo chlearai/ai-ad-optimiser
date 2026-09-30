@@ -1556,7 +1556,8 @@
 
             <div class="nav-actions">
                 <a href="/adguard/login" class="btn btn-ghost">Sign in</a>
-                <button onclick="openShadowModeModal()" class="btn btn-primary">Start free in Shadow Mode</button>
+                <span style="color:var(--text-muted);font-size:13.5px;">New to AdGuard?</span>
+                <button onclick="openSignupModal()" class="btn btn-primary" style="padding:8px 20px;border:1.5px solid #34d399;background:transparent;color:#34d399;font-weight:700;">SIGN UP</button>
             </div>
         </div>
     </nav>
@@ -2489,6 +2490,14 @@
                         <li><a href="#">Data Processing (DPDP)</a></li>
                     </ul>
                 </div>
+
+                <div>
+                    <div class="footer-col-title">Contact</div>
+                    <ul class="footer-links">
+                        <li><a href="mailto:support@chlear.in">support@chlear.in</a></li>
+                        <li><a href="tel:8050977977">Customer Care: 80509 97977</a></li>
+                    </ul>
+                </div>
             </div>
 
             <div class="footer-bottom">
@@ -2502,6 +2511,74 @@
         <button onclick="openShadowModeModal()" class="btn btn-primary" style="width:100%;">
             Start free in Shadow Mode →
         </button>
+    </div>
+
+    <!-- MODAL 0: SIGN UP (self-serve, industry-based) -->
+    <div class="modal-overlay" id="signupModal" onclick="if(event.target===this)closeSignupModal()">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeSignupModal()">✕</button>
+            <div style="text-align:center;margin-bottom:20px;">
+                <span class="chip chip-success" style="margin-bottom:8px;">Start My Free Trial</span>
+                <h3 style="font-size:22px;color:#ffffff;margin-top:4px;">Create your AdGuard account</h3>
+                <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">
+                    100 leads scored free · no credit card · verify email to activate
+                </p>
+            </div>
+
+            <form onsubmit="handleSignupSubmit(event)">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" class="form-input" id="suName" placeholder="Enter Your Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Company *</label>
+                    <input type="text" class="form-input" id="suCompany" placeholder="Enter Company Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" class="form-input" id="suEmail" placeholder="Enter Your Email ID" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <div style="display:flex;gap:8px;">
+                        <span style="display:flex;align-items:center;gap:6px;padding:10px 12px;background:rgba(2,6,23,0.6);border:1px solid var(--border-glass);border-radius:10px;color:#fff;font-size:14px;white-space:nowrap;">🇮🇳 +91</span>
+                        <input type="tel" class="form-input" id="suPhone" placeholder="Enter Your Phone Number" style="flex:1;" pattern="[0-9]{10}" title="10-digit mobile number" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Primary Country of Operation *</label>
+                    <input type="text" class="form-input" id="suCountry" value="India" readonly required>
+                </div>
+                <div class="form-group">
+                    <label>Industry *</label>
+                    <select class="form-input" id="suIndustry" required>
+                        <option value="" disabled selected>Select</option>
+                        <option>Hospitality</option>
+                        <option>NGO & Social Enterprises</option>
+                        <option>Food & Beverage</option>
+                        <option>Travel</option>
+                        <option>FMCG</option>
+                        <option>Education</option>
+                        <option>Marketing & Advertising</option>
+                        <option>Real Estate</option>
+                        <option>Healthcare</option>
+                        <option>Logistics</option>
+                        <option>HR & Recruitment</option>
+                        <option>BFSI & NBFC</option>
+                        <option>Manufacturing</option>
+                        <option>IT services</option>
+                        <option>Hyperlocal</option>
+                        <option>E-Commerce</option>
+                        <option>Marketplaces</option>
+                        <option>Others</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="suSubmitBtn">
+                    START MY FREE TRIAL
+                </button>
+                <p id="suMessage" style="font-size:12.5px;color:var(--text-muted);margin-top:12px;text-align:center;line-height:1.5;"></p>
+            </form>
+        </div>
     </div>
 
     <!-- MODAL 1: START FREE IN SHADOW MODE -->
@@ -2656,6 +2733,72 @@
         }
 
         // 3. MODAL CONTROLS & PLAN HANDLER
+        function openSignupModal() {
+            document.getElementById('signupModal').style.display = 'flex';
+        }
+
+        function closeSignupModal() {
+            document.getElementById('signupModal').style.display = 'none';
+        }
+
+        async function handleSignupSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('suSubmitBtn');
+            const msg = document.getElementById('suMessage');
+            const original = btn.innerText;
+            btn.innerText = 'Creating Account...';
+            btn.disabled = true;
+            msg.innerText = '';
+
+            const name = document.getElementById('suName').value.trim();
+            const company = document.getElementById('suCompany').value.trim();
+            const email = document.getElementById('suEmail').value.trim().toLowerCase();
+            const phone = document.getElementById('suPhone').value.trim();
+            const country = document.getElementById('suCountry').value.trim() || 'India';
+            const industry = document.getElementById('suIndustry').value;
+
+            try {
+                const res = await fetch('/api/auth/signup-subscriber', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: name,
+                        company_name: company,
+                        email: email,
+                        phone: phone,
+                        country: country,
+                        industry: industry
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Signup failed');
+
+                btn.innerText = '✓ Account Created';
+                msg.style.color = '#34d399';
+                if (data.email_sent) {
+                    msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + email + '</b><br>' +
+                        'It expires in 60 minutes. Check spam if you don\'t see it.<br>' +
+                        'Customer Care: 80509 97977 · support@chlear.in';
+                } else if (data.verify_link) {
+                    msg.innerHTML = '<b>Email failed - use this verify link directly:</b><br>' +
+                        '<a href="' + data.verify_link + '" style="color:#34d399;word-break:break-all;">Set your password now →</a>';
+                } else {
+                    msg.innerHTML = 'Account created. ' + (data.email_error || '');
+                }
+                setTimeout(() => {
+                    closeSignupModal();
+                    btn.innerText = original;
+                    btn.disabled = false;
+                    msg.innerText = '';
+                }, 9000);
+            } catch (err) {
+                msg.style.color = '#fca5a5';
+                msg.innerText = err.message + '  ·  Need help? 80509 97977';
+                btn.innerText = original;
+                btn.disabled = false;
+            }
+        }
+
         function openShadowModeModal() {
             document.getElementById('shadowModal').style.display = 'flex';
         }

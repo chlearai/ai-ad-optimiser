@@ -48,6 +48,15 @@ class SubscriberRegisterRequest(BaseModel):
     plan: Optional[str] = "trial"
 
 
+class SubscriberSignupRequest(BaseModel):
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    country: Optional[str] = "India"
+    industry: Optional[str] = None
+
+
 class OnboardRequest(BaseModel):
     full_name: str
     email: str
@@ -186,77 +195,95 @@ def onboard_first_user(req: OnboardRequest, db: Session = Depends(get_db)):
 # ============================================================
 # SUBSCRIBER SELF-REGISTRATION (AdGuard)
 # ============================================================
-@router.post("/register-subscriber")
-def register_subscriber(req: SubscriberRegisterRequest, db: Session = Depends(get_db)):
-    """Public self-serve registration for AdGuard subscribers."""
+ADGUARD_INDUSTRIES = [
+    "Hospitality", "NGO & Social Enterprises", "Food & Beverage", "Travel",
+    "FMCG", "Education", "Marketing & Advertising", "Real Estate", "Healthcare",
+    "Logistics", "HR & Recruitment", "BFSI & NBFC", "Manufacturing", "IT services",
+    "Hyperlocal", "E-Commerce", "Marketplaces", "Others",
+]
+ADGUARD_SUPPORT_EMAIL = "support@chlear.in"
+ADGUARD_CARE_NUMBER = "8050977977"
+
+
+@router.post("/signup-subscriber")
+def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Session = Depends(get_db)):
+    """Public self-serve signup: creates a PENDING account and emails a Verify & Set Password link."""
     clean_email = req.email.strip().lower()
     if not clean_email or "@" not in clean_email:
         raise HTTPException(status_code=400, detail="A valid email address is required")
-    if not req.password or len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     if not req.full_name or not req.full_name.strip():
         raise HTTPException(status_code=400, detail="Full name is required")
 
     existing_user = db.query(User).filter(User.email == clean_email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="An account with this email already exists. Please sign in.")
+        if existing_user.is_active and existing_user.onboarding_completed:
+            raise HTTPException(status_code=400, detail="An account with this email already exists. Please sign in.")
+        # Pending (unverified) user re-signing up: refresh token + resend email
+        user = existing_user
+    else:
+        user = User(email=clean_email, hashed_password=get_password_hash(secrets.token_urlsafe(16)),
+                    full_name=req.full_name.strip(), mobile=(req.phone or "").strip(), role="user",
+                    access_adguard=True, is_active=True)
 
-    # 1. Create User
-    user = User(
-        email=clean_email,
-        hashed_password=get_password_hash(req.password),
-        full_name=req.full_name.strip(),
-        mobile=(req.phone or "").strip(),
-        role="user",
-        access_adpulse=False,
-        access_insightdesk=False,
-        access_revenueops=False,
-        access_audit_review=False,
-        access_adguard=True,
-        is_active=True,
-    )
-    db.add(user)
+    import secrets as _secrets
+    from datetime import timedelta
+    verify_token = _secrets.token_urlsafe(32)
+    user.onboarding_token = verify_token
+    user.onboarding_token_expires_at = datetime.utcnow() + timedelta(minutes=60)
+
+    if not user.id:
+        db.add(user)
     db.commit()
     db.refresh(user)
 
-    # 2. Provision or find AdGuardAccount workspace
+    # Provision/find workspace (trial until verification completes plan setup)
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == clean_email).first()
     display_title = (req.company_name or "").strip() or f"{user.full_name}'s Workspace"
     if not ws:
-        plan_name = req.plan or "trial"
-        quota = 100 if plan_name == "trial" else (1000 if plan_name == "starter" else (5000 if plan_name == "pro" else -1))
         ws = AdGuardAccount(
             owner_email=clean_email,
             display_name=display_title,
-            plan=plan_name,
-            lead_quota=quota,
-            lead_count=0,
-            verification_threshold=70,
-            auto_push_enabled=True,
-            shield_enabled=True,
-            shield_junk_threshold=40,
-            shield_min_leads=50,
+            plan="trial", lead_quota=100,
+            verification_threshold=70, auto_push_enabled=True,
+            shield_enabled=True, shield_junk_threshold=40, shield_min_leads=50,
         )
         db.add(ws)
-        db.commit()
-        db.refresh(ws)
+    else:
+        if req.company_name and req.company_name.strip():
+            ws.display_name = display_title
+    ws.phone = (req.phone or "").strip() or ws.phone
+    ws.industry = (req.industry or "").strip() or ws.industry
+    ws.company_name = (req.company_name or "").strip() or ws.company_name
+    db.commit()
 
-    # 3. Issue Token
-    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    from backend.services.onboarding_email import send_adguard_verify_email
+    base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
+    verify_link = f"{base_url}/verify?token={verify_token}"
+    send_result = {"sent": False, "error": "pending"}
+    try:
+        send_result = send_adguard_verify_email(
+            recipient_email=clean_email,
+            full_name=req.full_name.strip(),
+            verify_link=verify_link,
+            timeout=30,
+        )
+    except Exception as e:
+        logger.exception(f"AdGuard verify email crash for {clean_email}: {e}")
+        send_result = {"sent": False, "error": str(e)}
+
     log_activity(
-        module="AdGuard",
-        action="Subscriber Signup",
-        description=f"New subscriber {user.full_name} ({user.email}) registered workspace '{display_title}'",
-        user_id=user.id,
-        user_name=user.full_name or user.email,
-        db=db,
+        module="AdGuard", action="Signup Started",
+        description=f"Self-serve signup {clean_email} (industry={req.industry or '-'}, company={display_title})",
+        user_id=user.id, user_name=user.full_name, db=db,
     )
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": user.to_dict(),
-        "workspace_id": ws.id,
-        "redirect_url": "/adguard-workspace",
+        "status": "ok",
+        "email": clean_email,
+        "verify_link": verify_link if not send_result.get("sent") else None,
+        "email_sent": bool(send_result.get("sent")),
+        "email_error": send_result.get("error"),
+        "message": "Verify & Set Password link emailed. It expires in 60 minutes." if send_result.get("sent")
+                   else "Account created but email failed - share the verify link manually.",
     }
 
 
@@ -271,6 +298,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    # First login after activation → Welcome email (fire-and-forget)
+    _send_adguard_welcome_email_bg(user)
     log_activity(
         module="System",
         action="Login",
@@ -280,6 +309,34 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         db=db,
     )
     return {"access_token": access_token, "token_type": "bearer", "user": user.to_dict()}
+
+
+def _send_adguard_welcome_email_bg(user):
+    """Email #3 of the signup journey: welcome + getting-started toolkit after first login."""
+    try:
+        ws = None
+        try:
+            db_tmp = next(get_db())
+            ws = db_tmp.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
+        except Exception:
+            ws = None
+        from backend.services.onboarding_email import send_adguard_welcome_aboard
+        threading.Thread(
+            target=_welcome_email_worker,
+            args=(user.email, user.full_name or user.email, bool(ws and ws.plan == "trial")),
+            daemon=True,
+        ).start()
+    except Exception as e:
+        logger.warning(f"Welcome email trigger failed for {user.email}: {e}")
+
+
+def _welcome_email_worker(email, name, is_trial):
+    try:
+        from backend.services.onboarding_email import send_adguard_welcome_aboard
+        result = send_adguard_welcome_aboard(recipient_email=email, full_name=name, is_trial=is_trial, timeout=30)
+        logger.info(f"AdGuard welcome aboard email to {email}: sent={result.get('sent')} err={result.get('error')}")
+    except Exception as e:
+        logger.warning(f"Welcome aboard worker failed for {email}: {e}")
 
 
 @router.get("/me", response_model=dict)
@@ -390,13 +447,34 @@ def get_onboarding_user(token: str, db: Session = Depends(get_db)):
     return {"email": user.email, "full_name": user.full_name, "role": user.role}
 
 
+PASSWORD_MIN_LENGTH = 8
+
+
+def _validate_strong_password(password: str) -> Optional[str]:
+    """Industry-standard: 8+ chars with upper, lower, digit, special char."""
+    import re as _re
+    if not password or len(password) < PASSWORD_MIN_LENGTH:
+        return f"Password must be at least {PASSWORD_MIN_LENGTH} characters"
+    if not _re.search(r"[A-Z]", password):
+        return "Password must include an uppercase letter (A-Z)"
+    if not _re.search(r"[a-z]", password):
+        return "Password must include a lowercase letter (a-z)"
+    if not _re.search(r"[0-9]", password):
+        return "Password must include a number (0-9)"
+    if not _re.search(r"[^A-Za-z0-9]", password):
+        return "Password must include a special character (e.g. !@#$%)"
+    return None
+
+
 @router.post("/onboard/{token}")
 def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.onboarding_token == token).first()
-    if not user or not user.onboarding_token_expires_at or user.onboarding_token_expires_at < datetime.utcnow():
+    expired = (not user) or (not user.onboarding_token_expires_at) or (user.onboarding_token_expires_at < datetime.utcnow())
+    if expired:
         raise HTTPException(status_code=400, detail="Invalid or expired setup link")
-    if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    pw_error = _validate_strong_password(req.password)
+    if pw_error:
+        raise HTTPException(status_code=400, detail=pw_error)
     user.hashed_password = get_password_hash(req.password)
     user.onboarding_completed = True
     user.is_active = True
@@ -404,8 +482,26 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     user.onboarding_token_expires_at = None
     db.commit()
     db.refresh(user)
+
+    # Email #2: password-set confirmation (security notice)
+    from backend.services.onboarding_email import send_adguard_password_set_confirmation
+    threading.Thread(
+        target=_password_confirmation_worker,
+        args=(user.email, user.full_name or user.email,),
+        daemon=True,
+    ).start()
+
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "user": user.to_dict()}
+
+
+def _password_confirmation_worker(email, name):
+    try:
+        from backend.services.onboarding_email import send_adguard_password_set_confirmation
+        result = send_adguard_password_set_confirmation(recipient_email=email, full_name=name, timeout=30)
+        logger.info(f"AdGuard password confirmation email to {email}: sent={result.get('sent')} err={result.get('error')}")
+    except Exception as e:
+        logger.warning(f"Password confirmation worker failed for {email}: {e}")
 
 
 @router.put("/users/{user_id}")
