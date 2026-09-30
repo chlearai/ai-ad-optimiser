@@ -295,6 +295,12 @@ def init_db():
             run_seed_admin_migration()
         except Exception as me:
             logger.warning(f"Seed default admin migration skipped/failed: {me}")
+        # Run seed initial accounts and groups migration
+        try:
+            from backend.migrations.seed_initial_accounts import run_migration as run_seed_accounts_migration
+            run_seed_accounts_migration()
+        except Exception as me:
+            logger.warning(f"Seed initial accounts migration skipped/failed: {me}")
     except Exception as e:
 
         logger.error(f"Database initialization failed: {e}")
