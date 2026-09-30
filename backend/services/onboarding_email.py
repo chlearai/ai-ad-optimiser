@@ -333,7 +333,7 @@ def _ag_brand_footer() -> str:
     return (
         '<div style="padding:14px 24px;background:#fafaf9;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e;">'
         '&copy; 2026 AdGuard &middot; Built by CHLEAR &middot; '
-        '<a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a>'
+        '<a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a>'
         ' &middot; Customer Care: 80509 97977</div>'
     )
 
@@ -366,7 +366,7 @@ def send_adguard_verify_email(
             <p style="margin:0 0 16px;font-size:13px;color:#57534e;">Once that's done, your trial is ready. Connect your Google &amp; Meta ad accounts and watch every lead get scored in real time.</p>
             <p style="margin:0 0 12px;font-size:13px;color:#57534e;">We'll send you a couple of short emails over the next few days with quick wins to get value faster.</p>
             <p style="margin:0 0 6px;font-size:13px;color:#57534e;">Or paste this link in your browser:<br><a href="{verify_link}" style="font-size:12px;word-break:break-all;">{verify_link}</a></p>
-            <p style="font-size:13px;color:#a8a29e;">Need a hand? Write to <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a> or call us at <b>80509 97977</b>.</p>
+            <p style="font-size:13px;color:#a8a29e;">Need a hand? Write to <a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a> or call us at <b>80509 97977</b>.</p>
             <p style="margin-top:24px;">Regards,<br><b>Team AdGuard</b></p>
         </div>
         {_ag_brand_footer()}
@@ -382,7 +382,7 @@ Verify & Set Password: {verify_link}
 
 Once that's done, your trial is ready. Connect your ad accounts and watch every lead get scored in real time.
 
-Need a hand? support@chlear.in or call 80509 97977.
+Need a hand? shekhar.chlear@gmail.com or call 80509 97977.
 
 Regards,
 Team AdGuard
@@ -415,7 +415,7 @@ def send_adguard_password_set_confirmation(
                 <a href="#" onclick="return false;" style="display:inline-block;padding:11px 24px;background:#d97706;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Go to My Workspace</a>
             </p>
             <p style="font-size:13px;color:#78716c;margin-top:20px;">If you didn't make this request, please reach out to
-            <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a> or call <b>80509 97977</b> immediately.</p>
+            <a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a> or call <b>80509 97977</b> immediately.</p>
         </div>
         {_ag_brand_footer()}
     </div></body></html>"""
@@ -424,7 +424,7 @@ def send_adguard_password_set_confirmation(
 
 Your AdGuard account password was set successfully on {date_str} at {time_str}.
 
-If you didn't make this request, reach out to support@chlear.in or call 80509 97977 immediately.
+If you didn't make this request, reach out to shekhar.chlear@gmail.com or call 80509 97977 immediately.
 
 - Team AdGuard
 """
@@ -466,7 +466,7 @@ def send_adguard_welcome_aboard(
             <p style="margin:0 0 6px;">&#63; <b><a href="#" style="color:#d97706;text-decoration:none;">Help Center</a>:</b> Solutions to common questions.</p>
             <p style="margin:0 0 16px;">&#128200; <b><a href="#" style="color:#d97706;text-decoration:none;">Pricing</a>:</b> Upgrade when your trial runs out.</p>
 
-            <p style="margin:0 0 12px;">Need a hand? Reach out at <a href="mailto:support@chlear.in" style="color:#d97706;">support@chlear.in</a>, or call us at <b>80509 97977</b>.</p>
+            <p style="margin:0 0 12px;">Need a hand? Reach out at <a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a>, or call us at <b>80509 97977</b>.</p>
             <p style="font-size:13px;color:#78716c;">Stop paying for garbage leads. - Team AdGuard</p>
         </div>
         {_ag_brand_footer()}
@@ -487,7 +487,7 @@ Resources:
 - Help Center: solutions to common questions
 - Pricing: upgrade when your trial runs out
 
-Need a hand? support@chlear.in or call 80509 97977.
+Need a hand? shekhar.chlear@gmail.com or call 80509 97977.
 
 Stop paying for garbage leads.
 - Team AdGuard
@@ -539,6 +539,65 @@ def _send_raw_email(
         return {"sent": False, "error": str(e), "provider": "smtp"}
 
 
+def send_adguard_demo_lead_alert(
+    lead: dict,
+    verify_link: str = "",
+    timeout: int = 30,
+) -> Dict[str, Any]:
+    """Instant notification to the owner: someone just booked a 15-min demo. Call them NOW."""
+    owner_email = os.getenv("ADGUARD_DEMO_ALERT_EMAIL", "shekhar.chlear@gmail.com").strip()
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
+    sender_name = "AdGuard Demo Alerts"
+    subject = f"🔥 DEMO REQUEST: {lead.get('full_name', '?')} ({lead.get('company_name', '?')}) — call {lead.get('phone', '?')} now"
+
+    channels_map = {"both": "Meta + Google", "meta": "Meta only", "google": "Google only", "other": "Other forms"}
+    rows = [
+        ("Name", lead.get("full_name", "-")),
+        ("Company", lead.get("company_name", "-")),
+        ("Email", lead.get("email", "-")),
+        ("Phone (with dial code)", lead.get("phone", "-")),
+        ("Country of Operation", lead.get("country", "-")),
+        ("Industry", lead.get("industry", "-")),
+        ("Primary Ad Channels", channels_map.get(lead.get("channels", ""), lead.get("channels", "-") or "-")),
+        ("Monthly Ad Spend Band", lead.get("monthly_ad_spend_band", "-") or "-"),
+        ("Currency at signup", lead.get("currency", "-") or "-"),
+    ]
+    html_rows = "".join(
+        f'<tr><td style="padding:7px 12px;border:1px solid #e7e5e4;font-weight:600;white-space:nowrap;">{k}</td>'
+        f'<td style="padding:7px 12px;border:1px solid #e7e5e4;">{v}</td></tr>'
+        for k, v in rows
+    )
+
+    html_body = f"""
+    <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1c1917;background:#fafaf9;padding:24px;">
+    <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
+        {_ag_brand_header("🔥 Demo Lead — HOT")}
+        <div style="padding:28px 24px;">
+            <p style="margin:0 0 8px;font-size:15px;"><b>New demo request just came in.</b> The promise on the site: call within 15 minutes.</p>
+            <table style="border-collapse:collapse;font-size:13px;margin:14px 0 18px;">{html_rows}</table>
+            <p style="margin:0 0 8px;"><b>Your 15-min demo playbook:</b></p>
+            <p style="margin:0 0 4px;">1. Call/WhatsApp <b>{lead.get('phone', '-')}</b> — introduce yourself</p>
+            <p style="margin:0 0 4px;">2. Ask them to open the verify email (sent to {lead.get('email', '-')}) and set password during the call</p>
+            <p style="margin:0 0 4px;">3. Screen-share their workspace: Connect Google/Meta → live lead stream → Money Shield → ₹ proof</p>
+            <p style="margin:0 0 4px;">4. Close: pick a paid plan or extend shadow reporting</p>
+            {f'<p style="font-size:12px;color:#78716c;margin-top:12px;">Their verify link (resend if expired): <a href="{verify_link}" style="word-break:break-all;">{verify_link}</a></p>' if verify_link else ''}
+            <p style="margin:24px 0 0;font-size:12px;color:#78716c;border-top:1px solid #e7e5e4;padding-top:12px;">Workspace is already provisioned in the admin cockpit — open /adguard → Subscribers to view.</p>
+        </div>
+        {_ag_brand_footer()}
+    </div></body></html>"""
+
+    plain_lines = "\n".join(f"{k}: {v}" for k, v in rows)
+    plain_body = f"""DEMO REQUEST — CALL {lead.get('phone', '-')} WITHIN 15 MINUTES
+
+{plain_lines}
+
+Playbook: call -> they verify during call -> screen-share workspace (connect accounts, live stream, shield, rupee proof) -> close plan.
+
+Workspace provisioned. Verify link: {verify_link}
+"""
+    return _send_raw_email(owner_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
+
+
 def send_adguard_support_notification(
     recipient_email: str,
     subject: str,
@@ -552,8 +611,8 @@ def send_adguard_support_notification(
     timeout: int = 45,
 ) -> Dict[str, Any]:
     """Send an AdGuard-branded support notification email to subscriber or admin."""
-    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "")).strip() or "support@adguard.ai"
-    reply_to_email = reply_to or os.getenv("ADGUARD_SUPPORT_EMAIL", "support@adguard.ai")
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "")).strip() or "shekhar.chlear@gmail.com"
+    reply_to_email = reply_to or os.getenv("ADGUARD_SUPPORT_EMAIL", "shekhar.chlear@gmail.com")
 
     html_body = f"""
     <html>

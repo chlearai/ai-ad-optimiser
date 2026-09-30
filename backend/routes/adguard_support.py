@@ -55,7 +55,7 @@ def _get_support_email(db: Session) -> str:
             return str(setting.config.get("support_email")).strip()
     except Exception as e:
         logger.warning(f"Error reading support email from DB: {e}")
-    return os.getenv("ADGUARD_SUPPORT_EMAIL", "support@adguard.ai").strip()
+    return os.getenv("ADGUARD_SUPPORT_EMAIL", "shekhar.chlear@gmail.com").strip()
 
 
 def _set_support_email(db: Session, email_str: str):

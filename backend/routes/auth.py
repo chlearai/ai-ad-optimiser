@@ -279,7 +279,7 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
         pass
     db.commit()
 
-    from backend.services.onboarding_email import send_adguard_verify_email
+    from backend.services.onboarding_email import send_adguard_verify_email, send_adguard_demo_lead_alert
     base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
     verify_link = f"{base_url}/verify?token={verify_token}"
     send_result = {"sent": False, "error": "pending"}
@@ -293,6 +293,14 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
     except Exception as e:
         logger.exception(f"AdGuard verify email crash for {clean_email}: {e}")
         send_result = {"sent": False, "error": str(e)}
+
+    # Demo request → INSTANT alert email to owner (fire-and-forget)
+    if req.demo_request:
+        threading.Thread(
+            target=_demo_lead_alert_worker,
+            args=(req.model_dump(), verify_link),
+            daemon=True,
+        ).start()
 
     log_activity(
         module="AdGuard", action="Signup Started",
@@ -516,6 +524,16 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "user": user.to_dict()}
+
+
+def _demo_lead_alert_worker(req_data: dict, verify_link: str):
+    """Instant email to owner when someone books a demo — so the 15-min callback promise is kept."""
+    try:
+        from backend.services.onboarding_email import send_adguard_demo_lead_alert
+        result = send_adguard_demo_lead_alert(lead=req_data, verify_link=verify_link, timeout=30)
+        logger.info(f"Demo lead alert: sent={result.get('sent')} err={result.get('error')}")
+    except Exception as e:
+        logger.warning(f"Demo lead alert failed: {e}")
 
 
 def _password_confirmation_worker(email, name):
