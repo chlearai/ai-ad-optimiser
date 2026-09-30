@@ -981,6 +981,9 @@ class AdGuardAccount(Base):
     plan_expires_at = Column(DateTime, nullable=True)
     lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
     is_archived = Column(Boolean, default=False)
+    # Signup provenance: admin_invite | self_serve | demo_request ; beta accounts kept separate from paid
+    signup_source = Column(String(20), default="admin_invite")
+    is_beta = Column(Boolean, default=False)
     phone = Column(String, nullable=True)
     company_name = Column(String, nullable=True)
     industry = Column(String, nullable=True)
@@ -1054,6 +1057,8 @@ class AdGuardAccount(Base):
             "plan_expires_at": self.plan_expires_at.isoformat() if self.plan_expires_at else None,
             "lead_quota": self.lead_quota,
             "is_archived": self.is_archived,
+            "signup_source": self.signup_source or "admin_invite",
+            "is_beta": bool(self.is_beta),
             "crm_preference": self.crm_preference,
             "shield_enabled": self.shield_enabled,
             "shield_junk_threshold": self.shield_junk_threshold,

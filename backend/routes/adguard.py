@@ -1613,6 +1613,8 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "google_is_live": ws.google_is_live,
             "meta_is_live": ws.meta_is_live,
             "is_archived": bool(ws.is_archived),
+            "signup_source": ws.signup_source or "admin_invite",
+            "is_beta": bool(ws.is_beta),
             "last_lead_at": last_lead[0].isoformat() if last_lead and last_lead[0] else None,
             "created_at": ws.created_at.isoformat() if ws.created_at else None,
         })
@@ -1934,6 +1936,8 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         lead_quota=assigned_quota,
         overage_policy=req.overage_policy or "block",
         plan_expires_at=parsed_expiry,
+        signup_source="admin_invite",
+        is_beta=False,  # admin-created = real subscriber, never beta
         payment_mode=req.payment_mode or "",
         payment_ref=req.payment_ref or "",
         amount_paid=req.amount_paid or 0.0,

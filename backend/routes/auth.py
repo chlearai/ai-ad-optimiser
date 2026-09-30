@@ -250,6 +250,8 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
             plan="trial", lead_quota=300,
             verification_threshold=70, auto_push_enabled=True,
             shield_enabled=True, shield_junk_threshold=40, shield_min_leads=50,
+            signup_source="demo_request" if req.demo_request else "self_serve",
+            is_beta=True,  # beta accounts stay separate from admin-created paid subscribers
         )
         db.add(ws)
     else:

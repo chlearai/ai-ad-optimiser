@@ -305,6 +305,12 @@ def init_db():
             run_adguard_meta_email_migration()
         except Exception as me:
             logger.warning(f"Update AdGuard Meta identity email migration skipped/failed: {me}")
+        # Run safe additive migration for AdGuard signup provenance (beta separation)
+        try:
+            from backend.migrations.add_adguard_signup_source import run_migration as run_adguard_source_migration
+            run_adguard_source_migration()
+        except Exception as me:
+            logger.warning(f"Additive AdGuard signup_source migration skipped/failed: {me}")
         # Run safe additive migration for cached campaigns & pages map
         try:
             from backend.migrations.add_adguard_cached_campaigns import run_migration as run_adguard_cached_campaigns_migration
