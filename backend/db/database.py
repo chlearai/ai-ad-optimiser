@@ -289,6 +289,12 @@ def init_db():
             run_adguard_v1_schema_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard V1 schema migration skipped/failed: {me}")
+        # Run seed default admin migration
+        try:
+            from backend.migrations.seed_default_admin import run_migration as run_seed_admin_migration
+            run_seed_admin_migration()
+        except Exception as me:
+            logger.warning(f"Seed default admin migration skipped/failed: {me}")
     except Exception as e:
 
         logger.error(f"Database initialization failed: {e}")
