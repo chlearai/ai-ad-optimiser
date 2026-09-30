@@ -108,6 +108,40 @@ def health_check():
     return {"status": "ok", "port": os.getenv("PORT", "8000")}
 
 
+@app.get("/health/db")
+def health_db():
+    """Diagnostic: which DB is active and whether DSU/DSI credentials exist there."""
+    from backend.db.database import get_active_db, engine, DB_PATH
+    from sqlalchemy import text as _text
+
+    info = {
+        "active_db": get_active_db(),
+        "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "database_url_host": None,
+        "sqlite_path": DB_PATH,
+        "accounts": [],
+    }
+    try:
+        from urllib.parse import urlparse
+        u = urlparse(os.getenv("DATABASE_URL") or "")
+        info["database_url_host"] = u.hostname
+        info["database_url_port"] = u.port
+    except Exception:
+        pass
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(_text(
+                "SELECT id, name, (google_credentials IS NOT NULL) AS has_gcreds, (lsq_access_key IS NOT NULL) AS has_lsq FROM accounts ORDER BY id"
+            )).fetchall()
+            info["accounts"] = [
+                {"id": r[0], "name": r[1], "has_google_credentials": bool(r[2]), "has_lsq_key": bool(r[3])}
+                for r in rows
+            ]
+    except Exception as e:
+        info["accounts_error"] = f"{type(e).__name__}: {e}"
+    return info
+
+
 @app.get("/india_states.js")
 def get_india_states_js():
     frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
