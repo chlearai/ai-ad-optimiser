@@ -1010,6 +1010,14 @@ class AdGuardAccount(Base):
     google_last_sync_at = Column(DateTime, nullable=True)
     meta_last_sync_at = Column(DateTime, nullable=True)
 
+    # Settings (row 61 pro pass): timezone/alerts + monitor|protect mode
+    timezone = Column(String, default="Asia/Kolkata")
+    alert_emails = Column(Text, nullable=True)  # JSON list, max 5
+    protection_mode = Column(String(20), default="monitor")  # monitor | protect (mirrors shield_enabled)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     # Multi-identity Google connections: JSON list of
     # [{"email": "...", "credentials": "<fernet>", "discovered": [...], "connected_at": ...}]
     google_identities = Column(Text, nullable=True)
