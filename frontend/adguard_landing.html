@@ -3070,7 +3070,18 @@
                     body: JSON.stringify(d)
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Signup failed');
+                if (!res.ok) {
+                    if (res.status === 400 && /already exists/i.test(data.detail || '')) {
+                        msg.style.color = '#fbbf24';
+                        msg.innerHTML = '<b>You already have an AdGuard account with this email.</b><br>' +
+                            '<a href="/adguard/login?email=' + encodeURIComponent(d.email) + '" style="color:#34d399;font-weight:700;">Sign in instead →</a><br>' +
+                            '<span style="font-size:11.5px;">Forgot your password? Call us at 80509 97977 to reset.</span>';
+                        btn.innerText = original;
+                        btn.disabled = false;
+                        return;
+                    }
+                    throw new Error(data.detail || 'Signup failed');
+                }
 
                 btn.innerText = '✓ Account Created';
                 msg.style.color = '#34d399';
@@ -3140,7 +3151,18 @@
                     body: JSON.stringify(d)
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Signup failed');
+                if (!res.ok) {
+                    if (res.status === 400 && /already exists/i.test(data.detail || '')) {
+                        msg.style.color = '#fbbf24';
+                        msg.innerHTML = '<b>You already have an AdGuard account with this email.</b><br>' +
+                            '<a href="/adguard/login?email=' + encodeURIComponent(d.email) + '" style="color:#34d399;font-weight:700;">Sign in instead →</a><br>' +
+                            '<span style="font-size:11.5px;">Forgot your password? Call us at 80509 97977 to reset.</span>';
+                        btn.innerText = original;
+                        btn.disabled = false;
+                        return;
+                    }
+                    throw new Error(data.detail || 'Signup failed');
+                }
 
                 btn.innerText = '✓ Account Created';
                 msg.style.color = '#34d399';
@@ -3183,7 +3205,17 @@
                     body: JSON.stringify(d)
                 });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Demo request failed');
+                if (!res.ok) {
+                    if (res.status === 400 && /already exists/i.test(data.detail || '')) {
+                        msg.style.color = '#fbbf24';
+                        msg.innerHTML = '<b>You already have an AdGuard account with this email.</b><br>' +
+                            '<a href="/adguard/login?email=' + encodeURIComponent(d.email) + '" style="color:#34d399;font-weight:700;">Sign in instead →</a> — or our team will call you anyway on your demo request.';
+                        btn.innerText = original;
+                        btn.disabled = false;
+                        return;
+                    }
+                    throw new Error(data.detail || 'Demo request failed');
+                }
 
                 btn.innerText = '✓ Demo Requested';
                 msg.style.color = '#34d399';
