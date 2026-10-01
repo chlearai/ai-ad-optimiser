@@ -1028,6 +1028,12 @@ class AdGuardAccount(Base):
     # Bot-caller settings: {"enabled": true, "max_attempts": 3, "delay_minutes": 5, ...}
     bot_caller_settings = Column(Text, nullable=True)
 
+    # Support/settings + sync health (columns created by add_adguard_support_settings migration)
+    timezone = Column(String(50), default="Asia/Kolkata")
+    alert_emails = Column(Text, nullable=True)
+    protection_mode = Column(String(20), default="monitor")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     def to_dict(self):
         return {
             "id": self.id,
