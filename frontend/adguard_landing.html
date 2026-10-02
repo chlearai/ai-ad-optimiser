@@ -2527,11 +2527,11 @@
         <div class="modal-card">
             <button class="modal-close" onclick="closeSignupModal()">✕</button>
             <div style="text-align:center;margin-bottom:20px;">
-                <span class="chip chip-success" style="margin-bottom:8px;">Start My Free Trial</span>
+                <span class="chip chip-success" id="suPlanChip" style="margin-bottom:8px;">Start My Free Trial</span>
                 <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#fbbf24;border:1px solid rgba(251,191,36,0.4);background:rgba(251,191,36,0.08);margin-left:6px;">BETA</span>
-                <h3 style="font-size:22px;color:#ffffff;margin-top:4px;">Create your AdGuard account</h3>
+                <h3 id="suPlanHeading" style="font-size:22px;color:#ffffff;margin-top:4px;">Create your AdGuard account</h3>
                 <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">
-                    100 leads scored free · no credit card · verify email to activate
+                    No credit card · verify email to activate
                 </p>
             </div>
 
@@ -2603,6 +2603,7 @@
                     BETA NOTICE: AdGuard is in early access. Features may change; we may reach out for feedback. Your data stays yours.
                 </p>
                 <p id="suMessage" style="font-size:12.5px;color:var(--text-muted);margin-top:12px;text-align:center;line-height:1.5;"></p>
+                <p id="suPlanNote" style="display:none;font-size:11px;color:#fbbf24;margin-top:6px;text-align:center;"></p>
             </form>
         </div>
     </div>
@@ -3018,12 +3019,43 @@
         })();
 
         function openSignupModal() {
+            if (!window.__fromPlanSelect) pendingPaidPlan = '';
+            applyPendingPlanBranding();
             document.getElementById('signupModal').style.display = 'flex';
         }
 
         function closeSignupModal() {
             document.getElementById('signupModal').style.display = 'none';
         }
+
+        const PLAN_BRANDING = {
+            starter: { chip: 'STARTER PLAN — ₹4,999/mo', heading: 'Get started with Starter', note: 'Starter plan (1,000 leads/mo) will be activated on your workspace — payment is bypassed during BETA testing.' },
+            pro: { chip: 'PRO PLAN — ₹14,999/mo', heading: 'Get started with Pro', note: 'Pro plan (5,000 leads/mo) will be activated on your workspace — payment is bypassed during BETA testing.' },
+            agency: { chip: 'ENTERPRISE PLAN — ₹39,999/mo', heading: 'Get started with Enterprise', note: 'Enterprise plan (10 workspaces) will be activated on your workspace — payment is bypassed during BETA testing.' }
+        };
+
+        function applyPendingPlanBranding() {
+            const b = PLAN_BRANDING[pendingPaidPlan];
+            const chip = document.getElementById('suPlanChip');
+            const heading = document.getElementById('suPlanHeading');
+            const note = document.getElementById('suPlanNote');
+            const btn = document.getElementById('suSubmitBtn');
+            if (b) {
+                chip.textContent = b.chip;
+                heading.textContent = b.heading;
+                note.textContent = b.note;
+                note.style.display = 'block';
+                btn.textContent = 'CONTINUE →';
+            } else {
+                chip.textContent = 'Start My Free Trial';
+                heading.textContent = 'Create your AdGuard account';
+                note.style.display = 'none';
+                btn.textContent = 'START MY FREE TRIAL';
+            }
+        }
+
+        // Paid plan chosen from the pricing table flows into signup (payment bypassed in beta)
+        let pendingPaidPlan = '';
 
         // Shared: collect identical fields from any modal (su/sm/dm prefixes)
         function collectForm(prefix) {
@@ -3041,7 +3073,8 @@
                 full_name: name, company_name: company, email: email,
                 phone: fullPhone, country: countryObj.name, industry: industry,
                 channels: channels, monthly_ad_spend_band: spendBand,
-                currency: CURRENCY_BY_COUNTRY[countryObj.name] || '$'
+                currency: CURRENCY_BY_COUNTRY[countryObj.name] || '$',
+                selected_plan: pendingPaidPlan || 'trial'
             };
         }
 
@@ -3085,8 +3118,10 @@
 
                 btn.innerText = '✓ Account Created';
                 msg.style.color = '#34d399';
+                const planLabel = { starter: 'Starter', pro: 'Pro', agency: 'Enterprise' }[pendingPaidPlan];
                 if (data.email_sent) {
                     msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + d.email + '</b><br>' +
+                        (planLabel ? '<b>' + planLabel + ' plan will be active when you verify.</b> Payment bypassed in BETA.<br>' : '') +
                         'It expires in 60 minutes. Check spam if you don\'t see it.<br>' +
                         'Customer Care: 80509 97977 · support@chlear.in';
                 } else if (data.verify_link) {
@@ -3126,10 +3161,14 @@
             if (RAZORPAY_MODE === 'live') {
                 // Live Razorpay integration when live mode is configured
                 window.location.href = '/adguard/subscribe?plan=' + encodeURIComponent(planKey);
-            } else {
-                // Free trial / Shadow mode signup flow
-                openShadowModeModal();
+                return;
             }
+            // Beta/test mode: payment step is bypassed. Paid plans go through the
+            // signup form with the plan remembered (applied on workspace activation).
+            pendingPaidPlan = planKey;
+            window.__fromPlanSelect = true;
+            openSignupModal();
+            window.__fromPlanSelect = false;
         }
 
         // 4. SIGNUP / DEMO HANDLERS — all three forms share identical fields

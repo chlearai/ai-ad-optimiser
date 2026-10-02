@@ -58,6 +58,7 @@ class SubscriberSignupRequest(BaseModel):
     channels: Optional[str] = None  # both | meta | google | other
     monthly_ad_spend_band: Optional[str] = None  # 1|2|3|4 (local-currency band)
     currency: Optional[str] = None  # symbol captured at signup
+    selected_plan: Optional[str] = None  # starter | pro | agency (paid plan chosen on landing; trial when blank)
     demo_request: Optional[bool] = False
 
 
@@ -240,14 +241,21 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
     db.commit()
     db.refresh(user)
 
-    # Provision/find workspace (trial until verification completes plan setup)
+    # Provision/find workspace. Payment is bypassed in beta/test mode: a paid plan
+    # chosen on the landing page is applied immediately (Razorpay goes live later).
+    from backend.routes.adguard import PLAN_LIMITS
+    selected_plan = (req.selected_plan or "").strip().lower()
+    if selected_plan not in ("", "trial", "starter", "pro", "agency", "custom"):
+        selected_plan = ""
+    effective_plan = selected_plan or "trial"
+    plan_limits = PLAN_LIMITS.get(effective_plan, PLAN_LIMITS["trial"])
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == clean_email).first()
     display_title = (req.company_name or "").strip() or f"{user.full_name}'s Workspace"
     if not ws:
         ws = AdGuardAccount(
             owner_email=clean_email,
             display_name=display_title,
-            plan="trial", lead_quota=300,
+            plan=effective_plan, lead_quota=plan_limits["lead_quota"],
             verification_threshold=70, auto_push_enabled=True,
             shield_enabled=True, shield_junk_threshold=40, shield_min_leads=50,
             signup_source="demo_request" if req.demo_request else "self_serve",
@@ -257,6 +265,10 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
     else:
         if req.company_name and req.company_name.strip():
             ws.display_name = display_title
+        # Re-signup with an explicit paid plan upgrades the pending workspace too
+        if selected_plan:
+            ws.plan = effective_plan
+            ws.lead_quota = plan_limits["lead_quota"]
     ws.phone = (req.phone or "").strip() or ws.phone
     ws.industry = (req.industry or "").strip() or ws.industry
     ws.company_name = (req.company_name or "").strip() or ws.company_name
@@ -268,6 +280,8 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
             "signup_spend_band": req.monthly_ad_spend_band or "",
             "signup_currency": req.currency or "",
             "signup_country": req.country or "",
+            "signup_plan": effective_plan,
+            "payment_bypassed": bool(selected_plan),
             "demo_request": bool(req.demo_request),
         }
         existing_actions = []
