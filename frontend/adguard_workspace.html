@@ -619,6 +619,7 @@
                 <div class="nav-section-items" id="connectorButtons">
                     <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">🔗 Connect Google Ads</button>
                     <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
+                    <button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;">⚡ Script Tag</button>
                 </div>
             </div>
 
@@ -769,8 +770,8 @@
                         </div>
                         <h1 id="ryzeDashboardTitle">Dashboard</h1>
                         <div class="ryze-subtitle" id="ryzeDashboardSubtitle">Your leads, spend signals and protection status — everything AdGuard screens for you.</div>
-                        <div class="ryze-currency-note">
-                            <span>Accounts use INR — totals shown in INR. AdGuard Money Shield active.</span>
+                        <div class="ryze-currency-note" id="servicesLiveNote">
+                            <span id="servicesLiveContent">🛡️ Money Shield active</span>
                         </div>
                     </div>
 
@@ -843,43 +844,9 @@
                     <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()">Upgrade Plan</button>
                 </div>
 
-                <!-- CONNECT BANNER -->
-                <div class="card hidden" id="connectBanner" style="border-color:var(--color-border-focus);">
-                    <div class="card-header">
-                        <span class="card-title">🔗 Connect your Google Ads or Meta Ads account</span>
-                        <button class="btn btn-primary btn-sm" onclick="startConnect()">Connect Google Ads</button>
-                    </div>
-                    <p style="font-size:13px;color:var(--color-text-secondary);">
-                        One click. Sign in with Google or Meta, approve access, and select which campaigns go live for screening.
-                    </p>
-                </div>
+                <!-- (Connect banner removed: connectors live in the left panel) -->
 
-                <!-- PRE-SUBMIT INTERCEPTOR SCRIPT TAG (CLIENT LANDING PAGES) -->
-                <div class="card" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
-                    <div class="card-header" style="margin-bottom:10px;">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:22px;">⚡</span>
-                            <div>
-                                <span class="card-title" style="color:var(--color-accent);font-size:15px;">Pre-Submit Interceptor Tag for Landing Pages</span>
-                                <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">
-                                    Embed this async tag (&lt;15 KB) on your landing pages &amp; websites to screen out bot/fraud leads before conversion pixels report to Meta CAPI &amp; Google Ads.
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedDash" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedDash')">📋 Copy Script Tag</button>
-                    </div>
-                    <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;position:relative;" id="wsEmbedCodeBoxDash">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
-&lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-muted);">
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                            <span>🛡️ <b>Canvas &amp; Device Telemetry</b></span>
-                            <span>⏱️ <b>2.0s Fail-Open Guarantee</b></span>
-                            <span>🚦 <b>3-Band Gating (Green/Grey/Red)</b></span>
-                            <span>📲 <b>Inline SMS / WhatsApp OTP</b></span>
-                        </div>
-                        <a href="javascript:void(0)" onclick="openWsEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide (GTM / Webflow / WP) →</a>
-                    </div>
-                </div>
+                <!-- (Script tag card moved to left panel "Script Tag" button pop-out) -->
 
                 <!-- ADGUARD CORE VALUE KPI CARDS (Audited, Verified, Blocked, Recovered Spend) -->
                 <div class="ryze-kpi-grid" id="ryzeKpiGrid">
@@ -1255,6 +1222,33 @@
 
     <div id="toastContainer"></div>
 
+    <!-- SCRIPT TAG POP-OUT (from left panel) -->
+    <div id="scriptTagOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:120;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeScriptTagPanel()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:680px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:24px;">⚡</span>
+                    <div>
+                        <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Pre-Submit Interceptor Tag</h2>
+                        <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Embed on your landing pages &amp; websites to stop bot/fraud leads at the submit button.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeScriptTagPanel()">✕</button>
+            </div>
+            <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;margin-bottom:12px;" id="wsEmbedCodeBoxPanel"></div>
+            <div style="display:flex;justify-content:center;margin-bottom:14px;">
+                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">📋 Copy Script Tag</button>
+            </div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);justify-content:center;border-top:1px solid var(--color-border);padding-top:12px;">
+                <span>🛡️ Canvas &amp; Device Telemetry</span>
+                <span>⏱️ 2.0s Fail-Open Guarantee</span>
+                <span>🚦 3-Band Gating (Green/Grey/Red)</span>
+                <span>📲 Inline SMS / WhatsApp OTP</span>
+                <a href="javascript:void(0)" onclick="closeScriptTagPanel(); openWsEmbedGuideModal();" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide →</a>
+            </div>
+        </div>
+    </div>
+
     <!-- UPGRADE PLAN MODAL -->
     <div id="upgradeModalOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:110;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:760px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
@@ -1572,13 +1566,13 @@
             const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : (currentUser ? currentUser.email : 'YOUR_WORKSPACE_ID');
             const code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
                          '<script async src="' + host + '/api/v1/tag/adguard.js" data-account-id="' + escapeHtml(wsId) + '"><\/script>';
-            if ($('wsEmbedCodeBoxDash')) $('wsEmbedCodeBoxDash').textContent = code;
+            if ($('wsEmbedCodeBoxPanel')) $('wsEmbedCodeBoxPanel').textContent = code;
             if ($('wsEmbedCodeBoxConn')) $('wsEmbedCodeBoxConn').textContent = code;
             if ($('wsModalEmbedSnippet')) $('wsModalEmbedSnippet').textContent = code;
         }
 
         function copyWorkspaceEmbedSnippet(btnId) {
-            const code = $('wsEmbedCodeBoxDash') ? $('wsEmbedCodeBoxDash').textContent : ($('wsEmbedCodeBoxConn') ? $('wsEmbedCodeBoxConn').textContent : '');
+            const code = $('wsEmbedCodeBoxPanel') ? $('wsEmbedCodeBoxPanel').textContent : ($('wsEmbedCodeBoxConn') ? $('wsEmbedCodeBoxConn').textContent : '');
             if (!code) return;
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(code).then(() => {
@@ -1598,6 +1592,15 @@
         function openWsEmbedGuideModal() {
             updateWorkspaceEmbedSnippet();
             $('wsEmbedGuideOverlay').style.display = 'flex';
+        }
+
+        // SCRIPT TAG pop-out (left panel button): full embed card in a modal
+        function openScriptTagPanel() {
+            updateWorkspaceEmbedSnippet();
+            $('scriptTagOverlay').style.display = 'flex';
+        }
+        function closeScriptTagPanel() {
+            $('scriptTagOverlay').style.display = 'none';
         }
 
         async function api(method, path, body) {
@@ -2014,9 +2017,7 @@
             $('pillGoogle').textContent = 'Google: ' + (ws && ws.google_is_live ? 'connected' : '—');
             $('pillMeta').textContent = 'Meta: ' + (ws && ws.meta_is_live ? 'connected' : '—');
             if (!ws || (!ws.google_is_live && !ws.meta_is_live)) {
-                $('connectBanner').classList.remove('hidden');
-            } else {
-                $('connectBanner').classList.add('hidden');
+                // Banner removed; connector buttons in left panel are the prompt
             }
             renderConnectorButtons();
         }
@@ -3152,6 +3153,8 @@
             if ($('shieldThreshold')) $('shieldThreshold').value = ws.shield_junk_threshold != null ? ws.shield_junk_threshold : 40;
             if ($('shieldMinLeads')) $('shieldMinLeads').value = ws.shield_min_leads != null ? ws.shield_min_leads : 50;
 
+            renderServicesLiveStrip(ws, liveCount);
+
             const dot = $('shieldStatusDot');
             const lbl = $('shieldStatusLabel');
             const detail = $('shieldMonitorDetail');
@@ -3169,6 +3172,41 @@
                 if (detail) detail.textContent = 'Select campaigns or ad accounts to Go Live above. Shield will guard them 24/7.';
                 if (hb) hb.textContent = 'Standby (no live campaigns)';
             }
+        }
+
+        // LIVE SERVICES STRIP: shows only what is genuinely active in this workspace right now
+        function renderServicesLiveStrip(ws, liveCount) {
+            const box = $('servicesLiveNote');
+            const out = $('servicesLiveContent');
+            if (!box || !out) return;
+            const items = [];
+            // 1. Money Shield — only when the subscriber turned it ON
+            if (ws.shield_enabled) {
+                items.push('🛡️ Money Shield active' + (liveCount > 0 ? ` · guarding ${liveCount} campaign${liveCount > 1 ? 's' : ''}` : ''));
+            }
+            // 2. Campaign screening (Go Live) — only when campaigns are live
+            if (liveCount > 0) items.push('🔍 Campaign screening on');
+            // 3. CRM delivery — only when a CRM is connected
+            if (ws.crm_preference && ws.crm_preference !== 'none') {
+                const lbl = { leadsquared: 'LeadSquared', zoho: 'Zoho CRM', hubspot: 'HubSpot', webhook: 'Webhook', salesforce: 'Salesforce' }[ws.crm_preference] || ws.crm_preference;
+                items.push('📩 ' + lbl + ' delivery on');
+            }
+            // 4. FraudGraph — always on when connected (every lead feeds the network)
+            if (ws.google_is_live || ws.meta_is_live) items.push('🕸️ FraudGraph network on');
+            // 5. Email alerts — only when configured
+            try {
+                const alerts = typeof ws.alert_emails === 'string' ? JSON.parse(ws.alert_emails || '[]') : (ws.alert_emails || []);
+                if (alerts && alerts.length) items.push('✉️ ' + alerts.length + ' alert email' + (alerts.length > 1 ? 's' : '') + ' set');
+            } catch (e) {}
+            // Fallback state
+            if (!items.length) {
+                out.textContent = '⚪ Services on standby — connect an ad account or turn on Money Shield in Settings';
+                return;
+            }
+            out.textContent = items.join('  ·  ');
+            // Green when shield on (protection live), amber otherwise
+            box.style.borderColor = ws.shield_enabled ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.25)';
+            box.style.background = ws.shield_enabled ? 'var(--color-success-light)' : 'var(--color-warning-light)';
         }
 
         async function saveShieldSetting(key, value) {
