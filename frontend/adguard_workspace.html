@@ -1178,27 +1178,19 @@
                         Configure automated downstream push of verified, clean leads. If your leads already route directly from Google Ads or Meta into your CRM, leave this set to <b>None</b>.
                     </div>
                     <div class="form-group" style="margin-bottom:14px;">
-                        <label style="font-size:12px;font-weight:500;">Downstream CRM Target</label>
-                        <select class="filter-select" id="crmSelect" onchange="onCrmSelect(this.value)" style="width:100%;max-width:360px;">
-                            <option value="">None — keep verified leads in AdGuard only</option>
-                            <option value="leadsquared">LeadSquared</option>
-                            <option value="zoho">Zoho CRM</option>
-                            <option value="hubspot">HubSpot</option>
-                            <option value="webhook">Custom Webhook</option>
-                            <option value="none">None — keep in AdGuard only</option>
-                        </select>
-                        <div id="crmStatus" style="font-size:12px;color:var(--color-text-muted);margin-top:6px;">Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.</div>
-                    </div>
-
-                    <!-- Credential form (shown per CRM choice) -->
-                    <div id="crmCredsForm" style="display:none;margin-top:12px;padding:14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-subtle, #f9fafb);max-width:440px;">
-                        <div id="crmCredsFields"></div>
-                        <div style="display:flex;gap:8px;margin-top:12px;">
-                            <button class="btn btn-primary btn-sm" onclick="saveCrmCreds()">Connect CRM</button>
-                            <button class="btn btn-secondary btn-sm" onclick="testCrm()">Test Connection</button>
-                            <button class="btn btn-secondary btn-sm" onclick="disconnectCrm()" title="Remove CRM connection">Disconnect</button>
+                        <label style="font-size:12px;font-weight:500;">Where should verified leads go?</label>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+                            <div id="crmOptNone" onclick="selectCrmNone()" style="flex:1;min-width:250px;max-width:340px;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;background:var(--color-bg-modal, #fff);">
+                                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">None</div>
+                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45;">Keep verified leads in AdGuard only — audit, alert and export via CSV.</div>
+                            </div>
+                            <div id="crmOptCrm" onclick="openCrmPicker()" style="flex:1;min-width:250px;max-width:340px;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;background:var(--color-bg-modal, #fff);">
+                                <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Deliver to a CRM</div>
+                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45;">Auto-push every verified lead into your CRM, in real time.</div>
+                                <div id="crmOptCrmState" style="margin-top:10px;"></div>
+                            </div>
                         </div>
-                        <div id="crmTestResult" style="font-size:12px;margin-top:8px;"></div>
+                        <div id="crmStatus" style="font-size:12px;color:var(--color-text-muted);margin-top:8px;">Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.</div>
                     </div>
                 </div>
             </div>
@@ -1246,6 +1238,49 @@
                 <span>📲 Inline SMS / WhatsApp OTP</span>
                 <a href="javascript:void(0)" onclick="closeScriptTagPanel(); openWsEmbedGuideModal();" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide →</a>
             </div>
+        </div>
+    </div>
+
+    <!-- CRM PICKER POP-OUT (Deliver to a CRM) -->
+    <div id="crmPickerOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:120;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeCrmPicker()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:680px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:24px;">🔗</span>
+                    <div>
+                        <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Connect your CRM</h2>
+                        <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Pick your CRM below — verified leads are pushed automatically, in real time.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmPicker()">✕</button>
+            </div>
+            <div id="crmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:16px;"></div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:16px;border-top:1px solid var(--color-border);padding-top:12px;">
+                🔒 Credentials are encrypted. Use <b>Test Connection</b> after connecting to confirm a test lead arrives in your CRM. Need a CRM that's not listed? Use <b>Custom Webhook</b> — it works with any system.
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM CREDENTIALS POP-OUT -->
+    <div id="crmCredsOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:130;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeCrmCreds()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span id="crmCredsIcon" style="font-size:24px;">🔌</span>
+                    <div>
+                        <h2 id="crmCredsTitle" style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Connect CRM</h2>
+                        <p id="crmCredsSub" style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Enter your credentials to connect.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmCreds()">✕</button>
+            </div>
+            <div id="crmCredsFields" style="margin-top:14px;"></div>
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <button class="btn btn-primary btn-sm" onclick="saveCrmCreds()">Connect</button>
+                <button class="btn btn-secondary btn-sm" onclick="testCrm()">Test Connection</button>
+                <button class="btn btn-secondary btn-sm" onclick="disconnectCrm()" title="Remove CRM connection">Disconnect</button>
+            </div>
+            <div id="crmTestResult" style="font-size:12px;margin-top:10px;"></div>
         </div>
     </div>
 
@@ -2686,9 +2721,11 @@
         }
 
         // ---------- CRM preference + credential capture ----------
-        const CRM_LABELS = {
-            leadsquared: 'LeadSquared', zoho: 'Zoho CRM', hubspot: 'HubSpot',
-            webhook: 'Custom Webhook', none: 'AdGuard only'
+        const CRM_META = {
+            leadsquared: { label: 'LeadSquared', icon: '📣', blurb: 'India\'s leading lead-management CRM' },
+            zoho: { label: 'Zoho CRM', icon: '🟦', blurb: 'Zoho CRM — push verified leads as Contacts/Leads' },
+            hubspot: { label: 'HubSpot', icon: '🧡', blurb: 'HubSpot CRM — leads land as Contacts' },
+            webhook: { label: 'Custom Webhook', icon: '⚙️', blurb: 'Any CRM or internal system with a webhook URL' },
         };
 
         const CRM_FIELDS = {
@@ -2712,42 +2749,68 @@
             ],
         };
 
-        function onCrmSelect(val) {
-            const form = $('crmCredsForm');
-            const fields = $('crmCredsFields');
-            const st = $('crmStatus');
+        let crmPickerCrm = null;
+
+        function openCrmPicker() {
+            const grid = $('crmGrid');
+            grid.innerHTML = Object.keys(CRM_META).map(k => {
+                const m = CRM_META[k];
+                return '<div onclick="openCrmCreds(\'' + k + '\')" style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px 12px;cursor:pointer;text-align:center;background:var(--color-bg-modal, #fff);transition:box-shadow .15s;" onmouseover="this.style.boxShadow=\'var(--shadow-lg)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+                    '<div style="font-size:26px;">' + m.icon + '</div>' +
+                    '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);margin-top:6px;">' + m.label + '</div>' +
+                    '<div style="font-size:10px;color:var(--color-text-muted);margin-top:4px;line-height:1.4;">' + m.blurb + '</div>' +
+                    '</div>';
+            }).join('');
+            $('crmPickerOverlay').style.display = 'flex';
+        }
+
+        function closeCrmPicker() {
+            $('crmPickerOverlay').style.display = 'none';
+        }
+
+        function openCrmCreds(crm) {
+            crmPickerCrm = crm;
+            closeCrmPicker();
+            const m = CRM_META[crm] || { label: crm, icon: '🔌' };
+            $('crmCredsIcon').textContent = m.icon;
+            $('crmCredsTitle').textContent = 'Connect ' + m.label;
+            $('crmCredsSub').textContent = 'Enter your ' + m.label + ' credentials to connect.';
             $('crmTestResult').innerHTML = '';
-            if (!val || val === 'none') {
-                form.style.display = 'none';
-                saveCrmPreference(val || '');
-                return;
-            }
-            // Build credential inputs
-            fields.innerHTML = (CRM_FIELDS[val] || []).map(f =>
-                '<div style="margin-bottom:6px;"><label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;">' + f.label + '</label>' +
-                '<input class="filter-input" id="crmField_' + f.key + '" type="' + (f.type || 'text') + '" placeholder="' + f.ph + '" style="width:100%;font-size:12px;padding:5px 8px;"></div>'
+            $('crmCredsFields').innerHTML = (CRM_FIELDS[crm] || []).map(f =>
+                '<div style="margin-bottom:8px;"><label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;">' + f.label + '</label>' +
+                '<input class="filter-input" id="crmField_' + f.key + '" type="' + (f.type || 'text') + '" placeholder="' + f.ph + '" style="width:100%;font-size:12px;padding:6px 8px;"></div>'
             ).join('');
-            form.style.display = 'block';
-            st.textContent = 'Enter your ' + CRM_LABELS[val] + ' credentials to connect.';
-            st.style.color = 'var(--color-text-muted)';
+            $('crmCredsOverlay').style.display = 'flex';
+        }
+
+        function closeCrmCreds() {
+            $('crmCredsOverlay').style.display = 'none';
+            renderCrmPreference();
+        }
+
+        function selectCrmNone() {
+            saveCrmPreference('none');
         }
 
         function renderCrmPreference() {
-            const sel = $('crmSelect');
             const st = $('crmStatus');
-            if (!sel) return;
+            if (!st) return;
             const pref = (selectedWorkspaceObj && selectedWorkspaceObj.crm_preference) || '';
-            sel.value = pref || '';
-            const hasCreds = selectedWorkspaceObj && selectedWorkspaceObj.crm_preference && selectedWorkspaceObj.crm_preference !== 'none';
-            if (hasCreds) {
-                // Connected: show connected state, no form
-                $('crmCredsForm').style.display = 'none';
-                st.innerHTML = '✅ Connected to <b>' + (CRM_LABELS[pref] || pref) + '</b> — verified leads deliver here. <span style="cursor:pointer;text-decoration:underline;" onclick="onCrmSelect(\'' + pref + '\')">Update credentials</span>';
-                st.style.color = 'var(--color-success-text)';
-            } else if (pref === 'none') {
-                st.textContent = 'Leads stay in AdGuard only. Export anytime via CSV.';
+            const connected = pref && pref !== 'none' && pref !== '';
+            const noneCard = $('crmOptNone');
+            const crmCard = $('crmOptCrm');
+            noneCard.style.borderColor = !connected ? 'var(--color-accent)' : 'var(--color-border)';
+            crmCard.style.borderColor = connected ? 'var(--color-accent)' : 'var(--color-border)';
+            const stateEl = $('crmOptCrmState');
+            if (connected) {
+                const m = CRM_META[pref] || { label: pref, icon: '🔌' };
+                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-success-text);font-weight:600;">✅ Connected — ' + m.label + '</div>' +
+                    '<div style="display:flex;gap:10px;margin-top:4px;"><span style="font-size:11px;color:var(--color-accent);cursor:pointer;text-decoration:underline;" onclick="openCrmCreds(\'' + pref + '\')">Update credentials</span>' +
+                    '<span style="font-size:11px;color:var(--color-danger-text);cursor:pointer;text-decoration:underline;" onclick="disconnectCrm()">Disconnect</span></div>';
+                st.textContent = 'Verified leads auto-deliver to ' + m.label + '.';
                 st.style.color = 'var(--color-text-muted)';
             } else {
+                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-accent);font-weight:600;cursor:pointer;" onclick="openCrmPicker()">Connect a CRM →</div>';
                 st.textContent = 'Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.';
                 st.style.color = 'var(--color-text-muted)';
             }
@@ -2755,7 +2818,7 @@
 
         async function saveCrmCreds() {
             if (!selectedWorkspaceObj) return;
-            const crm = $('crmSelect').value;
+            const crm = crmPickerCrm;
             if (!crm || crm === 'none') return;
             const credentials = {};
             (CRM_FIELDS[crm] || []).forEach(f => {
@@ -2770,9 +2833,8 @@
                 });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 selectedWorkspaceObj.crm_preference = crm;
-                toast('CRM connected: ' + (CRM_LABELS[crm] || crm));
-                $('crmCredsForm').style.display = 'none';
-                renderCrmPreference();
+                toast('CRM connected: ' + (CRM_META[crm] || {}).label || crm);
+                closeCrmCreds();
             } catch (e) { toast(e.message, 'error'); }
         }
 
@@ -2788,7 +2850,7 @@
                 const box = $('crmTestResult');
                 if (!res.ok) { box.innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(data.detail || 'Test failed') + '</span>'; return; }
                 if (data.status === 'pushed') {
-                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ Test lead delivered to ' + (CRM_LABELS[data.provider] || data.provider) + '. Check your CRM.</span>';
+                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ Test lead delivered to ' + ((CRM_META[data.provider] || {}).label || data.provider) + '. Check your CRM.</span>';
                 } else {
                     box.innerHTML = '<span style="color:var(--color-danger-text);">❌ ' + escapeHtml(data.error || 'Delivery failed') + '</span>';
                 }
@@ -2805,8 +2867,7 @@
                 });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 selectedWorkspaceObj.crm_preference = 'none';
-                $('crmSelect').value = '';
-                $('crmCredsForm').style.display = 'none';
+                closeCrmCreds();
                 toast('CRM disconnected');
                 renderCrmPreference();
             } catch (e) { toast(e.message, 'error'); }
@@ -2824,12 +2885,10 @@
                     });
                 } catch (e) { /* non-fatal */ }
                 selectedWorkspaceObj.crm_preference = 'none';
-                $('crmCredsForm').style.display = 'none';
-                toast('CRM set to AdGuard only');
+                toast('Verified leads stay in AdGuard only');
                 renderCrmPreference();
                 return;
             }
-            // Choosing a CRM opens the credential form (saved via Connect button)
             renderCrmPreference();
         }
 
