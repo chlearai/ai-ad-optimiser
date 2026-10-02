@@ -335,6 +335,13 @@ def init_db():
             run_seed_accounts_migration()
         except Exception as me:
             logger.warning(f"Seed initial accounts migration skipped/failed: {me}")
+        # Run safe additive migration to self-heal PostgreSQL serial sequences
+        # (fixes duplicate-key aborts after manual seed inserts with explicit IDs)
+        try:
+            from backend.migrations.fix_serial_sequences import run_migration as run_fix_sequences_migration
+            run_fix_sequences_migration()
+        except Exception as me:
+            logger.warning(f"Serial sequence self-heal migration skipped/failed: {me}")
     except Exception as e:
 
         logger.error(f"Database initialization failed: {e}")

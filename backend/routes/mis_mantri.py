@@ -105,7 +105,11 @@ def _upsert_snapshot(db: Session, project_id: int, platform: str, snapshot_date:
             amount_spent=amount_spent,
             cpl=cpl,
         ))
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 def _platform_connected(account: Account, platform: str) -> bool:
@@ -405,6 +409,10 @@ def refresh_data(
     results = []
     skipped = []
     for platform in platforms:
+        try:
+            db.rollback()  # clear any aborted transaction left by a previous platform's failure
+        except Exception:
+            pass
         account = db.query(Account).filter(Account.id == project.client_id).first()
         if not account:
             raise HTTPException(status_code=404, detail="Mantri client account not found")
@@ -415,9 +423,11 @@ def refresh_data(
         try:
             results.append(_refresh_platform(db, project, platform, valid_start, valid_end, user))
         except HTTPException as e:
+            db.rollback()
             skipped.append(platform)
             logger.warning(f"Mantri MIS refresh: {platform} failed: {e.detail}")
         except Exception as e:
+            db.rollback()
             skipped.append(platform)
             logger.error(f"Mantri MIS refresh: {platform} failed unexpectedly: {e}")
 
