@@ -56,12 +56,17 @@ def _load_pg_driver():
 
 
 def _create_postgres_engine(dbapi_name, url):
-    # psycopg 3 dialect needs an explicit +psycopg scheme
     if dbapi_name == "psycopg":
         url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    connect_args = {"sslmode": "require", "connect_timeout": 10}
+    # psycopg 3 prepares statements client-side; on Supabase transaction-pooler (Supavisor)
+    # prepared statements COLLIDE across pooled sessions -> DuplicatePreparedStatement "_pg3_0".
+    # Kill the cache at the driver level.
+    if dbapi_name == "psycopg":
+        connect_args["prepared_statement_cache_size"] = 0
     return create_engine(
         url,
-        connect_args={"sslmode": "require", "connect_timeout": 10},
+        connect_args=connect_args,
         pool_pre_ping=True,
         pool_recycle=300,
     )
@@ -98,7 +103,7 @@ def _test_postgres_fast(url):
                     test_conn = psycopg2.connect(**conn_kwargs)
                 else:
                     import psycopg
-                    test_conn = psycopg.connect(**conn_kwargs)
+                    test_conn = psycopg.connect(prepared_statement_cache_size=0, **conn_kwargs)
                 test_conn.close()
                 eng = _create_postgres_engine(driver, url)
                 logger.info(f"PostgreSQL connectivity verified via driver '{driver}'")
