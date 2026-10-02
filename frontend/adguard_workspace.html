@@ -763,14 +763,12 @@
                 <div class="ryze-header">
                     <div class="ryze-title-area">
                         <div class="ryze-breadcrumb" id="ryzeBreadcrumb">
-                            <span id="ryzeBreadcrumbClient" style="font-weight:600;color:var(--color-text-primary);">All Clients</span>
-                            <span class="sep">/</span>
-                            <span>Analytics</span>
-                            <span class="sep">/</span>
-                            <span style="color:var(--color-accent);font-weight:600;">Ads Performance</span>
+                            <span id="ryzeBreadcrumbClient" style="font-weight:600;color:var(--color-text-primary);">My Workspace</span>
+                            <span class="sep" id="ryzeBreadcrumbSep1">/</span>
+                            <span id="ryzeBreadcrumbMid">Overview</span>
                         </div>
                         <h1 id="ryzeDashboardTitle">Dashboard</h1>
-                        <div class="ryze-subtitle" id="ryzeDashboardSubtitle">Spend, results and what to do next across your ad platforms · Live AdGuard Shield active</div>
+                        <div class="ryze-subtitle" id="ryzeDashboardSubtitle">Your leads, spend signals and protection status — everything AdGuard screens for you.</div>
                         <div class="ryze-currency-note">
                             <span>Accounts use INR — totals shown in INR. AdGuard Money Shield active.</span>
                         </div>
@@ -1690,6 +1688,9 @@
                 renderConnectorButtons();
                 renderConnPills();
                 renderClientAccountsList();
+                // Customers: workspace name in breadcrumb; admins keep picker
+                const bcClient = $('ryzeBreadcrumbClient');
+                if (bcClient && selectedWorkspaceObj) bcClient.textContent = selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email;
                 updateWorkspaceEmbedSnippet();
                 await loadWorkspaceCampaigns();
                 renderCrmPreference();
@@ -2102,28 +2103,40 @@
                 });
             }
 
-            // If the workspace has live connected accounts, only show their real accounts (no dummy seed accounts)
+            // If the workspace has live connected accounts, only show their real accounts
             if (ws && (ws.google_is_live || ws.meta_is_live) && list.length > 0) {
                 return list;
             }
 
-            // Fallback seed accounts for demonstration only when nothing is connected
+            // Nothing connected: show ONLY the workspace itself (its own leads), never other companies' dummy data
             if (!list.length) {
-                list.push(
-                    { id: '2909919094', name: 'DSU - New', formatted: '290-991-9094', platform: 'google' },
-                    { id: '1917462211', name: 'DSI - New', formatted: '191-746-2211', platform: 'google' },
-                    { id: 'tlg_meta', name: 'The Little Gym India (TLG)', formatted: 'Meta Ads', platform: 'meta' },
-                    { id: '9700326931', name: 'Mantri Developers', formatted: '970-032-6931', platform: 'google' },
-                    { id: '6228138182', name: 'Classic Featherlite', formatted: '622-813-8182', platform: 'google' },
-                    { id: '7388829500', name: 'CHL Marketing Solutions', formatted: '738-882-9500', platform: 'google' },
-                    { id: '7920019197', name: 'DSPS', formatted: '792-001-9197', platform: 'google' }
-                );
+                list.push({
+                    id: 'workspace',
+                    name: ws ? (ws.display_name || ws.owner_email) : 'My Leads',
+                    formatted: ws && ws.company_name ? ws.company_name : '',
+                    platform: 'workspace',
+                });
             }
 
             return list;
         }
 
         function renderClientAccountsList() {
+            const section = $('clientsNavSection');
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+
+            // Customers: no client list at all — the workspace IS the account
+            if (!isAdmin) {
+                if (section) section.style.display = 'none';
+                clientAccountsList = extractClientAccounts(selectedWorkspaceObj);
+                activeClientId = 'workspace';
+                activeClientName = selectedWorkspaceObj ? (selectedWorkspaceObj.display_name || selectedWorkspaceObj.owner_email) : 'My Leads';
+                updateCurrentAvailableCampaigns();
+                return;
+            }
+
+            // Admin simulation keeps the picker (uses real connected accounts; workspace fallback)
+            if (section) section.style.display = '';
             const listEl = $('clientsList');
             if (!listEl) return;
 
@@ -2160,11 +2173,10 @@
             activeClientId = clientId;
             activeClientName = clientName;
 
-            // Update breadcrumbs & subtitle
+            // Update breadcrumbs
             const bc = $('ryzeBreadcrumbClient');
             if (bc) bc.textContent = clientName;
 
-            renderClientAccountsList();
             updateCurrentAvailableCampaigns();
             renderRyzeDashboard();
         }
@@ -2204,9 +2216,9 @@
             currentAvailableCampaigns = [];
             const seen = new Set();
 
-            if (activeClientId === 'all') {
-                // Strictly iterate over the accounts belonging to this workspace
-                const accountsToScan = (clientAccountsList && clientAccountsList.length) ? clientAccountsList : [];
+            if (activeClientId === 'all' || activeClientId === 'workspace') {
+                // 'workspace' = customer's own single view; scan all accounts of this workspace (or the map)
+                const accountsToScan = (clientAccountsList && clientAccountsList.length && clientAccountsList[0].platform !== 'workspace') ? clientAccountsList : [];
                 if (accountsToScan.length) {
                     accountsToScan.forEach(acc => {
                         const items = getCampaignsForAccount(acc.id);
