@@ -2001,6 +2001,9 @@
                 html += `<button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="width:100%;">🔗 Connect Meta Ads</button>`;
             }
 
+            // Script Tag button (always present — the embed snippet for landing pages)
+            html += `<button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;width:100%;">⚡ Script Tag</button>`;
+
             container.innerHTML = html;
         }
 
