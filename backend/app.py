@@ -105,7 +105,11 @@ def on_shutdown():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "port": os.getenv("PORT", "8000")}
+    return {
+        "status": "ok",
+        "port": os.getenv("PORT", "8000"),
+        "deploy_sha": os.getenv("RAILWAY_GIT_COMMIT_SHA") or None,
+    }
 
 
 @app.get("/health/db")
