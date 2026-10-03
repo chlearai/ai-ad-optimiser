@@ -112,9 +112,9 @@ def _send_via_smtp(
     msg["Message-ID"] = message_id
     msg["Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg["Reply-To"] = sender_email
-    msg["X-Mailer"] = "AdOptimaMailer/1.0"
-    msg["Precedence"] = "bulk"
-    msg["Auto-Submitted"] = "auto-generated"
+    msg["X-Mailer"] = "AdGuardMailer/1.0"
+    # NOTE: no Precedence/Auto-Submitted headers here — Gmail silently
+    # spam-filters or drops transactional mail carrying bulk markers.
     msg.attach(MIMEText(payloads["text"], "plain", _charset="utf-8"))
     msg.attach(MIMEText(payloads["html"], "html", _charset="utf-8"))
 
