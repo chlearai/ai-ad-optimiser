@@ -61,9 +61,12 @@ def _create_postgres_engine(dbapi_name, url):
     connect_args = {"sslmode": "require", "connect_timeout": 10}
     # psycopg 3 prepares statements client-side; on Supabase transaction-pooler (Supavisor)
     # prepared statements COLLIDE across pooled sessions -> DuplicatePreparedStatement "_pg3_0".
-    # Kill the cache at the driver level.
+    # Disable both the statement cache AND auto-prepare entirely (prepare_threshold=None):
+    # with only the cache disabled, psycopg re-prepares on every execution after the
+    # threshold, and those re-prepares still collide across pooled sessions.
     if dbapi_name == "psycopg":
         connect_args["prepared_statement_cache_size"] = 0
+        connect_args["prepare_threshold"] = None
     return create_engine(
         url,
         connect_args=connect_args,
