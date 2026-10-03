@@ -331,6 +331,12 @@ def init_db():
             run_monthly_counters_migration()
         except Exception as me:
             logger.warning(f"Additive monthly lead counters migration skipped/failed: {me}")
+        # Run safe additive migration: ToS acceptance tracking
+        try:
+            from backend.migrations.add_user_tos_acceptance import run_migration as run_tos_migration
+            run_tos_migration()
+        except Exception as me:
+            logger.warning(f"Additive ToS acceptance migration skipped/failed: {me}")
         # Run safe additive migration for cached campaigns & pages map
         try:
             from backend.migrations.add_adguard_cached_campaigns import run_migration as run_adguard_cached_campaigns_migration

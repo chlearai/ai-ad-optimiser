@@ -1664,6 +1664,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "is_archived": bool(ws.is_archived),
             "signup_source": ws.signup_source or "admin_invite",
             "is_beta": bool(ws.is_beta),
+            "tos_accepted_version": ws_user.tos_accepted_version if ws_user else None,
             "last_lead_at": last_lead[0].isoformat() if last_lead and last_lead[0] else None,
             "created_at": ws.created_at.isoformat() if ws.created_at else None,
         })

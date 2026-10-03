@@ -444,6 +444,8 @@ class User(Base):
     onboarding_token_expires_at = Column(DateTime, nullable=True)
     onboarding_completed = Column(Boolean, default=False)
     welcome_email_sent = Column(Boolean, default=False)
+    tos_accepted_version = Column(String(20), nullable=True)  # ToS version accepted at signup (e.g. "2.0")
+    tos_accepted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -467,6 +469,8 @@ class User(Base):
             "access_audit_review": self.access_audit_review,
             "access_adguard": self.access_adguard,
             "onboarding_completed": self.onboarding_completed,
+            "tos_accepted_version": self.tos_accepted_version,
+            "tos_accepted_at": self.tos_accepted_at.isoformat() if self.tos_accepted_at else None,
             "assigned_account_ids": self.assigned_account_ids(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

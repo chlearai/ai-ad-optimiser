@@ -60,6 +60,7 @@ class SubscriberSignupRequest(BaseModel):
     currency: Optional[str] = None  # symbol captured at signup
     selected_plan: Optional[str] = None  # starter | pro | agency (paid plan chosen on landing; trial when blank)
     demo_request: Optional[bool] = False
+    tos_accepted: Optional[bool] = False  # mandatory ToS acceptance (v2.0) at signup
 
 
 class OnboardRequest(BaseModel):
@@ -99,6 +100,7 @@ class UserUpdateRequest(BaseModel):
 
 class SetPasswordRequest(BaseModel):
     password: str
+    tos_accepted: Optional[bool] = False  # ToS v2.0 acceptance at activation
 
 
 class TokenResponse(BaseModel):
@@ -229,6 +231,43 @@ def signup_subscriber(req: SubscriberSignupRequest, request: Request, db: Sessio
         user = User(email=clean_email, hashed_password=get_password_hash(secrets.token_urlsafe(16)),
                     full_name=req.full_name.strip(), mobile=(req.phone or "").strip(), role="user",
                     access_adguard=True, is_active=True)
+
+    # Mandatory ToS acceptance at signup (v2.0)
+    TOS_VERSION = "2.0"
+    if not req.tos_accepted:
+        raise HTTPException(status_code=400, detail="You must accept the Terms of Service to continue.")
+    user.tos_accepted_version = TOS_VERSION
+    user.tos_accepted_at = datetime.utcnow()
+
+    # Signup abuse guard: repeat phone / similar company from different emails = free-trial farming.
+    # Never blocks a genuine signup — just flags for admin review + logs the pattern.
+    abuse_hit = None
+    try:
+        phone_digits = "".join(ch for ch in (req.phone or "") if ch.isdigit())
+        if len(phone_digits) >= 8:
+            dup_phone = db.query(User).filter(User.mobile.ilike(f"%{phone_digits[-10:]}%"), User.email != clean_email).count()
+            if dup_phone >= 2:
+                abuse_hit = f"phone_pattern:{phone_digits[-10:]} ({dup_phone} prior accounts)"
+        if req.company_name and req.company_name.strip():
+            key = req.company_name.strip().lower()[:25]
+            dup_company = db.query(User).filter(User.full_name.ilike(f"%{key}%"), User.email != clean_email).count()
+            if dup_company >= 2 and not abuse_hit:
+                abuse_hit = f"company_pattern:{key} ({dup_company} prior accounts)"
+    except Exception as _ae:
+        logger.warning(f"signup abuse guard check failed: {_ae}")
+    if abuse_hit:
+        logger.warning(f"[AdGuard] SIGNUP ABUSE FLAG: {clean_email} -> {abuse_hit}")
+        try:
+            extra_flag = {"time": datetime.utcnow().isoformat(), "action": "signup_abuse_flag", "detail": {"pattern": abuse_hit}}
+            actions = []
+            try:
+                actions = _json.loads(ws.shield_actions) if ws.shield_actions else []
+            except Exception:
+                actions = []
+            actions.append(extra_flag)
+            ws.shield_actions = _json.dumps(actions)
+        except Exception:
+            pass
 
     import secrets as _secrets
     from datetime import timedelta
@@ -407,7 +446,21 @@ def me(user: User = Depends(get_current_user_required)):
     # For legacy users created before onboarding flow, treat active+completed as fully onboarded.
     if not hasattr(user, "onboarding_completed") or user.onboarding_completed is None:
         data["onboarding_completed"] = user.is_active
+    data["tos_pending"] = not bool(user.tos_accepted_version)
     return data
+
+
+class TosAcceptRequest(BaseModel):
+    version: str = "2.0"
+
+
+@router.post("/accept-tos")
+def accept_tos(req: TosAcceptRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    """Record the subscriber's explicit ToS acceptance (grandfathered users prompted on login)."""
+    user.tos_accepted_version = (req.version or "2.0")[:20]
+    user.tos_accepted_at = datetime.utcnow()
+    db.commit()
+    return {"status": "ok", "tos_accepted_version": user.tos_accepted_version}
 
 
 # ============================================================
@@ -542,6 +595,10 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     user.is_active = True
     user.onboarding_token = None
     user.onboarding_token_expires_at = None
+    # Record ToS acceptance at activation (covers subscribers who signed up pre-checkbox)
+    if req.tos_accepted:
+        user.tos_accepted_version = "2.0"
+        user.tos_accepted_at = datetime.utcnow()
 
     # Plan clock starts at activation (password-set), not signup.
     # Trial: 14-day expiry. Paid plans: monthly billing anniversary anchors the lead counter reset.

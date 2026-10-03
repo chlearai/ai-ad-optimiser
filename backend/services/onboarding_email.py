@@ -332,7 +332,7 @@ def _ag_brand_header(title: str = "AdGuard") -> str:
 def _ag_brand_footer() -> str:
     return (
         '<div style="padding:14px 24px;background:#fafaf9;border-top:1px solid #e7e5e4;font-size:11px;color:#a8a29e;">'
-        '&copy; 2026 AdGuard &middot; Built by CHLEAR &middot; '
+        '&copy; 2026 AdGuard &middot; Built by CHLEAR &middot; Proprietary &amp; Confidential &middot; '
         '<a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a>'
         ' &middot; Customer Care: 80509 97977</div>'
     )

@@ -74,6 +74,13 @@
                 <input type="password" id="confirmPassword" placeholder="Re-enter new password" autocomplete="new-password">
             </div>
 
+            <div style="margin:0.9rem 0;">
+                <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#57534e;cursor:pointer;line-height:1.5;">
+                    <input type="checkbox" id="tosAccept" style="margin-top:3px;accent-color:#d97706;flex-shrink:0;">
+                    <span>I accept the <a href="/terms" target="_blank" style="color:#d97706;text-decoration:underline;">Terms of Service</a> &amp; <a href="/privacy" target="_blank" style="color:#d97706;text-decoration:underline;">Privacy Policy</a> (v2.0), including the automated lead-audit disclaimer.</span>
+                </label>
+            </div>
+
             <button class="btn btn-primary" id="saveBtn" onclick="setPassword()">Verify & Activate Account</button>
             <div id="message" class="error hidden"></div>
         </div>
@@ -163,7 +170,8 @@
             const pwErr = clientValidate();
             if (pwErr) { throw new Error(pwErr); }
             if (password !== confirm) { throw new Error('Passwords do not match.'); }
-            const data = await api('POST', '/auth/onboard/' + encodeURIComponent(token), { password });
+            if (!$('tosAccept').checked) { throw new Error('Please accept the Terms of Service to activate your account.'); }
+            const data = await api('POST', '/auth/onboard/' + encodeURIComponent(token), { password, tos_accepted: true });
             msg.textContent = 'Account verified! Taking you to AdGuard...';
             msg.className = 'success';
             msg.classList.remove('hidden');
@@ -182,5 +190,6 @@
 
     init();
     </script>
+<span data-b="s4tohy4nhm65zv26" data-c="CHL-MSPL-BLR" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0.01;" aria-hidden="true"></span>
 </body>
 </html>

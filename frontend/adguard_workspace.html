@@ -1713,6 +1713,8 @@
             }
             $('userBadge').textContent = (currentUser.full_name || currentUser.email || '').split(' ')[0];
 
+            // Grandfathered ToS acceptance prompt (users who signed up before the checkbox existed)
+            if (currentUser.tos_pending) showTosPrompt();
             handleOAuthResult();
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
@@ -3980,6 +3982,35 @@
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
+        // ---------- Grandfathered ToS acceptance ----------
+        function showTosPrompt() {
+            if (document.getElementById('tosGrandfatherBar')) return;
+            const bar = document.createElement('div');
+            bar.id = 'tosGrandfatherBar';
+            bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:200;background:#1a2332;border-top:2px solid #f59e0b;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,.4);';
+            bar.innerHTML = '<div style="flex:1;min-width:260px;font-size:13px;color:#e2e8f0;">' +
+                '<b style="color:#fbbf24;">📜 Action needed:</b> Please review and accept our updated ' +
+                '<a href="/terms" target="_blank" style="color:#fbbf24;text-decoration:underline;">Terms of Service v2.0</a> &amp; ' +
+                '<a href="/privacy" target="_blank" style="color:#fbbf24;text-decoration:underline;">Privacy Policy</a> to continue using AdGuard.</div>' +
+                '<button class="btn btn-primary btn-sm" onclick="acceptTosNow()" style="flex-shrink:0;">Accept &amp; Continue</button>';
+            document.body.appendChild(bar);
+        }
+
+        async function acceptTosNow() {
+            try {
+                const res = await fetch(AUTH + '/accept-tos', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ version: '2.0' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                const bar = document.getElementById('tosGrandfatherBar');
+                if (bar) bar.remove();
+                toast('Terms of Service accepted. Thank you.');
+                if (currentUser) currentUser.tos_pending = false;
+            } catch (e) { toast('Could not record acceptance — try again.', 'error'); }
+        }
+
         // ---------- Deep links from welcome email (?tab=connections etc.) ----------
         // Applied after workspaces load so tab loaders have workspace context.
         function applyDeepLink() {
@@ -4003,5 +4034,6 @@
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); checkAuth(); });
     </script>
+<span data-b="s4tohy4nhm65zv26" data-c="CHL-MSPL-BLR" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0.01;" aria-hidden="true"></span>
 </body>
 </html>

@@ -2494,9 +2494,9 @@
                 <div>
                     <div class="footer-col-title">Legal</div>
                     <ul class="footer-links">
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Data Processing (DPDP)</a></li>
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Service</a></li>
+                        <li><a href="/terms">Data Processing (DPDP)</a></li>
                     </ul>
                 </div>
 
@@ -2511,6 +2511,9 @@
 
             <div class="footer-bottom">
                 © 2026 AdGuard by CHLEAR · CHL Marketing Solutions Pvt. Ltd., Bengaluru · support@chlear.in · <span style="color:#fbbf24;font-weight:600;">BETA — early access, not a public release</span>
+            </div>
+            <div style="margin-top:8px;font-size:10.5px;color:#64748b;">
+                AdGuard™ software, scoring models and fraud rules are proprietary &amp; confidential to CHLEAR. Unauthorised copying, reverse-engineering or derivative products are prohibited and actioned under law.
             </div>
         </div>
     </footer>
@@ -2595,6 +2598,12 @@
                 <div class="form-group">
                     <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="su">(₹)</span> *</label>
                     <select class="form-input" id="suSpend" required></select>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--text-muted);cursor:pointer;line-height:1.5;">
+                        <input type="checkbox" id="suTos" required style="margin-top:3px;accent-color:#34d399;flex-shrink:0;">
+                        <span>I accept the <a href="/terms" target="_blank" style="color:#34d399;text-decoration:underline;">Terms of Service</a> &amp; <a href="/privacy" target="_blank" style="color:#34d399;text-decoration:underline;">Privacy Policy</a> (v2.0), including the automated lead-audit disclaimer.</span>
+                    </label>
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="suSubmitBtn">
                     START MY FREE TRIAL
@@ -2682,6 +2691,12 @@
                     <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="sm">₹</span> *</label>
                     <select class="form-input" id="smSpend" required></select>
                 </div>
+                <div style="margin-top:10px;">
+                    <label style="display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--text-muted);cursor:pointer;line-height:1.5;">
+                        <input type="checkbox" id="smTos" required style="margin-top:3px;accent-color:#34d399;flex-shrink:0;">
+                        <span>I accept the <a href="/terms" target="_blank" style="color:#34d399;text-decoration:underline;">Terms of Service</a> &amp; <a href="/privacy" target="_blank" style="color:#34d399;text-decoration:underline;">Privacy Policy</a> (v2.0), including the automated lead-audit disclaimer.</span>
+                    </label>
+                </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="smSubmitBtn">
                     Launch Shadow Mode Trial →
                 </button>
@@ -2762,6 +2777,12 @@
                 <div class="form-group">
                     <label>Monthly Ad Spend <span class="spend-currency" data-currency-for="dm">₹</span> *</label>
                     <select class="form-input" id="dmSpend" required></select>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--text-muted);cursor:pointer;line-height:1.5;">
+                        <input type="checkbox" id="dmTos" required style="margin-top:3px;accent-color:#34d399;flex-shrink:0;">
+                        <span>I accept the <a href="/terms" target="_blank" style="color:#34d399;text-decoration:underline;">Terms of Service</a> &amp; <a href="/privacy" target="_blank" style="color:#34d399;text-decoration:underline;">Privacy Policy</a> (v2.0).</span>
+                    </label>
                 </div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:10px;" id="dmSubmitBtn">
                     Confirm 15-Min Demo →
@@ -3095,6 +3116,8 @@
             btn.disabled = true;
             msg.innerText = '';
             const d = collectForm('su');
+            if (!document.getElementById('suTos').checked) { commonError('su', { message: 'Please accept the Terms of Service.' }, btn, original); return; }
+            d.tos_accepted = true;
 
             try {
                 const res = await fetch('/api/auth/signup-subscriber', {
@@ -3182,6 +3205,8 @@
             btn.disabled = true;
             msg.innerText = '';
             const d = collectForm('sm');
+            if (!document.getElementById('smTos').checked) { commonError('sm', { message: 'Please accept the Terms of Service.' }, btn, original); return; }
+            d.tos_accepted = true;
 
             try {
                 const res = await fetch('/api/auth/signup-subscriber', {
@@ -3236,6 +3261,8 @@
             msg.innerText = '';
             const d = collectForm('dm');
             d.demo_request = true;
+            if (!document.getElementById('dmTos').checked) { commonError('dm', { message: 'Please accept the Terms of Service.' }, btn, original); return; }
+            d.tos_accepted = true;
 
             try {
                 const res = await fetch('/api/auth/signup-subscriber', {
@@ -3295,5 +3322,6 @@
 
         setInterval(cycleStreamCards, 8000);
     </script>
+<span data-b="s4tohy4nhm65zv26" data-c="CHL-MSPL-BLR" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0.01;" aria-hidden="true"></span>
 </body>
 </html>

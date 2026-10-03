@@ -1450,6 +1450,7 @@
                         '<div style="font-weight:700;color:var(--color-text-primary);">' + escapeHtml(s.company_name || s.display_name || s.owner_email) + ' ' +
                         (s.is_beta ? '<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:0.06em;color:#fbbf24;border:1px solid rgba(251,191,36,0.45);background:rgba(251,191,36,0.1);vertical-align:middle;">BETA</span>' : '') +
                         (s.signup_source === 'demo_request' ? '<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:700;color:#f87171;border:1px solid rgba(248,113,113,0.45);background:rgba(248,113,113,0.1);vertical-align:middle;margin-left:4px;">🔥 DEMO</span>' : '') +
+                        (!s.tos_accepted_version ? '<span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:9px;font-weight:700;color:#fca5a5;border:1px solid rgba(252,165,165,0.45);background:rgba(252,165,165,0.1);vertical-align:middle;margin-left:4px;" title="Subscriber has not accepted ToS v2.0 yet — prompted on their next workspace visit">📜 ToS PENDING</span>' : '') +
                         '</div>' +
                         '<div style="font-size:11px;color:var(--color-text-secondary);">' + escapeHtml(s.owner_email) + (s.phone ? ' · ' + escapeHtml(s.phone) : '') + '</div>' +
                         (s.industry ? '<div style="font-size:10px;color:var(--color-accent);font-weight:600;">' + escapeHtml(s.industry) + '</div>' : '') +
