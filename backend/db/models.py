@@ -443,6 +443,7 @@ class User(Base):
     onboarding_token = Column(String, nullable=True, unique=True, index=True)
     onboarding_token_expires_at = Column(DateTime, nullable=True)
     onboarding_completed = Column(Boolean, default=False)
+    welcome_email_sent = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

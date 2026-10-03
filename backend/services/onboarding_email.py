@@ -443,7 +443,7 @@ def send_adguard_welcome_aboard(
     subject = "Welcome Aboard! Your Toolkit to Get Started"
 
     trial_note = (
-        "Your trial includes <b>100 free leads</b> to score - enough to see exactly how much junk you've been paying for."
+        "Your trial includes <b>300 free leads</b> to score - enough to see exactly how much junk you've been paying for."
         if is_trial
         else "Your subscription is active - every lead from your connected accounts is scored automatically."
     )

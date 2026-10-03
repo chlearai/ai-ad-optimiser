@@ -359,8 +359,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 def _send_adguard_welcome_email_bg(user):
-    """Email #3 of the signup journey: welcome + getting-started toolkit after first login."""
+    """Email #3 of the signup journey: welcome + getting-started toolkit after first login.
+
+    AdGuard subscribers only (role=user + access_adguard), exactly once per user
+    (welcome_email_sent flag). Admins/staff logins must NOT receive it.
+    """
     try:
+        if user.role != "user" or not user.access_adguard:
+            return
+        if getattr(user, "welcome_email_sent", False):
+            return
         ws = None
         try:
             db_tmp = next(get_db())
@@ -370,18 +378,25 @@ def _send_adguard_welcome_email_bg(user):
         from backend.services.onboarding_email import send_adguard_welcome_aboard
         threading.Thread(
             target=_welcome_email_worker,
-            args=(user.email, user.full_name or user.email, bool(ws and ws.plan == "trial")),
+            args=(user.email, user.full_name or user.email, bool(ws and ws.plan == "trial"), user.id),
             daemon=True,
         ).start()
     except Exception as e:
         logger.warning(f"Welcome email trigger failed for {user.email}: {e}")
 
 
-def _welcome_email_worker(email, name, is_trial):
+def _welcome_email_worker(email, name, is_trial, user_id=None):
     try:
         from backend.services.onboarding_email import send_adguard_welcome_aboard
         result = send_adguard_welcome_aboard(recipient_email=email, full_name=name, is_trial=is_trial, timeout=30)
         logger.info(f"AdGuard welcome aboard email to {email}: sent={result.get('sent')} err={result.get('error')}")
+        if result.get("sent") and user_id:
+            try:
+                db_tmp = next(get_db())
+                db_tmp.query(User).filter(User.id == user_id).update({"welcome_email_sent": True})
+                db_tmp.commit()
+            except Exception as e:
+                logger.warning(f"welcome_email_sent flag update failed for user {user_id}: {e}")
     except Exception as e:
         logger.warning(f"Welcome aboard worker failed for {email}: {e}")
 
@@ -537,6 +552,9 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
         args=(user.email, user.full_name or user.email,),
         daemon=True,
     ).start()
+
+    # Email #3: Welcome Aboard — fires at activation (not on login), AdGuard subscribers only
+    _send_adguard_welcome_email_bg(user)
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "user": user.to_dict()}
