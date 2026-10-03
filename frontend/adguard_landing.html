@@ -1647,10 +1647,10 @@
                             <span style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);">8s ago</span>
                         </div>
                         <div class="card-body-text">
-                            Source: Google Search · New device, VPN detected · Trust Score 52/100 · WhatsApp OTP sent
+                            Source: Google Search · New device, VPN detected · Trust Score 52/100 · AI call verification triggered
                         </div>
                         <div class="card-footer-chips">
-                            <span class="chip chip-success">OTP verified in 21 s → moved to Verified</span>
+                            <span class="chip chip-success">AI call verified in 40 s → moved to Verified</span>
                         </div>
                     </div>
 
@@ -1774,7 +1774,7 @@
                     <div class="step-number">02</div>
                     <h3 class="step-title">Verify</h3>
                     <p class="step-copy">
-                        Borderline leads get a quick WhatsApp OTP. Genuine leads get an AI call within 5 minutes that confirms the person and their intent.
+                        Borderline leads get an AI verification call within 5 minutes (Samvaad) that confirms the person and their intent. Leads can also be cross-checked with the OTP your own forms already send.
                     </p>
                 </div>
 
@@ -2131,7 +2131,7 @@
                             </tr>
                             <tr>
                                 <td><strong>Friction for real visitors</strong></td>
-                                <td class="col-adguard"><strong>Only borderline leads see an OTP</strong></td>
+                                <td class="col-adguard"><strong>Zero for real visitors — verification happens on our side</strong></td>
                                 <td>None</td>
                                 <td>None</td>
                                 <td>None</td>
@@ -2273,7 +2273,6 @@
                             <ul class="plan-bullets">
                                 <li>1,000 leads/month</li>
                                 <li>Pre-Submit Interceptor</li>
-                                <li>WhatsApp OTP for borderline leads</li>
                                 <li>Contributes to and protected by FraudGraph</li>
                                 <li>Proof in ₹ dashboard</li>
                                 <li>CRM delivery (Zoho, HubSpot, Salesforce, webhook)</li>
@@ -2297,7 +2296,7 @@
                             <ul class="plan-bullets">
                                 <li>5,000 leads/month</li>
                                 <li>Conversion Firewall</li>
-                                <li>AI call verification (up to 500 calls/month)</li>
+                                <li>AI call verification (300 calls included, more via prepaid packs)</li>
                                 <li>Exclusion audiences on all campaigns</li>
                                 <li>AI intent scoring</li>
                             </ul>
@@ -2318,9 +2317,9 @@
                             <strong>Everything in Pro, plus:</strong>
                             <ul class="plan-bullets">
                                 <li>Unlimited leads</li>
-                                <li>Bot Traps</li>
+                                <li>AI call verification (500 calls included, more via prepaid packs)</li>
                                 <li>Google invalid-click evidence packs</li>
-                                <li>Multiple brands and ad accounts</li>
+                                <li>Multiple brands and ad accounts (10 workspaces)</li>
                                 <li>Custom CRM stage mapping</li>
                                 <li>Dedicated account manager</li>
                             </ul>
@@ -2333,7 +2332,7 @@
             </div>
 
             <p class="pricing-footer-note">
-                Prices exclude GST. Extra AI verification calls billed at ₹<span id="extraCallPriceSpan">4</span> per call.
+                Prices exclude GST. AI call verification on prepaid packs: 100 calls ₹799 · 300 calls ₹1,999 · 500 calls ₹2,999 — never expire.
             </p>
         </div>
     </section>
@@ -2354,7 +2353,7 @@
                         <span class="faq-icon">+</span>
                     </div>
                     <div class="faq-answer">
-                        Rarely, and never silently on a hunch. Clear bots are blocked; borderline leads get a quick WhatsApp OTP instead of a block. Shadow Mode lets you check our judgement on your own traffic before anything is blocked.
+                        Rarely, and never silently on a hunch. Clear bots are blocked; borderline leads get a quick AI verification call (and cross-checks with the OTP your own forms already send) instead of a block. Shadow Mode lets you check our judgement on your own traffic before anything is blocked.
                     </div>
                 </div>
 
@@ -2796,15 +2795,11 @@
     <script>
         // CONFIGURABLE BRAND & PRICING IDENTIFIERS
         const BRAND_NAME = 'AdGuard';
-        const EXTRA_AI_CALL_PRICE = 4; // Configurable extra AI verification call price in ₹
+        const EXTRA_AI_CALL_PRICE = 4; // deprecated: extras now sold as prepaid packs (kept for calculator compat)
         const SHOW_CASE_STUDY = false; // Flag to toggle pilot case study component
         const RAZORPAY_MODE = 'none'; // 'live' for real payment checkout, 'none' or 'test' redirects to signup flow
 
-        // Set dynamic extra call price in pricing footnote
-        const extraCallSpan = document.getElementById('extraCallPriceSpan');
-        if (extraCallSpan) {
-            extraCallSpan.innerText = EXTRA_AI_CALL_PRICE;
-        }
+        // Call verification extras now sold as prepaid packs (see pricing footnote) — no per-call billing
 
         // Toggle case study card based on flag
         const caseStudyCard = document.getElementById('pilotCaseStudyCard');
