@@ -408,6 +408,7 @@ def refresh_data(
     platforms = ["meta", "google"] if req.platform == "combined" else [req.platform]
     results = []
     skipped = []
+    skip_reasons = []
     for platform in platforms:
         try:
             db.rollback()  # clear any aborted transaction left by a previous platform's failure
@@ -417,25 +418,29 @@ def refresh_data(
         if not account:
             raise HTTPException(status_code=404, detail="Mantri client account not found")
         if not _platform_connected(account, platform):
+            reason = "not connected"
+            skip_reasons.append(f"{platform}: {reason}")
             skipped.append(platform)
-            logger.info(f"Mantri MIS refresh: skipping {platform} (not connected)")
+            logger.info(f"Mantri MIS refresh: skipping {platform} ({reason})")
             continue
         try:
             results.append(_refresh_platform(db, project, platform, valid_start, valid_end, user))
         except HTTPException as e:
             db.rollback()
+            skip_reasons.append(f"{platform}: {e.detail}")
             skipped.append(platform)
             logger.warning(f"Mantri MIS refresh: {platform} failed: {e.detail}")
         except Exception as e:
             db.rollback()
+            skip_reasons.append(f"{platform}: {type(e).__name__}: {e}")
             skipped.append(platform)
             logger.error(f"Mantri MIS refresh: {platform} failed unexpectedly: {e}")
 
     if not results and skipped:
-        skipped_str = ", ".join(skipped)
+        skipped_str = "; ".join(skip_reasons) if skip_reasons else ", ".join(skipped)
         raise HTTPException(
             status_code=400,
-            detail=f"No platforms could be refreshed. Not connected or failed: {skipped_str}. "
+            detail=f"No platforms could be refreshed. {skipped_str}. "
                    f"Please check account connections in AdPulse → Manage Accounts."
         )
 
