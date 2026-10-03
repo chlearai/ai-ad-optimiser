@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard Academy — Subscriber Training</title>
+    <meta name="robots" content="noindex, nofollow">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0b1120; color: #e2e8f0; min-height: 100vh; }
+        .topbar { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #fff; }
+        .ag-logo { background: #d97706; color: #fff; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 800; }
+        .beta { font-size: 10px; letter-spacing: 0.08em; color: #fbbf24; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.08); border-radius: 20px; padding: 3px 10px; font-weight: 700; }
+        .container { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+        h1 { font-size: 26px; color: #fff; }
+        .sub { color: #94a3b8; margin-top: 6px; font-size: 14px; }
+        .lesson { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin-top: 14px; overflow: hidden; }
+        .lesson-head { padding: 16px 20px; cursor: pointer; display: flex; align-items: center; gap: 14px; }
+        .lesson-head:hover { background: #141e33; }
+        .lesson-num { width: 34px; height: 34px; border-radius: 50%; background: rgba(217,119,6,0.15); color: #f59e0b; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+        .lesson-title { font-weight: 600; color: #f1f5f9; }
+        .lesson-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .chev { margin-left: auto; color: #64748b; transition: transform .2s; }
+        .lesson.open .chev { transform: rotate(90deg); }
+        .lesson-body { display: none; padding: 0 20px 20px 68px; font-size: 14px; line-height: 1.7; color: #cbd5e1; }
+        .lesson.open .lesson-body { display: block; }
+        .lesson-body ul { margin: 10px 0 10px 20px; }
+        .lesson-body li { margin-bottom: 6px; }
+        .lesson-body b { color: #f1f5f9; }
+        .video-slot { background: #16203233; border: 1px dashed #334155; border-radius: 8px; padding: 18px; text-align: center; color: #64748b; font-size: 12px; margin: 12px 0; }
+        .step { display: flex; gap: 10px; margin-top: 10px; }
+        .step input[type="checkbox"] { accent-color: #d97706; width: 16px; height: 16px; margin-top: 3px; }
+        .cta { display: inline-block; margin-top: 10px; padding: 8px 18px; background: #d97706; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+        /* lock screen */
+        .lock { max-width: 420px; margin: 90px auto; background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 36px 30px; text-align: center; }
+        .lock .ic { font-size: 40px; }
+        .lock h2 { color: #fff; margin: 12px 0 8px; }
+        .lock p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+        .lock a { display: inline-block; padding: 10px 26px; background: #d97706; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; }
+        .back { color: #94a3b8; font-size: 13px; text-decoration: none; }
+        .back:hover { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand"><div class="ag-logo">AG</div> AdGuard <span class="beta">BETA</span></div>
+        <a class="back" href="/adguard-workspace">← Back to Workspace</a>
+    </div>
+
+    <div id="lockScreen" class="lock" style="display:none;">
+        <div class="ic">🔐</div>
+        <h2>Subscribers only</h2>
+        <p>AdGuard Academy is exclusive to registered subscribers. Sign in with your AdGuard account to unlock the lessons.</p>
+        <a href="/adguard/login?return_to=/adguard/academy">Sign in to continue →</a>
+    </div>
+
+    <div id="academyContent" class="container" style="display:none;">
+        <h1>🎓 AdGuard Academy</h1>
+        <p class="sub">Bite-sized walkthroughs to train your team. One lesson at a time — most take under 10 minutes.</p>
+
+        <div class="lesson open">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">1</div>
+                <div><div class="lesson-title">What is lead fraud &amp; junk — and why you're paying for it</div><div class="lesson-meta">Foundation · 5 min read</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <p>Every click on your ad costs money. But 15–30% of leads from paid campaigns are never real buyers — bots, competitors checking prices, form-spam, duplicate entries and accidental clicks.</p>
+                <ul>
+                    <li><b>Bots &amp; crawlers</b> — automated scripts filling your forms thousands of times.</li>
+                    <li><b>Competitor clicks</b> — rivals draining your budget by clicking your ads and submitting junk.</li>
+                    <li><b>Unqualified traffic</b> — people outside your service area, or just browsing with no intent.</li>
+                    <li><b>Duplicates</b> — the same person submitting the form twice inflates CPL and confuses your sales team.</li>
+                </ul>
+                <p>AdGuard scores every lead in real time so your team only calls humans who matter — and the evidence file tells you exactly what to claim back from Google.</p>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">2</div>
+                <div><div class="lesson-title">Connecting your Google &amp; Meta accounts</div><div class="lesson-meta">Setup · 5 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li>Open your workspace → <b>Connections</b> tab (next to Dashboard).</li>
+                    <li>Click <b>Connect Google Ads</b> → sign in with the Google account that manages your campaigns → allow read + lead access.</li>
+                    <li>Click <b>Connect Meta Ads</b> → log into Facebook → pick your ad account → approve lead access.</li>
+                    <li>Pick which campaigns should go <b>LIVE</b> for screening — only active campaigns are scored.</li>
+                </ul>
+                <p>OAuth only — your ad platform passwords are never seen or stored by AdGuard.</p>
+                <a class="cta" href="/adguard-workspace?tab=connections">Open Connections →</a>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">3</div>
+                <div><div class="lesson-title">Reading your lead scores (green / grey / red)</div><div class="lesson-meta">Daily use · 7 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li><b>🟢 Green (verified)</b> — clean, human, ready for your sales team. Delivered to CRM instantly.</li>
+                    <li><b>⚪ Grey (review)</b> — suspicious signals but not conclusive; check on your Dashboard screen.</li>
+                    <li><b>🔴 Red (junk)</b> — bot patterns, duplicate or fraudulent; blocked and logged with evidence.</li>
+                </ul>
+                <p>Your <b>Dashboard</b> shows the live stream, junk rate and money saved. <b>Reports</b> gives weekly trends per campaign.</p>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">4</div>
+                <div><div class="lesson-title">Money Shield thresholds explained</div><div class="lesson-meta">Protection · 6 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li><b>Monitor</b> (default) — AdGuard watches junk rates on every campaign and flags breaches. Nothing is paused automatically. Safe way to start.</li>
+                    <li><b>Protect</b> — when a campaign's junk rate crosses your threshold (default 40%), AdGuard auto-pauses it and emails you instantly. Turn this on once you trust the scores.</li>
+                    <li>Set both under <b>Settings</b> → Protection Mode. Alerts go to the emails configured in Settings.</li>
+                </ul>
+                <a class="cta" href="/adguard-workspace?tab=settings">Open Settings →</a>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">5</div>
+                <div><div class="lesson-title">Installing the Script Tag (stop bots at the submit button)</div><div class="lesson-meta">Protection · 10 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <div class="step"><input type="checkbox"><span>In your workspace left panel, click <b>⚡ Script Tag</b> and copy the snippet.</span></div>
+                <div class="step"><input type="checkbox"><span>Paste it into the <b>&lt;head&gt;</b> (or before <b>&lt;/body&gt;</b>) of every landing page that collects leads.</span></div>
+                <div class="step"><input type="checkbox"><span>WordPress/Elementor: use the "Custom Code" or header scripts field. Shopify: theme.liquid. Webflow: Site Settings → Custom Code.</span></div>
+                <div class="step"><input type="checkbox"><span>Submit a test form yourself — the Interceptor verdict appears within ~2 seconds, fail-open (your forms keep working even if the tag ever fails).</span></div>
+                <a class="cta" href="/adguard-workspace?tab=script">Open Script Tag →</a>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">6</div>
+                <div><div class="lesson-title">CRM delivery setup (LeadSquared, Zoho, HubSpot, webhook)</div><div class="lesson-meta">Delivery · 8 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li>Go to <b>Settings</b> → <b>Deliver to a CRM</b> → pick yours from the grid (16+ CRMs listed).</li>
+                    <li>Paste your CRM credentials (API keys from your CRM admin panel), click <b>Connect</b>, then <b>Test Connection</b> — a test lead should appear in your CRM.</li>
+                    <li>Only 🟢 <b>verified leads</b> are pushed — junk never reaches your sales pipeline.</li>
+                    <li>If your leads already flow from Google/Meta straight into your CRM, keep it set to <b>None</b>.</li>
+                </ul>
+                <a class="cta" href="/adguard-workspace?tab=settings&open=crm">Set CRM Delivery →</a>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">7</div>
+                <div><div class="lesson-title">Reports &amp; weekly email digests</div><div class="lesson-meta">Insights · 5 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li><b>Reports tab</b>: junk rate trend, verified leads, cost saved — filter by last 7/30 days or custom range, exportable to CSV.</li>
+                    <li><b>Weekly digest</b>: every Monday an email summary lands in the alert emails you set in Settings.</li>
+                    <li>Use the trend to spot campaigns that attract junk — then tighten targeting or pause repeat offenders.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="lesson">
+            <div class="lesson-head" onclick="this.parentElement.classList.toggle('open')">
+                <div class="lesson-num">8</div>
+                <div><div class="lesson-title">Claiming click refunds from Google (evidence file)</div><div class="lesson-meta">Advanced · 10 min</div></div>
+                <span class="chev">›</span>
+            </div>
+            <div class="lesson-body">
+                <div class="video-slot">🎬 Video walkthrough coming soon</div>
+                <ul>
+                    <li>AdGuard logs every flagged invalid click with its <b>GCLID</b>, timestamp, campaign and cost.</li>
+                    <li>Export the evidence CSV and claim invalid-traffic refunds from the Google Ads support team — legitimate claims are routinely credited.</li>
+                    <li>Keep claims to genuine flagged clicks; use the file monthly. Detailed walkthrough with exact email template arrives with the Evidence feature.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const token = localStorage.getItem('adoptima_token');
+            if (!token) {
+                document.getElementById('lockScreen').style.display = 'block';
+                return;
+            }
+            fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => { if (!r.ok) throw new Error('n'); return r.json(); })
+                .then(u => {
+                    if (u && (u.access_adguard || u.role === 'admin' || u.role === 'superadmin')) {
+                        document.getElementById('academyContent').style.display = 'block';
+                    } else {
+                        document.getElementById('lockScreen').style.display = 'block';
+                    }
+                })
+                .catch(() => { document.getElementById('lockScreen').style.display = 'block'; });
+        })();
+    </script>
+</body>
+</html>

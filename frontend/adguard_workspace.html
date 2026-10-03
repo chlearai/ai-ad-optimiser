@@ -1656,7 +1656,7 @@
         }
 
         async function checkAuth() {
-            if (!token) { window.location.href = '/adguard/login'; return; }
+            if (!token) { window.location.href = '/adguard/login?return_to=' + encodeURIComponent(window.location.pathname + window.location.search); return; }
             try {
                 currentUser = await fetch(AUTH + '/me', { headers: { 'Authorization': 'Bearer ' + token } }).then(r => r.json());
             } catch (e) { window.location.href = '/adguard/login'; return; }
@@ -1685,6 +1685,7 @@
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
             loadLeads();
+            applyDeepLink();
         }
 
         function logout() {
@@ -3824,6 +3825,27 @@
         function escapeHtml(s) {
             if (!s) return '';
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ---------- Deep links from welcome email (?tab=connections etc.) ----------
+        // Applied after workspaces load so tab loaders have workspace context.
+        function applyDeepLink() {
+            const params = new URLSearchParams(window.location.search);
+            const tab = (params.get('tab') || '').toLowerCase();
+            const open = (params.get('open') || '').toLowerCase();
+            const allowed = ['dashboard', 'reports', 'connections', 'support', 'settings'];
+            if (!allowed.includes(tab)) return;
+            switchTab(tab);
+            if (tab === 'settings' && open === 'crm') {
+                setTimeout(() => {
+                    try { openCrmPicker(); } catch (e) {}
+                }, 600);
+            }
+            if (tab === 'script') {
+                setTimeout(() => {
+                    try { openScriptTagPanel(); } catch (e) {}
+                }, 600);
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); checkAuth(); });

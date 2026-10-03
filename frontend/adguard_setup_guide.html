@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGuard Setup Guide — First Lead in Under 10 Minutes</title>
+    <meta name="robots" content="noindex, nofollow">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0b1120; color: #e2e8f0; min-height: 100vh; }
+        .topbar { background: #0f172a; border-bottom: 1px solid #1e293b; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #fff; }
+        .ag-logo { background: #d97706; color: #fff; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; font-weight: 800; }
+        .beta { font-size: 10px; letter-spacing: 0.08em; color: #fbbf24; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.08); border-radius: 20px; padding: 3px 10px; font-weight: 700; }
+        .container { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+        h1 { font-size: 26px; color: #fff; }
+        .sub { color: #94a3b8; margin-top: 6px; font-size: 14px; }
+        .progress { margin: 18px 0 6px; font-size: 13px; color: #f59e0b; font-weight: 600; }
+        .step-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin-top: 14px; padding: 18px 20px; display: flex; gap: 14px; }
+        .step-card.done { border-color: rgba(16,185,129,0.4); }
+        .step-num { width: 34px; height: 34px; border-radius: 50%; background: rgba(217,119,6,0.15); color: #f59e0b; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+        .step-card.done .step-num { background: rgba(16,185,129,0.15); color: #34d399; }
+        .step-body { flex: 1; }
+        .step-title { font-weight: 600; color: #f1f5f9; }
+        .step-desc { font-size: 13.5px; color: #cbd5e1; line-height: 1.7; margin-top: 6px; }
+        .step-desc b { color: #f1f5f9; }
+        .shot { background: #16203233; border: 1px dashed #334155; border-radius: 8px; padding: 16px; text-align: center; color: #64748b; font-size: 12px; margin: 10px 0 0; }
+        .cta { display: inline-block; margin-top: 10px; padding: 8px 18px; background: #d97706; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+        .check { accent-color: #10b981; width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+        .lock { max-width: 420px; margin: 90px auto; background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 36px 30px; text-align: center; }
+        .lock .ic { font-size: 40px; }
+        .lock h2 { color: #fff; margin: 12px 0 8px; }
+        .lock p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+        .lock a { display: inline-block; padding: 10px 26px; background: #d97706; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; }
+        .back { color: #94a3b8; font-size: 13px; text-decoration: none; }
+        .back:hover { color: #f59e0b; }
+        .done-banner { display: none; margin-top: 22px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.4); color: #34d399; border-radius: 12px; padding: 16px 20px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand"><div class="ag-logo">AG</div> AdGuard <span class="beta">BETA</span></div>
+        <a class="back" href="/adguard-workspace">← Back to Workspace</a>
+    </div>
+
+    <div id="lockScreen" class="lock" style="display:none;">
+        <div class="ic">🔐</div>
+        <h2>Subscribers only</h2>
+        <p>The Setup Guide is exclusive to registered subscribers. Sign in with your AdGuard account to open it.</p>
+        <a href="/adguard/login?return_to=/adguard/setup-guide">Sign in to continue →</a>
+    </div>
+
+    <div id="guideContent" class="container" style="display:none;">
+        <h1>🕎 Setup Guide</h1>
+        <p class="sub">Connect your accounts + get your first scored lead in under 10 minutes. Tick steps off as you go.</p>
+        <div class="progress" id="progressText">0 of 8 done</div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">1</div>
+            <div class="step-body">
+                <div class="step-title">Open your Connections tab</div>
+                <div class="step-desc">In your workspace, click <b>Connections</b> — the third tab next to Dashboard and Reports. This is where every ad platform is linked.</div>
+                <a class="cta" href="/adguard-workspace?tab=connections">Open Connections →</a>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">2</div>
+            <div class="step-body">
+                <div class="step-title">Connect Google Ads</div>
+                <div class="step-desc">Click <b>Connect Google Ads</b> → sign in with the Google account that manages your campaigns → allow access. Takes ~60 seconds.</div>
+                <div class="shot">📷 Screenshot coming soon</div>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">3</div>
+            <div class="step-body">
+                <div class="step-title">Connect Meta Ads</div>
+                <div class="step-desc">Click <b>Connect Meta Ads</b> → log into the Facebook profile tied to your Business Manager → pick your ad account → approve lead access.</div>
+                <div class="shot">📷 Screenshot coming soon</div>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">4</div>
+            <div class="step-body">
+                <div class="step-title">Choose campaigns to screen (Go Live)</div>
+                <div class="step-desc">Tick the campaigns you want scored. Only <b>active</b> campaigns listed as LIVE are screened and delivered to CRM.</div>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">5</div>
+            <div class="step-body">
+                <div class="step-title">(Recommended) Install the Script Tag</div>
+                <div class="step-desc">Left panel → <b>⚡ Script Tag</b> → copy the one-line snippet → paste into the <b>&lt;head&gt;</b> of every landing page. This stops bot submissions at the form itself.</div>
+                <a class="cta" href="/adguard-workspace?tab=script">Open Script Tag →</a>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">6</div>
+            <div class="step-body">
+                <div class="step-title">Wait for your first leads</div>
+                <div class="step-desc">Your Dashboard live stream starts scoring leads in real time — green (verified), grey (review), red (junk). New leads usually appear within minutes of connecting.</div>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">7</div>
+            <div class="step-body">
+                <div class="step-title">Set alert emails</div>
+                <div class="step-desc">Settings → <b>Alert &amp; Report Emails</b> → add up to 5 addresses. Weekly reports (Mondays) + shield alerts go there.</div>
+                <a class="cta" href="/adguard-workspace?tab=settings">Open Settings →</a>
+            </div>
+        </div>
+
+        <div class="step-card" data-step>
+            <input type="checkbox" class="check">
+            <div class="step-num">8</div>
+            <div class="step-body">
+                <div class="step-title">(Optional) Connect your CRM</div>
+                <div class="step-desc">Settings → <b>Deliver to a CRM</b> → pick from the grid (LeadSquared, Zoho, HubSpot, 16+ more) → paste credentials → <b>Test Connection</b>. Verified leads flow in real time.</div>
+                <a class="cta" href="/adguard-workspace?tab=settings&open=crm">Set CRM Delivery →</a>
+            </div>
+        </div>
+
+        <div class="done-banner" id="doneBanner">🎉 All done! Your shield is live — every lead from your connected campaigns is now scored before it reaches your team.</div>
+    </div>
+
+    <script>
+        (function () {
+            const token = localStorage.getItem('adoptima_token');
+            if (!token) { document.getElementById('lockScreen').style.display = 'block'; return; }
+            fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => { if (!r.ok) throw new Error('n'); return r.json(); })
+                .then(u => {
+                    if (u && (u.access_adguard || u.role === 'admin' || u.role === 'superadmin')) {
+                        document.getElementById('guideContent').style.display = 'block';
+                        const boxes = document.querySelectorAll('[data-step] input.check');
+                        const KEY = 'ag_setup_guide_progress';
+                        const saved = JSON.parse(localStorage.getItem(KEY) || '[]');
+                        boxes.forEach((b, i) => { b.checked = !!saved[i]; if (b.checked) b.closest('.step-card').classList.add('done'); });
+                        function update() {
+                            const state = [];
+                            boxes.forEach((b, i) => { state[i] = b.checked; b.closest('.step-card').classList.toggle('done', b.checked); });
+                            localStorage.setItem(KEY, JSON.stringify(state));
+                            const n = state.filter(Boolean).length;
+                            document.getElementById('progressText').textContent = n + ' of ' + boxes.length + ' done';
+                            document.getElementById('doneBanner').style.display = n === boxes.length ? 'block' : 'none';
+                        }
+                        boxes.forEach(b => b.addEventListener('change', update));
+                        update();
+                    } else {
+                        document.getElementById('lockScreen').style.display = 'block';
+                    }
+                })
+                .catch(() => { document.getElementById('lockScreen').style.display = 'block'; });
+        })();
+    </script>
+</body>
+</html>

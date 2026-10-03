@@ -178,13 +178,18 @@
 
     <script>
         // Prefill email from ?email= query param (registration / invite flows)
+        const loginParams = new URLSearchParams(window.location.search);
+        const returnTo = loginParams.get('return_to') || '';
+        function safeReturnTo() {
+            // Only allow relative in-app paths (open redirect guard)
+            return returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '';
+        }
         (function () {
-            const params = new URLSearchParams(window.location.search);
-            const email = params.get('email');
+            const email = loginParams.get('email');
             if (email) document.getElementById('custEmail').value = email;
-            // Already logged in? Go straight to workspace.
+            // Already logged in? Go straight to workspace (or return target).
             if (localStorage.getItem('adoptima_token')) {
-                window.location.href = '/adguard-workspace';
+                window.location.href = safeReturnTo() || '/adguard-workspace';
             }
         })();
 
@@ -225,7 +230,7 @@
                 }
 
                 localStorage.setItem('adoptima_token', data.access_token);
-                window.location.href = '/adguard-workspace';
+                window.location.href = safeReturnTo() || '/adguard-workspace';
             } catch (err) {
                 errBox.textContent = err.message;
                 errBox.style.display = 'block';

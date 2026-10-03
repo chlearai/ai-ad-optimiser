@@ -299,8 +299,8 @@ def send_adguard_invite_email(
     msg["Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg["Reply-To"] = sender_email
     msg["X-Mailer"] = "AdGuardMailer/1.0"
-    msg["Precedence"] = "bulk"
-    msg["Auto-Submitted"] = "auto-generated"
+    # NOTE: no Precedence/Auto-Submitted headers here - Gmail silently
+    # spam-filters or drops transactional mail carrying bulk markers.
     msg.attach(MIMEText(payloads["text"], "plain", _charset="utf-8"))
     msg.attach(MIMEText(payloads["html"], "html", _charset="utf-8"))
 
@@ -441,6 +441,7 @@ def send_adguard_welcome_aboard(
     sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
     sender_name = os.getenv("SMTP_SENDER_NAME", "Team AdGuard").strip() or "Team AdGuard"
     subject = "Welcome Aboard! Your Toolkit to Get Started"
+    base_url = (os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or "https://ai-ad-optimiser-production-dd12.up.railway.app").rstrip("/")
 
     trial_note = (
         "Your trial includes <b>300 free leads</b> to score - enough to see exactly how much junk you've been paying for."
@@ -448,6 +449,7 @@ def send_adguard_welcome_aboard(
         else "Your subscription is active - every lead from your connected accounts is scored automatically."
     )
 
+    link_style = "color:#d97706;text-decoration:none;"
     html_body = f"""
     <html><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1c1917;background:#fafaf9;padding:24px;">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;">
@@ -455,16 +457,16 @@ def send_adguard_welcome_aboard(
         <div style="padding:28px 24px;">
             <h2 style="font-size:20px;margin:0 0 6px;">Hello. Your shield is ready.</h2>
             <p style="margin:0 0 16px;font-size:14px;color:#57534e;">Welcome to AdGuard! {trial_note}</p>
-            <p style="margin:0 0 8px;"><b>Your first steps, all free:</b></p>
-            <p style="margin:0 0 6px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Connect Your Ad Accounts</a>:</b> One-click Google &amp; Meta OAuth - no passwords shared with anyone.</p>
-            <p style="margin:0 0 6px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Turn On Money Shield</a>:</b> Auto-flag junk patterns and stop repeat fraud before it costs you.</p>
-            <p style="margin:0 0 16px;">&#9989; <b><a href="#" style="color:#d97706;text-decoration:none;">Set CRM Delivery</a>:</b> Route only verified leads to LeadSquared, Zoho, HubSpot, or a webhook.</p>
+            <p style="margin:0 0 8px;"><b>Your first steps:</b> <span style="font-size:12px;color:#78716c;">(each link opens your workspace &mdash; sign in first)</span></p>
+            <p style="margin:0 0 6px;">&#9989; <b><a href="{base_url}/adguard-workspace?tab=connections" style="{link_style}">Connect Your Ad Accounts</a>:</b> One-click Google &amp; Meta OAuth - no passwords shared with anyone.</p>
+            <p style="margin:0 0 6px;">&#9889; <b><a href="{base_url}/adguard-workspace?tab=script" style="{link_style}">Install the Script Tag</a>:</b> One line on your landing pages stops bot leads at the submit button.</p>
+            <p style="margin:0 0 16px;">&#9989; <b><a href="{base_url}/adguard-workspace?tab=settings&amp;open=crm" style="{link_style}">Set CRM Delivery</a>:</b> Route only verified leads to LeadSquared, Zoho, HubSpot, or a webhook.</p>
 
             <p style="margin:0 0 8px;"><b>Resources for your journey:</b></p>
-            <p style="margin:0 0 6px;">&#127891; <b><a href="#" style="color:#d97706;text-decoration:none;">AdGuard Academy</a>:</b> Bite-sized walkthroughs to train your team.</p>
-            <p style="margin:0 0 6px;">&#128413; <b><a href="#" style="color:#d97706;text-decoration:none;">Setup Guide</a>:</b> Connect accounts + first lead in under 10 minutes.</p>
-            <p style="margin:0 0 6px;">&#63; <b><a href="#" style="color:#d97706;text-decoration:none;">Help Center</a>:</b> Solutions to common questions.</p>
-            <p style="margin:0 0 16px;">&#128200; <b><a href="#" style="color:#d97706;text-decoration:none;">Pricing</a>:</b> Upgrade when your trial runs out.</p>
+            <p style="margin:0 0 6px;">&#127891; <b><a href="{base_url}/adguard/academy" style="{link_style}">AdGuard Academy</a>:</b> Bite-sized walkthroughs to train your team.</p>
+            <p style="margin:0 0 6px;">&#128413; <b><a href="{base_url}/adguard/setup-guide" style="{link_style}">Setup Guide</a>:</b> Connect accounts + first lead in under 10 minutes.</p>
+            <p style="margin:0 0 6px;">&#63; <b><a href="{base_url}/#faq" style="{link_style}">Help Center</a>:</b> Solutions to common questions.</p>
+            <p style="margin:0 0 16px;">&#128200; <b><a href="{base_url}/#pricing" style="{link_style}">Pricing</a>:</b> Starter, Pro &amp; Enterprise - upgrade when your trial runs out.</p>
 
             <p style="margin:0 0 12px;">Need a hand? Reach out at <a href="mailto:shekhar.chlear@gmail.com" style="color:#d97706;">shekhar.chlear@gmail.com</a>, or call us at <b>80509 97977</b>.</p>
             <p style="font-size:13px;color:#78716c;">Stop paying for garbage leads. - Team AdGuard</p>
@@ -474,18 +476,18 @@ def send_adguard_welcome_aboard(
 
     plain_body = f"""Hello,
 
-Welcome to AdGuard! {trial_note if is_trial else ''}
+Welcome to AdGuard! {'Your trial includes 300 free leads to score.' if is_trial else 'Your subscription is active.'}
 
-Your first steps:
-1. Connect Your Ad Accounts (Google + Meta OAuth)
-2. Turn On Money Shield (auto-flag junk patterns)
-3. Set CRM Delivery (LeadSquared / Zoho / HubSpot / webhook)
+Your first steps (each opens your workspace - sign in first):
+1. Connect Your Ad Accounts: {base_url}/adguard-workspace?tab=connections
+2. Install the Script Tag (stop bots at the submit button): {base_url}/adguard-workspace?tab=script
+3. Set CRM Delivery (LeadSquared / Zoho / HubSpot / webhook): {base_url}/adguard-workspace?tab=settings&open=crm
 
 Resources:
-- AdGuard Academy: walkthroughs to train your team
-- Setup Guide: connect + first lead in under 10 minutes
-- Help Center: solutions to common questions
-- Pricing: upgrade when your trial runs out
+- AdGuard Academy: {base_url}/adguard/academy
+- Setup Guide (first lead in under 10 minutes): {base_url}/adguard/setup-guide
+- Help Center (FAQ): {base_url}/#faq
+- Pricing (Starter / Pro / Enterprise): {base_url}/#pricing
 
 Need a hand? shekhar.chlear@gmail.com or call 80509 97977.
 
@@ -518,8 +520,8 @@ def _send_raw_email(
     msg["Date"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg["Reply-To"] = sender_email
     msg["X-Mailer"] = "AdGuardMailer/1.0"
-    msg["Precedence"] = "bulk"
-    msg["Auto-Submitted"] = "auto-generated"
+    # NOTE: no Precedence/Auto-Submitted headers here - Gmail silently
+    # spam-filters or drops transactional mail carrying bulk markers.
     msg.attach(MIMEText(plain_body, "plain", _charset="utf-8"))
     msg.attach(MIMEText(html_body, "html", _charset="utf-8"))
 
