@@ -656,18 +656,17 @@ def _get_or_create_workspace(db: Session, user: User) -> AdGuardAccount:
 
 class CreateWorkspaceRequest(BaseModel):
     name: str
-    platform: Optional[str] = "google"  # which connector to launch after creation
+    platform: Optional[str] = "google"  # which connector to launch after creation ("none" = skip)
 
 
-PLAN_WORKSPACE_LIMITS = {"trial": 1, "starter": 1, "pro": 3, "agency": 10}
+PLAN_WORKSPACE_LIMITS = {"trial": 1, "starter": 1, "pro": 1, "agency": 10, "custom": 1}
 
 
 @router.post("/workspaces/create")
 def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
-    """Multi-account-per-login: create an additional named workspace (plan-limited).
+    """Multi-account-per-login: create an additional named brand workspace (plan-limited).
 
-    Pro = 3 workspaces, Agency = 10. Returns the OAuth URL to connect the new
-    account's platform right away (one flow: create -> consent -> bound to new ws).
+    Trial/Starter/Pro = 1 workspace, Enterprise (agency) = 10.
     """
     _require_adguard_access(user)
     name = (req.name or "").strip()
@@ -675,37 +674,49 @@ def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db),
         raise HTTPException(status_code=400, detail="Workspace name required")
 
     my_ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).all()
-    if user.role in ("admin", "superadmin"):
-        my_count = db.query(AdGuardAccount).count()  # admins manage all; limit applies per-owner
-        my_count = len(my_ws) if my_ws else 0
-    else:
-        my_count = len(my_ws)
+    my_count = len(my_ws)
 
     # Plan limit check (from the user's first workspace plan; default trial)
     plan = (my_ws[0].plan if my_ws else "trial") or "trial"
     limit = PLAN_WORKSPACE_LIMITS.get(plan, 1)
     if my_count >= limit:
+        plan_label = {"trial": "Free trial", "starter": "Starter", "pro": "Pro", "agency": "Enterprise"}.get(plan, plan)
         raise HTTPException(
             status_code=403,
-            detail=f"Plan '{plan}' allows {limit} workspace(s). Upgrade to Pro (3) or Agency (10) for more.",
+            detail=f"Plan '{plan_label}' allows {limit} workspace(s). Additional brand workspaces are available on the Enterprise plan (10).",
         )
 
-    ws = AdGuardAccount(owner_email=user.email, display_name=name)
+    source_ws = my_ws[0] if my_ws else None
+    ws = AdGuardAccount(
+        owner_email=user.email,
+        display_name=name,
+        plan=plan,
+        lead_quota=(PLAN_LIMITS.get(plan, {}).get("lead_quota", 1000)),
+        verification_threshold=source_ws.verification_threshold if source_ws else 70,
+        shield_enabled=bool(source_ws.shield_enabled) if source_ws else True,
+        shield_junk_threshold=source_ws.shield_junk_threshold if source_ws else 40,
+        shield_min_leads=source_ws.shield_min_leads if source_ws else 50,
+        timezone=source_ws.timezone if source_ws else None,
+        signup_source=source_ws.signup_source if source_ws else "self_serve",
+        is_beta=bool(source_ws.is_beta) if source_ws else True,
+    )
     db.add(ws)
     db.commit()
     db.refresh(ws)
 
     platform = (req.platform or "google").lower()
-    try:
-        if platform == "meta":
-            from backend.services.adguard_meta import get_adguard_meta_auth_url
-            url = get_adguard_meta_auth_url(ws.id)
-        else:
-            from backend.services.oauth import get_adguard_auth_url
-            url = get_adguard_auth_url(ws.id)
-    except RuntimeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    return {"workspace_id": ws.id, "display_name": ws.display_name, "authorization_url": url}
+    if platform in ("meta", "google"):
+        try:
+            if platform == "meta":
+                from backend.services.adguard_meta import get_adguard_meta_auth_url
+                url = get_adguard_meta_auth_url(ws.id)
+            else:
+                from backend.services.oauth import get_adguard_auth_url
+                url = get_adguard_auth_url(ws.id)
+        except RuntimeError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        return {"workspace_id": ws.id, "display_name": ws.display_name, "authorization_url": url}
+    return {"workspace_id": ws.id, "display_name": ws.display_name}
 
 
 @router.get("/oauth/connect")
@@ -796,6 +807,23 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
     profile_info = get_meta_profile_info(token)
     meta_email = profile_info.get("email")
     identity_label = meta_email or profile_info.get("name") or get_meta_profile_label(token)
+
+    # Plan limit: max Meta identities per plan (trial/starter/pro = 1, Enterprise = 2)
+    try:
+        admin_emails = {u.email.lower() for u in db.query(User.email).filter(User.role.in_(["admin", "superadmin"])).all()}
+        if not (ws.owner_email and ws.owner_email.lower() in admin_emails):
+            _lim = PLAN_LIMITS.get(ws.plan or "trial", {}).get("connectors", {}).get("meta", 1)
+            _existing = []
+            try:
+                _existing = json.loads(ws.meta_identities) if ws.meta_identities else []
+            except Exception:
+                _existing = []
+            if identity_label and not any(i.get("label") == identity_label or i.get("email") == identity_label for i in _existing):
+                if len(_existing) >= _lim:
+                    plan_name = {"trial": "Free trial", "starter": "Starter", "pro": "Pro"}.get(ws.plan, ws.plan)
+                    return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_error=meta_identity_limit&plan={ws.plan}&limit={_lim}")
+    except Exception as _pe:
+        logger.warning(f"[AdGuard] meta connector limit check failed: {_pe}")
 
     ws.meta_credentials = build_meta_credentials(token)
     ws.meta_is_live = True
@@ -944,6 +972,23 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
 
     if not identity_email:
         identity_email = ws.owner_email or "connected-google-user"
+
+    # Plan limit: max Google identities per plan (trial/starter/pro = 1, Enterprise = 2)
+    try:
+        admin_emails_g = {u.email.lower() for u in db.query(User.email).filter(User.role.in_(["admin", "superadmin"])).all()}
+        if not (ws.owner_email and ws.owner_email.lower() in admin_emails_g):
+            _glim = PLAN_LIMITS.get(ws.plan or "trial", {}).get("connectors", {}).get("google", 1)
+            _gidentities = []
+            try:
+                _gidentities = json.loads(ws.google_identities) if ws.google_identities else []
+            except Exception:
+                _gidentities = []
+            # Existing entry for same email = reconnect (replace), never counts as new
+            _is_new = not any(i.get("email") == identity_email for i in _gidentities)
+            if _is_new and len(_gidentities) >= _glim:
+                return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_error=google_identity_limit&plan={ws.plan}&limit={_glim}")
+    except Exception as _pg:
+        logger.warning(f"[AdGuard] google connector limit check failed: {_pg}")
 
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
@@ -1545,11 +1590,11 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
 # ---------------------------------------------------------------------------
 
 PLAN_LIMITS = {
-    "trial": {"lead_quota": 300, "workspaces": 1},
-    "starter": {"lead_quota": 1000, "workspaces": 1},
-    "pro": {"lead_quota": 5000, "workspaces": 3},
-    "agency": {"lead_quota": -1, "workspaces": 10},
-    "custom": {"lead_quota": 1000, "workspaces": 1},
+    "trial": {"lead_quota": 300, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
+    "starter": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
+    "pro": {"lead_quota": 5000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
+    "agency": {"lead_quota": -1, "workspaces": 10, "connectors": {"google": 2, "meta": 2}},  # Enterprise: 10 brand workspaces
+    "custom": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
 }
 
 

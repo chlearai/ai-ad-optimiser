@@ -1746,7 +1746,8 @@
             }
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
             $('sidebarQuotaWidget').style.display = 'block';
-            $('quotaPlanTag').textContent = (ws.plan || 'trial').toUpperCase();
+            const planNames = { trial: 'FREE TRIAL', starter: 'STARTER', pro: 'PRO', agency: 'ENTERPRISE', custom: 'CUSTOM' };
+            $('quotaPlanTag').textContent = planNames[ws.plan || 'trial'] || (ws.plan || 'trial').toUpperCase();
 
             // Admins never upgrade plans inside subscriber simulation
             const upBtn = $('sidebarUpgradeBtn');
@@ -1754,28 +1755,45 @@
                 upBtn.style.display = isAdmin ? 'none' : 'block';
             }
 
+            // Monthly counter (hard-stop plan quota) with fallback to stored-lead count for legacy rows
             const quota = ws.lead_quota;
-            const count = ws.lead_count || 0;
+            const monthly = (ws.leads_this_month !== undefined && ws.leads_this_month !== null) ? ws.leads_this_month : (ws.lead_count || 0);
+            const count = monthly;
+            // Trial expiry countdown
+            let expiryLine = '';
+            if (ws.plan === 'trial' && ws.plan_expires_at) {
+                const ms = new Date(ws.plan_expires_at) - new Date();
+                if (ms > 0) {
+                    const days = Math.ceil(ms / 86400000);
+                    expiryLine = ' · ' + days + 'd left';
+                }
+            } else if (ws.plan !== 'agency' && ws.plan_expires_at) {
+                const ms = new Date(ws.plan_expires_at) - new Date();
+                if (ms > 0) {
+                    const days = Math.ceil(ms / 86400000);
+                    expiryLine = ' · renews in ' + days + 'd';
+                }
+            }
             if (quota < 0) {
-                $('quotaUsedText').textContent = count + ' leads';
-                $('quotaPctText').textContent = 'Unlimited';
+                $('quotaUsedText').textContent = count.toLocaleString() + ' leads';
+                $('quotaPctText').textContent = 'Unlimited' + expiryLine;
                 $('quotaBar').style.width = '100%';
                 $('quotaBar').className = 'quota-bar';
                 $('quotaAlertBanner').classList.add('hidden');
             } else {
-                const pct = Math.min(100, Math.round((count / (quota || 1)) * 100));
-                $('quotaUsedText').textContent = count.toLocaleString() + ' / ' + quota.toLocaleString() + ' used';
+                const pct = quota > 0 ? Math.min(100, Math.round((count / quota) * 100)) : 100;
+                $('quotaUsedText').textContent = count.toLocaleString() + ' / ' + quota.toLocaleString() + ' this month' + expiryLine;
                 $('quotaPctText').textContent = pct + '%';
                 $('quotaBar').style.width = pct + '%';
                 $('quotaBar').className = 'quota-bar' + (pct >= 95 ? ' danger' : pct >= 80 ? ' warn' : '');
                 if (pct >= 100 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
-                    $('quotaAlertTitle').textContent = '🚫 Free trial used up (' + (ws.plan === 'trial' ? '300 leads audited' : 'plan limit reached') + ')';
-                    $('quotaAlertBody').textContent = ' New leads are paused. Upgrade to a paid plan to continue protection — your history stays safe.';
+                    $('quotaAlertTitle').textContent = '🚫 ' + (planNames[ws.plan || 'trial'] || 'Plan') + ' limit reached (' + quota.toLocaleString() + ' leads this month)';
+                    $('quotaAlertBody').textContent = ' New leads are paused. Upgrade to a higher plan to continue protection — your history stays safe.';
                 } else if (pct >= 80 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
                     $('quotaAlertTitle').textContent = '⚠️ Plan Quota Alert:';
-                    $('quotaAlertBody').textContent = ' You have reached ' + pct + '% of your lead limit. Upgrade your plan to prevent lead capture interruptions.';
+                    $('quotaAlertBody').textContent = ' You have used ' + pct + '% of your monthly lead limit (' + count.toLocaleString() + '/' + quota.toLocaleString() + '). Upgrade your plan to prevent lead capture interruptions.';
                 } else {
                     $('quotaAlertBanner').classList.add('hidden');
                 }
@@ -1982,6 +2000,43 @@
                 const live = (w.google_is_live || w.meta_is_live) ? ' ●' : '';
                 list.appendChild(makeNavItem(w.display_name || w.owner_email, w.id, (w.display_name || w.owner_email) + live, selectedWorkspaceObj && String(selectedWorkspaceObj.id) === String(w.id)));
             });
+
+            // Enterprise (agency plan): Add-Workspace button up to plan limit
+            if (!isAdmin && selectedWorkspaceObj && (selectedWorkspaceObj.plan === 'agency')) {
+                const limit = 10;
+                if (shown.length < limit) {
+                    const addBtn = document.createElement('button');
+                    addBtn.className = 'add-account-btn';
+                    addBtn.style.cssText = 'margin-top:6px;width:100%;';
+                    addBtn.textContent = '+ Add Brand Workspace';
+                    addBtn.onclick = () => createEnterpriseWorkspace();
+                    list.appendChild(addBtn);
+                }
+                if (shown.length >= limit) {
+                    const cap = document.createElement('div');
+                    cap.style.cssText = 'font-size:10px;color:var(--color-text-muted);margin-top:6px;text-align:center;';
+                    cap.textContent = 'Enterprise plan limit: ' + limit + ' brand workspaces';
+                    list.appendChild(cap);
+                }
+            }
+        }
+
+        async function createEnterpriseWorkspace() {
+            const name = prompt('Brand workspace name (e.g. "Brand B — Delhi"):');
+            if (!name || !name.trim()) return;
+            try {
+                const res = await fetch(API + '/workspaces/create', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), platform: 'none' })
+                });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(d.detail || 'Failed to create workspace');
+                toast('Brand workspace created: ' + name.trim());
+                const targetId = d.workspace_id || (d.workspace && d.workspace.id);
+                if (targetId) { window.location.href = '/adguard-workspace?ws=' + targetId; return; }
+                await loadWorkspaces();
+            } catch (e) { toast(e.message, 'error'); }
         }
 
         function switchWorkspace(wsId) {
@@ -2956,7 +3011,16 @@
             const params = new URLSearchParams(window.location.search);
             if (params.get('oauth_success') === 'google') toast('Google Ads connected successfully.');
             else if (params.get('oauth_success') === 'meta') toast('Meta Ads connected successfully.');
-            else if (params.get('oauth_error')) toast('Connection error: ' + params.get('oauth_error'), 'error');
+            else if (params.get('oauth_error')) {
+                const limitPlans = { trial: 'Free trial', starter: 'Starter', pro: 'Pro', agency: 'Enterprise' };
+                if (params.get('oauth_error') === 'google_identity_limit') {
+                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Google Ads connection(s). Upgrade to Enterprise for more.', 'error');
+                } else if (params.get('oauth_error') === 'meta_identity_limit') {
+                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Meta Ads connection(s). Upgrade to Enterprise for more.', 'error');
+                } else {
+                    toast('Connection error: ' + params.get('oauth_error'), 'error');
+                }
+            }
             if (params.has('oauth_success') || params.has('oauth_error')) {
                 window.history.replaceState({}, '', '/adguard-workspace' + (simWsId ? '?ws=' + simWsId : ''));
             }

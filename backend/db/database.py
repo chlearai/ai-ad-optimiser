@@ -325,6 +325,12 @@ def init_db():
             run_user_welcome_flag_migration()
         except Exception as me:
             logger.warning(f"Additive users.welcome_email_sent migration skipped/failed: {me}")
+        # Run safe additive migration: monthly lead counters (plan hard-stop enforcement)
+        try:
+            from backend.migrations.add_adguard_monthly_lead_counters import run_migration as run_monthly_counters_migration
+            run_monthly_counters_migration()
+        except Exception as me:
+            logger.warning(f"Additive monthly lead counters migration skipped/failed: {me}")
         # Run safe additive migration for cached campaigns & pages map
         try:
             from backend.migrations.add_adguard_cached_campaigns import run_migration as run_adguard_cached_campaigns_migration

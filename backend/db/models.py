@@ -981,6 +981,8 @@ class AdGuardAccount(Base):
     plan = Column(String(20), default="trial")  # trial | starter | pro | agency | custom
     plan_expires_at = Column(DateTime, nullable=True)
     lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
+    leads_this_month = Column(Integer, default=0, nullable=False)  # monthly audited-lead counter (hard-stop plans)
+    leads_month_reset = Column(DateTime, nullable=True)  # when the monthly counter was last reset (billing anniversary)
     is_archived = Column(Boolean, default=False)
     # Signup provenance: admin_invite | self_serve | demo_request ; beta accounts kept separate from paid
     signup_source = Column(String(20), default="admin_invite")
@@ -1071,6 +1073,8 @@ class AdGuardAccount(Base):
             "plan": self.plan,
             "plan_expires_at": self.plan_expires_at.isoformat() if self.plan_expires_at else None,
             "lead_quota": self.lead_quota,
+            "leads_this_month": int(self.leads_this_month or 0),
+            "leads_month_reset": self.leads_month_reset.isoformat() if self.leads_month_reset else None,
             "is_archived": self.is_archived,
             "signup_source": self.signup_source or "admin_invite",
             "is_beta": bool(self.is_beta),

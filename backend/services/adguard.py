@@ -351,13 +351,35 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
         # Quota: block ingest when the workspace is over its lead limit
         if workspace_id:
             ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
-            if ws is not None and (ws.lead_quota or 0) >= 0:
-                count = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).count()
-                if count >= ws.lead_quota:
+            if ws is not None:
+                from datetime import timedelta
+                now = datetime.utcnow()
+                # Roll the monthly counter on its billing anniversary (leads_month_reset set at activation)
+                if ws.leads_month_reset is None or now - ws.leads_month_reset >= timedelta(days=30):
+                    ws.leads_this_month = 0
+                    ws.leads_month_reset = now
+                    db.commit()
+                # Monthly plan quota = hard stop (trial 300 / starter 1000 / pro 5000 / agency unlimited)
+                monthly_limit = ws.lead_quota if (ws.lead_quota or 0) >= 0 else (0 if ws.plan != "agency" else -1)
+                effective_plan = ws.plan or "trial"
+                if monthly_limit >= 0 and (ws.leads_this_month or 0) >= monthly_limit and effective_plan != "agency":
                     logger.warning(
-                        f"[AdGuard] quota block: ws {ws.id} at {count}/{ws.lead_quota} leads"
+                        f"[AdGuard] monthly quota block: ws {ws.id} plan {effective_plan} at {ws.leads_this_month}/{monthly_limit} leads this month"
                     )
-                    raise QuotaExceededError(f"Lead quota reached ({ws.lead_quota}). Upgrade plan to continue.")
+                    raise QuotaExceededError(
+                        f"Monthly plan limit reached ({monthly_limit} leads). Upgrade your plan to continue."
+                    )
+                # Trial expiry: plan_expires_at enforced at ingest (14 days from activation)
+                if ws.plan_expires_at and effective_plan in ("trial",) and now > ws.plan_expires_at:
+                    logger.warning(f"[AdGuard] trial expired block: ws {ws.id} (expired {ws.plan_expires_at})")
+                    raise QuotaExceededError("Free trial (14 days) has expired. Upgrade your plan to continue.")
+                if (ws.lead_quota or 0) >= 0:
+                    count = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).count()
+                    if count >= ws.lead_quota:
+                        logger.warning(
+                            f"[AdGuard] quota block: ws {ws.id} at {count}/{ws.lead_quota} leads"
+                        )
+                        raise QuotaExceededError(f"Lead quota reached ({ws.lead_quota}). Upgrade plan to continue.")
 
             # Selective screening: only screen leads from campaigns explicitly activated by the customer
             if ws is not None and ws.cached_campaigns:
@@ -503,6 +525,17 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
         db.commit()
         db.refresh(record)
         record.processed_at = datetime.utcnow()
+        # Count every audited lead against the monthly plan quota
+        if workspace_id:
+            try:
+                ws_row = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
+                if ws_row is not None:
+                    ws_row.leads_this_month = (ws_row.leads_this_month or 0) + 1
+                    if ws_row.leads_month_reset is None:
+                        ws_row.leads_month_reset = datetime.utcnow()
+                    db.commit()
+            except Exception as _cex:
+                logger.warning(f"[AdGuard] monthly counter increment failed ws {workspace_id}: {_cex}")
         db.commit()
         logger.info(
             f"[AdGuard] lead id={record.id} verdict={record.verdict} "

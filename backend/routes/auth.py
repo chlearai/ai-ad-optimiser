@@ -542,6 +542,23 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     user.is_active = True
     user.onboarding_token = None
     user.onboarding_token_expires_at = None
+
+    # Plan clock starts at activation (password-set), not signup.
+    # Trial: 14-day expiry. Paid plans: monthly billing anniversary anchors the lead counter reset.
+    from backend.routes.adguard import PLAN_LIMITS as _PL
+    try:
+        ws_act = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
+        if ws_act is not None:
+            now_act = datetime.utcnow()
+            ws_act.leads_month_reset = now_act
+            ws_act.leads_this_month = 0
+            if (ws_act.plan or "trial") == "trial":
+                ws_act.plan_expires_at = now_act + timedelta(days=14)
+            if not ws_act.plan_expires_at and ws_act.plan in _PL and ws_act.plan not in ("trial", "agency"):
+                ws_act.plan_expires_at = now_act + timedelta(days=30)
+    except Exception as e:
+        logger.warning(f"plan clock setup failed for {user.email}: {e}")
+
     db.commit()
     db.refresh(user)
 
