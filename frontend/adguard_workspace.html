@@ -603,6 +603,22 @@
                 <button type="button" id="sidebarUpgradeBtn" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">⚡ Upgrade Plan</button>
             </div>
 
+            <!-- CALL CREDITS WIDGET (prepaid bucket, never expire) -->
+            <div class="quota-box" id="sidebarCallWidget" style="display:none;">
+                <div class="quota-header">
+                    <span>Verification Calls</span>
+                    <span class="quota-plan-tag" id="callCreditsTag">PREPAID</span>
+                </div>
+                <div class="quota-progress">
+                    <div class="quota-bar" id="callCreditsBar" style="width: 0%; background: var(--color-accent);"></div>
+                </div>
+                <div class="quota-stats">
+                    <span id="callCreditsText">0 calls in bucket</span>
+                    <span style="font-size:10px;opacity:0.7;">never expire</span>
+                </div>
+                <button type="button" id="buyCallsBtn" class="btn btn-sm btn-secondary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openBuyCallsModal()">+ Buy Calls</button>
+            </div>
+
             <!-- MY WORKSPACE -->
             <div class="nav-section open" id="workspaceSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
@@ -1285,6 +1301,22 @@
     </div>
 
     <!-- UPGRADE PLAN MODAL -->
+    <!-- BUY CALLS MODAL (prepaid packs, never expire) -->
+    <div id="buyCallsModalOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:115;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeBuyCallsModal()">
+        <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">📞 Buy Verification Calls</h2>
+                    <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Top up your prepaid call bucket. Credits never expire and carry forward across renewals.</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeBuyCallsModal()">✕</button>
+            </div>
+            <div id="buyCallsBalance" style="font-size:12px;color:var(--color-text-muted);margin:8px 0 14px;"></div>
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;" id="buyCallsGrid"></div>
+            <p style="font-size:11px;color:var(--color-text-muted);margin-top:14px;">💳 Payment: UPI to <b>adguard@upi</b> · share the screenshot at <b>shekhar.chlear@gmail.com</b> — credits are added to your workspace within 2 hours (10 AM – 8 PM IST).</p>
+        </div>
+    </div>
+
     <div id="upgradeModalOverlay" style="display:none;position:fixed;inset:0;background:var(--overlay-bg);z-index:110;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeUpgradeModal()">
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:760px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -1723,6 +1755,7 @@
                 }
 
                 renderQuota(selectedWorkspaceObj);
+                renderCallWidget(selectedWorkspaceObj);
                 renderWorkspaceSidebar();
                 renderConnectorButtons();
                 renderConnPills();
@@ -1813,6 +1846,62 @@
 
         function closeUpgradeModal() {
             $('upgradeModalOverlay').style.display = 'none';
+        }
+
+        // ---------- Verification calls: prepaid bucket widget + Buy Calls ----------
+        const CALL_PACKS = [
+            { credits: 100, price: 799 },
+            { credits: 300, price: 1999 },
+            { credits: 500, price: 2999 },
+        ];
+
+        function renderCallWidget(ws) {
+            const widget = $('sidebarCallWidget');
+            if (!widget) return;
+            const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+            const plan = (ws && ws.plan) || 'trial';
+            const credits = parseInt(ws && ws.call_credits_remaining || 0, 10) || 0;
+            const hasCalls = plan === 'pro' || plan === 'agency' || credits > 0;
+            widget.style.display = hasCalls ? 'block' : 'none';
+            if (!hasCalls) return;
+            const granted = parseInt(ws && ws.call_credits_granted_total || 0, 10) || credits;
+            const pct = granted > 0 ? Math.min(100, Math.round((credits / granted) * 100)) : 0;
+            $('callCreditsText').textContent = credits.toLocaleString() + ' call' + (credits === 1 ? '' : 's') + ' in bucket';
+            $('callCreditsBar').style.width = Math.max(pct, credits > 0 ? 6 : 0) + '%';
+            $('callCreditsBar').className = 'quota-bar';
+            $('callCreditsBar').style.background = credits > 0 ? 'var(--color-accent)' : 'var(--color-danger)';
+            const buyBtn = $('buyCallsBtn');
+            if (buyBtn) buyBtn.style.display = isAdmin ? 'none' : 'block';
+        }
+
+        function openBuyCallsModal() {
+            if (!selectedWorkspaceObj) { toast('No workspace selected', 'warn'); return; }
+            $('buyCallsBalance').textContent = 'Current balance: ' + int(selectedWorkspaceObj.call_credits_remaining || 0).toLocaleString() + ' calls (never expire)';
+            $('buyCallsGrid').innerHTML = CALL_PACKS.map(p =>
+                '<div style="background:var(--color-bg-card);border:1px solid ' + (p.credits === 300 ? 'var(--color-accent)' : 'var(--color-border)') + ';border-radius:10px;padding:16px;text-align:center;position:relative;">' +
+                (p.credits === 300 ? '<div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--color-accent);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:2px 8px;">POPULAR</div>' : '') +
+                '<div style="font-size:20px;font-weight:800;color:var(--color-text-primary);">' + p.credits + '</div>' +
+                '<div style="font-size:10px;color:var(--color-text-muted);margin-bottom:8px;">AI verification calls</div>' +
+                '<div style="font-size:16px;font-weight:700;color:var(--color-success-text);">₹' + p.price.toLocaleString('en-IN') + '</div>' +
+                '<div style="font-size:10px;color:var(--color-text-muted);margin:4px 0 10px;">₹' + (p.price / p.credits).toFixed(1) + ' per call</div>' +
+                '<button class="btn btn-sm ' + (p.credits === 300 ? 'btn-primary' : 'btn-secondary') + '" style="width:100%;font-size:11px;" onclick="buyCallPack(' + p.credits + ',' + p.price + ')">Buy ' + p.credits + '</button>' +
+                '</div>'
+            ).join('');
+            $('buyCallsModalOverlay').style.display = 'flex';
+        }
+
+        function closeBuyCallsModal() {
+            $('buyCallsModalOverlay').style.display = 'none';
+        }
+
+        function buyCallPack(credits, price) {
+            const ws = selectedWorkspaceObj;
+            closeBuyCallsModal();
+            if (!ws) { toast('No workspace selected', 'warn'); return; }
+            const body = 'Call top-up request: ' + credits + ' calls (₹' + price + ') for workspace "' + (ws.display_name || ws.id) +
+                '". I have sent the UPI payment to adguard@upi — sharing the screenshot. Please credit my call bucket.';
+            createTicket('Call Top-up: ' + credits + ' calls (₹' + price + ')', 'billing', body)
+                .catch(() => toast('Contact shekhar.chlear@gmail.com to credit your calls.', 'info'));
         }
 
         async function startWorkspaceUpgrade(plan) {

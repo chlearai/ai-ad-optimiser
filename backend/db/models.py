@@ -983,6 +983,10 @@ class AdGuardAccount(Base):
     lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
     leads_this_month = Column(Integer, default=0, nullable=False)  # monthly audited-lead counter (hard-stop plans)
     leads_month_reset = Column(DateTime, nullable=True)  # when the monthly counter was last reset (billing anniversary)
+    # AI call verification credits: PREPAID bucket — never expire, carry across renewals
+    call_credits_remaining = Column(Integer, default=0, nullable=False)
+    call_credits_granted_total = Column(Integer, default=0, nullable=False)  # lifetime granted (plan + top-ups)
+    call_credits_used = Column(Integer, default=0, nullable=False)  # lifetime consumed
     is_archived = Column(Boolean, default=False)
     # Signup provenance: admin_invite | self_serve | demo_request ; beta accounts kept separate from paid
     signup_source = Column(String(20), default="admin_invite")
@@ -1075,6 +1079,9 @@ class AdGuardAccount(Base):
             "lead_quota": self.lead_quota,
             "leads_this_month": int(self.leads_this_month or 0),
             "leads_month_reset": self.leads_month_reset.isoformat() if self.leads_month_reset else None,
+            "call_credits_remaining": int(self.call_credits_remaining or 0),
+            "call_credits_granted_total": int(self.call_credits_granted_total or 0),
+            "call_credits_used": int(self.call_credits_used or 0),
             "is_archived": self.is_archived,
             "signup_source": self.signup_source or "admin_invite",
             "is_beta": bool(self.is_beta),

@@ -1590,11 +1590,11 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
 # ---------------------------------------------------------------------------
 
 PLAN_LIMITS = {
-    "trial": {"lead_quota": 300, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
-    "starter": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
-    "pro": {"lead_quota": 5000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
-    "agency": {"lead_quota": -1, "workspaces": 10, "connectors": {"google": 2, "meta": 2}},  # Enterprise: 10 brand workspaces
-    "custom": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}},
+    "trial": {"lead_quota": 300, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
+    "starter": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
+    "pro": {"lead_quota": 5000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 300},
+    "agency": {"lead_quota": -1, "workspaces": 10, "connectors": {"google": 2, "meta": 2}, "call_credits": 500},  # Enterprise: 10 brand workspaces
+    "custom": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
 }
 
 
@@ -1644,6 +1644,10 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "plan": ws.plan or "trial",
             "plan_expires_at": ws.plan_expires_at.isoformat() if ws.plan_expires_at else None,
             "lead_quota": quota,
+            "leads_this_month": int(ws.leads_this_month or 0),
+            "call_credits_remaining": int(ws.call_credits_remaining or 0),
+            "call_credits_granted_total": int(ws.call_credits_granted_total or 0),
+            "call_credits_used": int(ws.call_credits_used or 0),
             "overage_policy": ws.overage_policy or "block",
             "payment_mode": ws.payment_mode or "",
             "payment_ref": ws.payment_ref or "",
@@ -1730,6 +1734,7 @@ class EditSubscriberRequest(BaseModel):
     account_status: Optional[str] = None
     is_archived: Optional[bool] = None
     reset_password: Optional[bool] = None  # generates a new password, returned once
+    add_call_credits: Optional[int] = None  # manual UPI top-up: credits added to prepaid bucket (never expire)
 
 
 @router.put("/admin/subscribers/{sub_id}/edit")
@@ -1777,6 +1782,12 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
 
     if req.lead_quota is not None:
         ws.lead_quota = req.lead_quota
+
+    # Call credit top-up: add to prepaid bucket (never expires); negative = admin correction
+    if req.add_call_credits is not None and req.add_call_credits != 0:
+        ws.call_credits_remaining = max(0, int(ws.call_credits_remaining or 0) + int(req.add_call_credits))
+        if req.add_call_credits > 0:
+            ws.call_credits_granted_total = int(ws.call_credits_granted_total or 0) + int(req.add_call_credits)
 
     if req.plan_expires_at is not None:
         if req.plan_expires_at.strip():

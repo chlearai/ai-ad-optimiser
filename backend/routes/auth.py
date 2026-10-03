@@ -545,6 +545,7 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
 
     # Plan clock starts at activation (password-set), not signup.
     # Trial: 14-day expiry. Paid plans: monthly billing anniversary anchors the lead counter reset.
+    # Call credits: PREPAID bucket granted once at plan activation — never expire, never reset on renewal.
     from backend.routes.adguard import PLAN_LIMITS as _PL
     try:
         ws_act = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
@@ -552,6 +553,14 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
             now_act = datetime.utcnow()
             ws_act.leads_month_reset = now_act
             ws_act.leads_this_month = 0
+            _plan_def = _PL.get(ws_act.plan or "trial", {})
+            plan_credits = int(_plan_def.get("call_credits", 0) or 0)
+            if plan_credits > 0:
+                # Top-up only the shortfall so leftover credits survive re-grants/renewals
+                shortfall = plan_credits - int(ws_act.call_credits_remaining or 0)
+                if shortfall > 0:
+                    ws_act.call_credits_remaining = int(ws_act.call_credits_remaining or 0) + shortfall
+                    ws_act.call_credits_granted_total = int(ws_act.call_credits_granted_total or 0) + shortfall
             if (ws_act.plan or "trial") == "trial":
                 ws_act.plan_expires_at = now_act + timedelta(days=14)
             if not ws_act.plan_expires_at and ws_act.plan in _PL and ws_act.plan not in ("trial", "agency"):
