@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AdGuard — My Workspace</title>
+    <title>AdGuard â€” My Workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -600,7 +600,7 @@
                     <span id="quotaUsedText">0 / 100 used</span>
                     <span id="quotaPctText">0%</span>
                 </div>
-                <button type="button" id="sidebarUpgradeBtn" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">⚡ Upgrade Plan</button>
+                <button type="button" id="sidebarUpgradeBtn" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;font-size:11px;justify-content:center;padding:4px;" onclick="openUpgradeModal()">âš¡ Upgrade Plan</button>
             </div>
 
             <!-- CALL CREDITS WIDGET (prepaid bucket, never expire) -->
@@ -622,7 +622,7 @@
             <!-- MY WORKSPACE -->
             <div class="nav-section open" id="workspaceSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>My Workspace</span>
+                    <span class="nav-section-arrow">â–¶</span><span>My Workspace</span>
                 </div>
                 <div class="nav-section-items" id="accountList"></div>
             </div>
@@ -630,22 +630,22 @@
             <!-- CONNECTORS -->
             <div class="nav-section open" id="connectorsSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Ad Connectors</span>
+                    <span class="nav-section-arrow">â–¶</span><span>Ad Connectors</span>
                 </div>
                 <div class="nav-section-items" id="connectorButtons">
-                    <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">🔗 Connect Google Ads</button>
-                    <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">🔗 Connect Meta Ads</button>
-                    <button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;">⚡ Script Tag</button>
+                    <button class="add-account-btn" id="addAccountBtn" onclick="startConnect()">ðŸ”— Connect Google Ads</button>
+                    <button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()">ðŸ”— Connect Meta Ads</button>
+                    <button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;">âš¡ Script Tag</button>
                 </div>
             </div>
 
             <!-- CLIENT ACCOUNTS (Ryze Style Clean List: DSU, DSI, TLG, Mantri, etc.) -->
             <div class="nav-section open" id="clientsNavSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>Client Accounts</span>
+                    <span class="nav-section-arrow">â–¶</span><span>Client Accounts</span>
                 </div>
                 <div class="nav-section-items" id="clientsList" style="padding:4px 0 8px;">
-                    <div style="font-size:11px;color:var(--color-text-muted);padding:6px 12px;">Loading client accounts…</div>
+                    <div style="font-size:11px;color:var(--color-text-muted);padding:6px 12px;">Loading client accountsâ€¦</div>
                 </div>
             </div>
             <div id="googleAcctTree" style="display:none;"></div>
@@ -657,7 +657,7 @@
             <!-- MONEY SHIELD (24/7 Autonomous Watchdog) -->
             <div class="nav-section open" id="shieldSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span>
+                    <span class="nav-section-arrow">â–¶</span>
                     <span style="display:flex;align-items:center;gap:6px;">
                         <span class="shield-pulse-dot" id="shieldStatusDot"></span>
                         <span>Money Shield 24/7</span>
@@ -685,15 +685,15 @@
                     </div>
 
                     <div style="display:flex;gap:6px;margin-top:6px;">
-                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="runShieldScan()" title="Trigger immediate test scan">⚡ Test Scan</button>
-                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="syncExclusions()" title="Push blocklist to Google & Meta">🚫 Sync Lists</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="runShieldScan()" title="Trigger immediate test scan">âš¡ Test Scan</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px;padding:4px;" onclick="syncExclusions()" title="Push blocklist to Google & Meta">ðŸš« Sync Lists</button>
                     </div>
                     <div id="shieldScanResult" style="font-size:10px;margin-top:4px;"></div>
                     <div id="exclusionSyncResult" style="font-size:10px;margin-top:4px;"></div>
 
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--color-border);">
                         <span style="font-size:10px;color:var(--color-text-muted);" id="shieldHeartbeatText">Watchdog: 5m cycle</span>
-                        <a href="javascript:void(0)" onclick="viewShieldActions()" style="font-size:11px;color:var(--color-accent);text-decoration:none;font-weight:500;">📜 View Log</a>
+                        <a href="javascript:void(0)" onclick="viewShieldActions()" style="font-size:11px;color:var(--color-accent);text-decoration:none;font-weight:500;">ðŸ“œ View Log</a>
                     </div>
                     <div id="shieldActionsBox" style="font-size:11px;margin-top:6px;display:none;max-height:180px;overflow-y:auto;"></div>
                 </div>
@@ -702,16 +702,16 @@
             <!-- MORE AD PLATFORMS (roadmap) -->
             <div class="nav-section" id="morePlatformsSection">
                 <div class="nav-section-header" onclick="toggleSection(this)">
-                    <span class="nav-section-arrow">▶</span><span>More Ad Platforms</span>
+                    <span class="nav-section-arrow">â–¶</span><span>More Ad Platforms</span>
                 </div>
                 <div class="nav-section-items" style="padding:0 8px 8px;">
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">💼 LinkedIn Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🔍 Microsoft/Bing Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🎵 TikTok Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">🐦 X (Twitter) Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">📌 Pinterest Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">👻 Snapchat Ads — coming soon</button>
-                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">📦 Amazon Ads — coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ’¼ LinkedIn Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ” Microsoft/Bing Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸŽµ TikTok Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ¦ X (Twitter) Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ“Œ Pinterest Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ‘» Snapchat Ads â€” coming soon</button>
+                    <button class="add-account-btn" disabled style="opacity:.55;cursor:not-allowed;">ðŸ“¦ Amazon Ads â€” coming soon</button>
                 </div>
             </div>
         </div>
@@ -721,17 +721,17 @@
                 <span>Need Help?</span>
                 <span id="sidePlanSlaPill" style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(217, 119, 6, 0.15);color:var(--color-amber, #d97706);">SUPPORT</span>
             </div>
-            <a href="mailto:support@adguard.ai" id="sideSupportEmailLink" style="color:var(--color-accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:5px;word-break:break-all;">
-                <span>✉️</span> <span id="sideSupportEmailText">support@adguard.ai</span>
+            <a href="mailto:shekhar.chlear@gmail.com" id="sideSupportEmailLink" style="color:var(--color-accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:5px;word-break:break-all;">
+                <span>âœ‰ï¸</span> <span id="sideSupportEmailText">shekhar.chlear@gmail.com</span>
             </a>
             <div style="margin-top:6px;display:flex;gap:6px;">
-                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;padding:3px 6px;font-size:10px;justify-content:center;" onclick="switchTab('support')">💬 Tickets</button>
-                <button type="button" class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;justify-content:center;" onclick="copySupportEmail(this)" title="Copy Email">📋 Copy</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;padding:3px 6px;font-size:10px;justify-content:center;" onclick="switchTab('support')">ðŸ’¬ Tickets</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="padding:3px 6px;font-size:10px;justify-content:center;" onclick="copySupportEmail(this)" title="Copy Email">ðŸ“‹ Copy</button>
             </div>
         </div>
 
-        <a href="/adguard" class="nav-back admin-only" id="navAdminBack" style="display:none;">← Back to Admin</a>
-        <a href="javascript:void(0)" class="nav-back" onclick="logout()" style="color:var(--color-danger);"><span style="font-size:14px;">🚪</span> Log Out</a>
+        <a href="/adguard" class="nav-back admin-only" id="navAdminBack" style="display:none;">â† Back to Admin</a>
+        <a href="javascript:void(0)" class="nav-back" onclick="logout()" style="color:var(--color-danger);"><span style="font-size:14px;">ðŸšª</span> Log Out</a>
     </div>
 
     <!-- MAIN -->
@@ -739,18 +739,18 @@
         <!-- ADMIN DIAGNOSTIC SIMULATION BANNER -->
         <div id="adminSimBanner" style="display:none;background:linear-gradient(90deg, #312e81, #5b21b6);color:#fff;padding:9px 24px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.25);position:sticky;top:0;z-index:99999;">
             <div style="display:flex;align-items:center;gap:10px;">
-                <span style="font-size:16px;">👑</span>
+                <span style="font-size:16px;">ðŸ‘‘</span>
                 <span>ADMIN DIAGNOSTIC MODE: Simulating Customer Workspace <strong id="adminSimWsName" style="color:#fde047;"></strong></span>
                 <span style="background:rgba(255,255,255,0.18);padding:2px 8px;border-radius:10px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Scoped Simulation</span>
             </div>
-            <a href="/adguard" style="color:#fff;background:rgba(255,255,255,0.22);padding:4px 12px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,0.35);transition:all 0.2s;">← Return to Admin Cockpit</a>
+            <a href="/adguard" style="color:#fff;background:rgba(255,255,255,0.22);padding:4px 12px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,0.35);transition:all 0.2s;">â† Return to Admin Cockpit</a>
         </div>
 
         <div class="topbar">
             <h1 id="pageTitle"><span>My Workspace</span></h1>
             <div class="topbar-right">
-                <span class="badge badge-green" id="pillGoogle">Google: —</span>
-                <span class="badge badge-blue" id="pillMeta">Meta: —</span>
+                <span class="badge badge-green" id="pillGoogle">Google: â€”</span>
+                <span class="badge badge-blue" id="pillMeta">Meta: â€”</span>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()"></button>
                 <span class="user-badge" id="userBadge">Loading...</span>
             </div>
@@ -758,11 +758,11 @@
 
         <!-- TAB NAV -->
         <div style="height:44px;background:var(--color-bg-page);border-bottom:1px solid var(--color-border);display:flex;align-items:center;padding:0 24px;gap:4px;" id="tabNav">
-            <div class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</div>
-            <div class="tab-item" data-tab="reports" onclick="switchTab('reports')">📈 Reports</div>
-            <div class="tab-item" data-tab="connections" onclick="switchTab('connections')">🔗 Connections</div>
-            <div class="tab-item" data-tab="support" onclick="switchTab('support')">💬 Support</div>
-            <div class="tab-item" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</div>
+            <div class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard')">ðŸ“Š Dashboard</div>
+            <div class="tab-item" data-tab="reports" onclick="switchTab('reports')">ðŸ“ˆ Reports</div>
+            <div class="tab-item" data-tab="connections" onclick="switchTab('connections')">ðŸ”— Connections</div>
+            <div class="tab-item" data-tab="support" onclick="switchTab('support')">ðŸ’¬ Support</div>
+            <div class="tab-item" data-tab="settings" onclick="switchTab('settings')">âš™ï¸ Settings</div>
         </div>
         <style>
             .tab-item{padding:10px 14px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;user-select:none}
@@ -785,9 +785,9 @@
                             <span id="ryzeBreadcrumbMid">Overview</span>
                         </div>
                         <h1 id="ryzeDashboardTitle">Dashboard</h1>
-                        <div class="ryze-subtitle" id="ryzeDashboardSubtitle">Your leads, spend signals and protection status — everything AdGuard screens for you.</div>
+                        <div class="ryze-subtitle" id="ryzeDashboardSubtitle">Your leads, spend signals and protection status â€” everything AdGuard screens for you.</div>
                         <div class="ryze-currency-note" id="servicesLiveNote">
-                            <span id="servicesLiveContent">🛡️ Money Shield active</span>
+                            <span id="servicesLiveContent">ðŸ›¡ï¸ Money Shield active</span>
                         </div>
                     </div>
 
@@ -801,7 +801,7 @@
                                 <option value="30">Last 30 days</option>
                                 <option value="90">Last 90 days</option>
                                 <option value="all">All Time</option>
-                                <option value="custom">📅 Custom date range</option>
+                                <option value="custom">ðŸ“… Custom date range</option>
                             </select>
                             <div id="dashCustomDates" style="display:none;align-items:center;gap:4px;background:var(--color-bg-page);padding:2px 8px;border-radius:6px;border:1px solid var(--color-border);">
                                 <input type="date" id="dashStartDate" class="filter-input" style="padding:3px 6px;font-size:11px;cursor:pointer;">
@@ -813,24 +813,24 @@
 
                         <button id="ryzeFilterBtn" class="ryze-dropdown-btn" onclick="toggleRyzePopover(event)" title="Filter campaigns & pages">
                             <span id="ryzeFilterBtnText">All campaigns selected</span>
-                            <span style="font-size:9px;margin-left:6px;display:inline-block;transition:transform .2s;" id="ryzeFilterCaret">▼</span>
+                            <span style="font-size:9px;margin-left:6px;display:inline-block;transition:transform .2s;" id="ryzeFilterCaret">â–¼</span>
                         </button>
                         <button class="ryze-refresh-btn" onclick="refreshRyzeData()" title="Reload data">
-                            <span>🔄 Refresh</span>
+                            <span>ðŸ”„ Refresh</span>
                         </button>
 
                         <!-- FLOATING POPOVER (Anchored to button, Go-Live Screening Control) -->
                         <div id="ryzePopover" class="ryze-popover hidden" onclick="event.stopPropagation()" style="min-width:380px;">
                             <div style="padding:10px 12px 6px;border-bottom:1px solid var(--color-border);background:rgba(37,99,235,0.04);">
                                 <div style="font-size:11px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
-                                    <span id="ryzePopoverTitle">🛡️ Campaign Screening Control</span>
+                                    <span id="ryzePopoverTitle">ðŸ›¡ï¸ Campaign Screening Control</span>
                                 </div>
                                 <div style="font-size:11px;color:var(--color-text-secondary);margin-top:3px;line-height:1.35;">
                                     Select which campaigns should go <strong>LIVE</strong> for screening. Only active campaigns are screened and delivered to CRM.
                                 </div>
                             </div>
                             <div class="ryze-popover-search">
-                                <span style="font-size:12px;color:var(--color-text-muted);">🔍</span>
+                                <span style="font-size:12px;color:var(--color-text-muted);">ðŸ”</span>
                                 <input type="text" id="ryzeSearchInput" placeholder="Search campaigns & pages..." oninput="onRyzeSearch(this.value)">
                             </div>
                             <div class="ryze-popover-actions">
@@ -839,13 +839,13 @@
                                 <button type="button" onclick="toggleAllRyzeCampaigns(false)">Clear All</button>
                             </div>
                             <div class="ryze-popover-list" id="ryzePopoverList">
-                                <div style="font-size:11px;color:var(--color-text-muted);padding:12px;text-align:center;">Loading campaigns…</div>
+                                <div style="font-size:11px;color:var(--color-text-muted);padding:12px;text-align:center;">Loading campaignsâ€¦</div>
                             </div>
                             <div class="ryze-popover-footer" id="ryzePopoverFooter" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--color-bg-secondary);border-top:1px solid var(--color-border);">
                                 <span id="ryzePopoverFooterText" style="font-size:11px;color:var(--color-text-muted);">0 selected</span>
                                 <div style="display:flex;gap:6px;">
-                                    <button type="button" class="btn btn-secondary btn-xs" style="font-size:11px;padding:4px 8px;" onclick="deactivateSelectedCampaigns()" title="Pause screening for selected campaigns">⏸️ Standby</button>
-                                    <button type="button" class="btn btn-primary btn-xs" style="font-size:11px;padding:4px 10px;font-weight:600;" onclick="activateSelectedCampaigns()" title="Activate real-time screening for selected campaigns">🚀 Go Live</button>
+                                    <button type="button" class="btn btn-secondary btn-xs" style="font-size:11px;padding:4px 8px;" onclick="deactivateSelectedCampaigns()" title="Pause screening for selected campaigns">â¸ï¸ Standby</button>
+                                    <button type="button" class="btn btn-primary btn-xs" style="font-size:11px;padding:4px 10px;font-weight:600;" onclick="activateSelectedCampaigns()" title="Activate real-time screening for selected campaigns">ðŸš€ Go Live</button>
                                 </div>
                             </div>
                         </div>
@@ -855,7 +855,7 @@
                 <!-- QUOTA ALERT -->
                 <div class="quota-alert-banner hidden" id="quotaAlertBanner">
                     <div>
-                        <strong id="quotaAlertTitle">⚠️ Plan Quota Alert:</strong> <span id="quotaAlertBody">You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.</span>
+                        <strong id="quotaAlertTitle">âš ï¸ Plan Quota Alert:</strong> <span id="quotaAlertBody">You have reached <span id="alertQuotaPct">80%</span> of your lead limit. Upgrade your plan to prevent lead capture interruptions.</span>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="openUpgradeModal()">Upgrade Plan</button>
                 </div>
@@ -870,16 +870,16 @@
                     <div class="ryze-card">
                         <div class="ryze-card-header">
                             <span class="ryze-card-label">Leads Audited</span>
-                            <span class="ryze-pill-trend ryze-pill-blue" id="kpiAuditedPill">🛡️ Live Screened</span>
+                            <span class="ryze-pill-trend ryze-pill-blue" id="kpiAuditedPill">ðŸ›¡ï¸ Live Screened</span>
                         </div>
                         <div class="ryze-card-value" id="kpiAuditedLeads">0</div>
-                        <div class="ryze-card-sub" id="kpiAuditedSub">0 Google · 0 Meta</div>
+                        <div class="ryze-card-sub" id="kpiAuditedSub">0 Google Â· 0 Meta</div>
                     </div>
                     <!-- Card 2: Verified Leads (Passed to CRM) -->
                     <div class="ryze-card">
                         <div class="ryze-card-header">
                             <span class="ryze-card-label">Verified Leads</span>
-                            <span class="ryze-pill-trend ryze-pill-green" id="kpiPassRatePill">🟢 100% Quality</span>
+                            <span class="ryze-pill-trend ryze-pill-green" id="kpiPassRatePill">ðŸŸ¢ 100% Quality</span>
                         </div>
                         <div class="ryze-card-value" id="kpiVerifiedLeads">0</div>
                         <div class="ryze-card-sub" id="kpiVerifiedSub">0 clean leads passed to CRM</div>
@@ -888,19 +888,19 @@
                     <div class="ryze-card">
                         <div class="ryze-card-header">
                             <span class="ryze-card-label">Blocked Garbage</span>
-                            <span class="ryze-pill-trend ryze-pill-orange" id="kpiBlockPill">🛑 0% Blocked</span>
+                            <span class="ryze-pill-trend ryze-pill-orange" id="kpiBlockPill">ðŸ›‘ 0% Blocked</span>
                         </div>
                         <div class="ryze-card-value" id="kpiBlockedLeads">0</div>
                         <div class="ryze-card-sub" id="kpiBlockedSub">0 fake &amp; bot leads stopped</div>
                     </div>
-                    <!-- Card 4: Recovered ₹ Spend -->
+                    <!-- Card 4: Recovered â‚¹ Spend -->
                     <div class="ryze-card">
                         <div class="ryze-card-header">
-                            <span class="ryze-card-label">Recovered ₹ Spend</span>
-                            <span class="ryze-pill-trend ryze-pill-green" id="kpiBudgetPill">💰 Budget Saved</span>
+                            <span class="ryze-card-label">Recovered â‚¹ Spend</span>
+                            <span class="ryze-pill-trend ryze-pill-green" id="kpiBudgetPill">ðŸ’° Budget Saved</span>
                         </div>
-                        <div class="ryze-card-value" id="kpiSavedSpend">₹0</div>
-                        <div class="ryze-card-sub" id="kpiSavedSub">₹0 saved vs ₹0 would-be ad burn</div>
+                        <div class="ryze-card-value" id="kpiSavedSpend">â‚¹0</div>
+                        <div class="ryze-card-sub" id="kpiSavedSub">â‚¹0 saved vs â‚¹0 would-be ad burn</div>
                     </div>
                 </div>
                 <div id="kpiGrid" style="display:none;"></div>
@@ -929,13 +929,13 @@
                         </div>
                         <div id="chartConversionsRate" style="height:140px;width:100%;"></div>
                     </div>
-                    <!-- Chart 3: Recovered ₹ Spend -->
+                    <!-- Chart 3: Recovered â‚¹ Spend -->
                     <div class="ryze-chart-card">
                         <div class="ryze-chart-title">
-                            <span>Recovered ₹ Spend</span>
+                            <span>Recovered â‚¹ Spend</span>
                             <div class="ryze-chart-legend">
                                 <span><span class="legend-dot" style="background:#93c5fd;"></span> Would-be Spend</span>
-                                <span><span class="legend-dot" style="background:#059669;"></span> ₹ Saved</span>
+                                <span><span class="legend-dot" style="background:#059669;"></span> â‚¹ Saved</span>
                             </div>
                         </div>
                         <div id="chartClicksCtr" style="height:140px;width:100%;"></div>
@@ -953,7 +953,7 @@
                                 <option value="verified">Verified only</option>
                                 <option value="flagged">Flagged only</option>
                             </select>
-                            <button class="btn btn-secondary btn-sm" onclick="exportCsv()">⬇ Export CSV</button>
+                            <button class="btn btn-secondary btn-sm" onclick="exportCsv()">â¬‡ Export CSV</button>
                             <button class="btn btn-secondary btn-sm" onclick="loadLeads()">Refresh</button>
                         </div>
                     </div>
@@ -973,7 +973,7 @@
             <div id="tab-reports" class="hidden">
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">📈 Campaign Junk Report</span>
+                        <span class="card-title">ðŸ“ˆ Campaign Junk Report</span>
                         <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <select class="filter-select" id="reportRange" onchange="onReportRangeChange()">
                                 <option value="1">Last 24 hours</option>
@@ -981,7 +981,7 @@
                                 <option value="30">Last 30 days</option>
                                 <option value="90">Last 90 days</option>
                                 <option value="365">Last 365 days</option>
-                                <option value="custom">📅 Custom date range</option>
+                                <option value="custom">ðŸ“… Custom date range</option>
                             </select>
                             <div id="reportCustomDates" style="display:none;align-items:center;gap:6px;background:var(--color-bg-page);padding:3px 8px;border-radius:6px;border:1px solid var(--color-border);">
                                 <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">From:</label>
@@ -1005,7 +1005,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">🚩 Waste Analysis — why leads were blocked</span>
+                        <span class="card-title">ðŸš© Waste Analysis â€” why leads were blocked</span>
                     </div>
                     <div id="flagsBreakdown"></div>
                 </div>
@@ -1015,41 +1015,41 @@
                     <!-- Card 1: Invalid Click Evidence -->
                     <div class="card" style="margin-bottom:0;border:1px solid rgba(14, 165, 233, 0.3);background:linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
                         <div class="card-header" style="margin-bottom:8px;">
-                            <span class="card-title" style="color:var(--color-info);font-size:14px;">📑 Invalid-Click Refund Evidence</span>
+                            <span class="card-title" style="color:var(--color-info);font-size:14px;">ðŸ“‘ Invalid-Click Refund Evidence</span>
                         </div>
                         <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
                             Court-admissible, timestamped forensic click-to-submission reconciliation logs. Use this packet to submit formal Google Ads Invalid Click Credit claims.
                         </p>
                         <div style="display:flex;gap:8px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('json')">⬇ Evidence (JSON)</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('csv')">⬇ Evidence (CSV)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('json')">â¬‡ Evidence (JSON)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('csv')">â¬‡ Evidence (CSV)</button>
                         </div>
                     </div>
 
                     <!-- Card 2: Conversion Signal Dispatch -->
                     <div class="card" style="margin-bottom:0;border:1px solid rgba(16, 185, 129, 0.3);background:linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
                         <div class="card-header" style="margin-bottom:8px;">
-                            <span class="card-title" style="color:var(--color-accent);font-size:14px;">🎯 Conversion Signal Firewall Status</span>
+                            <span class="card-title" style="color:var(--color-accent);font-size:14px;">ðŸŽ¯ Conversion Signal Firewall Status</span>
                         </div>
                         <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
-                            Gated Meta CAPI &amp; Google Offline signals. Junk leads blocked from ad training; high-value signals (₹500 / ₹2,000 / ₹10,000) dispatched.
+                            Gated Meta CAPI &amp; Google Offline signals. Junk leads blocked from ad training; high-value signals (â‚¹500 / â‚¹2,000 / â‚¹10,000) dispatched.
                         </p>
                         <div style="display:flex;gap:8px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadRealizedSavingsModal()">📊 View Signal Dispatch Log</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadRealizedSavingsModal()">ðŸ“Š View Signal Dispatch Log</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">⬇ Export Lead Data</span>
+                        <span class="card-title">â¬‡ Export Lead Data</span>
                         <div class="filters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <select class="filter-select" id="exportRange" onchange="onExportRangeChange()">
                                 <option value="7">Last 7 days</option>
                                 <option value="30" selected>Last 30 days</option>
                                 <option value="90">Last 90 days</option>
                                 <option value="365">Last 365 days</option>
-                                <option value="custom">📅 Custom date range</option>
+                                <option value="custom">ðŸ“… Custom date range</option>
                             </select>
                             <div id="exportCustomDates" style="display:none;align-items:center;gap:6px;background:var(--color-bg-page);padding:3px 8px;border-radius:6px;border:1px solid var(--color-border);">
                                 <label style="font-size:11px;color:var(--color-text-muted);font-weight:600;">From:</label>
@@ -1070,7 +1070,7 @@
                 <div class="card" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
                     <div class="card-header" style="margin-bottom:10px;">
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:22px;">⚡</span>
+                            <span style="font-size:22px;">âš¡</span>
                             <div>
                                 <span class="card-title" style="color:var(--color-accent);font-size:15px;">Landing Page &amp; Website Pre-Submit Interceptor Tag</span>
                                 <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">
@@ -1078,23 +1078,23 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedConn" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedConn')">📋 Copy Script Tag</button>
+                        <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedConn" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedConn')">ðŸ“‹ Copy Script Tag</button>
                     </div>
                     <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;position:relative;" id="wsEmbedCodeBoxConn">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
 &lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-muted);">
                         <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                            <span>🛡️ <b>Canvas &amp; WebGL Signals</b></span>
-                            <span>⏱️ <b>2.0s Fail-Open Safety</b></span>
-                            <span>🚦 <b>3-Band Gating (Green/Grey/Red)</b></span>
+                            <span>ðŸ›¡ï¸ <b>Canvas &amp; WebGL Signals</b></span>
+                            <span>â±ï¸ <b>2.0s Fail-Open Safety</b></span>
+                            <span>ðŸš¦ <b>3-Band Gating (Green/Grey/Red)</b></span>
                         </div>
-                        <a href="javascript:void(0)" onclick="openWsEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide (GTM / Webflow / WP) →</a>
+                        <a href="javascript:void(0)" onclick="openWsEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">ðŸ“– Installation Guide (GTM / Webflow / WP) â†’</a>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">🔗 Connected Ad Accounts</span>
+                        <span class="card-title">ðŸ”— Connected Ad Accounts</span>
                     </div>
                     <div id="connectionsBody"></div>
                 </div>
@@ -1107,13 +1107,13 @@
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
                         <div style="display:flex;align-items:center;gap:14px;">
                             <div style="width:46px;height:46px;border-radius:12px;background:var(--color-amber, #d97706);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 4px 10px rgba(217, 119, 6, 0.3);">
-                                ✉️
+                                âœ‰ï¸
                             </div>
                             <div>
                                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-amber, #d97706);letter-spacing:0.06em;">Official Help Desk</div>
                                 <div style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-top:2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                                    <a id="supportEmailLink" href="mailto:support@adguard.ai" style="color:var(--color-text-primary);text-decoration:none;" title="Click to email support">support@adguard.ai</a>
-                                    <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 10px;font-size:11px;" onclick="copySupportEmail(this)" id="copySupportEmailBtn">📋 Copy Email</button>
+                                    <a id="supportEmailLink" href="mailto:shekhar.chlear@gmail.com" style="color:var(--color-text-primary);text-decoration:none;" title="Click to email support">shekhar.chlear@gmail.com</a>
+                                    <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 10px;font-size:11px;" onclick="copySupportEmail(this)" id="copySupportEmailBtn">ðŸ“‹ Copy Email</button>
                                 </div>
                                 <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px;">
                                     Direct inquiries &amp; priority escalations. Or create a threaded ticket below.
@@ -1131,7 +1131,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">💬 Support Tickets</span>
+                        <span class="card-title">ðŸ’¬ Support Tickets</span>
                         <button class="btn btn-primary btn-sm" onclick="openNewTicket()">+ New Ticket</button>
                     </div>
                     <div class="table-wrap">
@@ -1158,7 +1158,7 @@
             <!-- ============ TAB: SETTINGS ============ -->
             <div id="tab-settings" class="hidden">
                 <div class="card">
-                    <div class="card-header"><span class="card-title">⚙️ Workspace Settings</span></div>
+                    <div class="card-header"><span class="card-title">âš™ï¸ Workspace Settings</span></div>
                     <div class="form-group" style="margin-bottom:14px;">
                         <label style="font-size:12px;font-weight:500;">Timezone (for reports)</label>
                         <select class="filter-select" id="setTimezone" style="width:100%;max-width:320px;">
@@ -1172,8 +1172,8 @@
                     <div class="form-group" style="margin-bottom:14px;">
                         <label style="font-size:12px;font-weight:500;">Protection Mode</label>
                         <select class="filter-select" id="setMode" style="width:100%;max-width:320px;">
-                            <option value="monitor">👁 Monitor — detect &amp; flag only (safe start)</option>
-                            <option value="protect">🛡️ Protect — auto-pause junk campaigns (Money Shield)</option>
+                            <option value="monitor">ðŸ‘ Monitor â€” detect &amp; flag only (safe start)</option>
+                            <option value="protect">ðŸ›¡ï¸ Protect â€” auto-pause junk campaigns (Money Shield)</option>
                         </select>
                         <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Monitor = watch junk rates. Protect = campaigns breaching your junk threshold get auto-paused with alerts.</div>
                     </div>
@@ -1188,7 +1188,7 @@
 
                 <!-- CRM DELIVERY SETTINGS (relocated from sidebar) -->
                 <div class="card" style="margin-top:20px;">
-                    <div class="card-header"><span class="card-title">🔄 CRM Delivery &amp; Webhooks (Optional)</span></div>
+                    <div class="card-header"><span class="card-title">ðŸ”„ CRM Delivery &amp; Webhooks (Optional)</span></div>
                     <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.5;">
                         Configure automated downstream push of verified, clean leads. If your leads already route directly from Google Ads or Meta into your CRM, leave this set to <b>None</b>.
                     </div>
@@ -1197,7 +1197,7 @@
                         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
                             <div id="crmOptNone" onclick="selectCrmNone()" style="flex:1;min-width:250px;max-width:340px;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;background:var(--color-bg-modal, #fff);">
                                 <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">None</div>
-                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45;">Keep verified leads in AdGuard only — audit, alert and export via CSV.</div>
+                                <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45;">Keep verified leads in AdGuard only â€” audit, alert and export via CSV.</div>
                             </div>
                             <div id="crmOptCrm" onclick="openCrmPicker()" style="flex:1;min-width:250px;max-width:340px;border:2px solid var(--color-border);border-radius:var(--radius-md);padding:14px 16px;cursor:pointer;background:var(--color-bg-modal, #fff);">
                                 <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Deliver to a CRM</div>
@@ -1234,23 +1234,23 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:680px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:24px;">⚡</span>
+                    <span style="font-size:24px;">âš¡</span>
                     <div>
                         <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Pre-Submit Interceptor Tag</h2>
                         <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Embed on your landing pages &amp; websites to stop bot/fraud leads at the submit button.</p>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeScriptTagPanel()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeScriptTagPanel()">âœ•</button>
             </div>
             <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;margin-bottom:12px;" id="wsEmbedCodeBoxPanel"></div>
             <div style="display:flex;justify-content:center;margin-bottom:14px;">
-                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">📋 Copy Script Tag</button>
+                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">ðŸ“‹ Copy Script Tag</button>
             </div>
             <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);justify-content:center;border-top:1px solid var(--color-border);padding-top:12px;">
-                <span>🛡️ Canvas &amp; Device Telemetry</span>
-                <span>⏱️ 2.0s Fail-Open Guarantee</span>
-                <span>🚦 3-Band Gating (Green/Grey/Red)</span>
-                <a href="javascript:void(0)" onclick="closeScriptTagPanel(); openWsEmbedGuideModal();" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide →</a>
+                <span>ðŸ›¡ï¸ Canvas &amp; Device Telemetry</span>
+                <span>â±ï¸ 2.0s Fail-Open Guarantee</span>
+                <span>ðŸš¦ 3-Band Gating (Green/Grey/Red)</span>
+                <a href="javascript:void(0)" onclick="closeScriptTagPanel(); openWsEmbedGuideModal();" style="color:var(--color-accent);text-decoration:none;font-weight:600;">ðŸ“– Installation Guide â†’</a>
             </div>
         </div>
     </div>
@@ -1260,17 +1260,17 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:680px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:24px;">🔗</span>
+                    <span style="font-size:24px;">ðŸ”—</span>
                     <div>
                         <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Connect your CRM</h2>
-                        <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Pick your CRM below — verified leads are pushed automatically, in real time.</p>
+                        <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Pick your CRM below â€” verified leads are pushed automatically, in real time.</p>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmPicker()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmPicker()">âœ•</button>
             </div>
             <div id="crmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:16px;"></div>
             <div style="font-size:11px;color:var(--color-text-muted);margin-top:16px;border-top:1px solid var(--color-border);padding-top:12px;">
-                🔒 Credentials are encrypted. Use <b>Test Connection</b> after connecting to confirm a test lead arrives in your CRM. Need a CRM that's not listed? Use <b>Custom Webhook</b> — it works with any system.
+                ðŸ”’ Credentials are encrypted. Use <b>Test Connection</b> after connecting to confirm a test lead arrives in your CRM. Need a CRM that's not listed? Use <b>Custom Webhook</b> â€” it works with any system.
             </div>
         </div>
     </div>
@@ -1280,13 +1280,13 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:460px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span id="crmCredsIcon" style="font-size:24px;">🔌</span>
+                    <span id="crmCredsIcon" style="font-size:24px;">ðŸ”Œ</span>
                     <div>
                         <h2 id="crmCredsTitle" style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Connect CRM</h2>
                         <p id="crmCredsSub" style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Enter your credentials to connect.</p>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmCreds()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeCrmCreds()">âœ•</button>
             </div>
             <div id="crmCredsFields" style="margin-top:14px;"></div>
             <div style="display:flex;gap:8px;margin-top:16px;">
@@ -1304,14 +1304,14 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:560px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div>
-                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">📞 Buy Verification Calls</h2>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">ðŸ“ž Buy Verification Calls</h2>
                     <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Top up your prepaid call bucket. Credits never expire and carry forward across renewals.</p>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeBuyCallsModal()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeBuyCallsModal()">âœ•</button>
             </div>
             <div id="buyCallsBalance" style="font-size:12px;color:var(--color-text-muted);margin:8px 0 14px;"></div>
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;" id="buyCallsGrid"></div>
-            <p style="font-size:11px;color:var(--color-text-muted);margin-top:14px;">💳 Payment: UPI to <b>adguard@upi</b> · share the screenshot at <b>shekhar.chlear@gmail.com</b> — credits are added to your workspace within 2 hours (10 AM – 8 PM IST).</p>
+            <p style="font-size:11px;color:var(--color-text-muted);margin-top:14px;">ðŸ’³ Payment: UPI to <b>adguard@upi</b> Â· share the screenshot at <b>shekhar.chlear@gmail.com</b> â€” credits are added to your workspace within 2 hours (10 AM â€“ 8 PM IST).</p>
         </div>
     </div>
 
@@ -1319,10 +1319,10 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:760px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div>
-                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">⚡ Upgrade Your AdGuard Plan</h2>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">âš¡ Upgrade Your AdGuard Plan</h2>
                     <p style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Unlock higher lead quotas, real-time AI scoring, and multi-platform protection.</p>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeUpgradeModal()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeUpgradeModal()">âœ•</button>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;margin-bottom:20px;">
@@ -1330,17 +1330,17 @@
                 <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:16px;display:flex;flex-direction:column;position:relative;">
                     <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Starter</div>
                     <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For small single-brand campaigns.</div>
-                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹4,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">â‚¹4,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
                     <div style="font-size:11px;font-weight:600;color:var(--color-accent);margin-bottom:12px;">1,000 Leads / mo</div>
                     <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
-                        <li>✓ Google &amp; Meta 1-Click Connectors</li>
-                        <li>✓ 0–100 Lead Integrity Scoring</li>
-                        <li>✓ Real-Time Fraud &amp; Bot Blocker</li>
-                        <li>✓ Direct CRM Delivery &amp; CSV Export</li>
-                        <li>✓ Recovered ₹ Spend Audit Log</li>
-                        <li>✓ 3,500+ Disposable Email Blacklist</li>
-                        <li>✓ Indian Carrier Phone Validation</li>
-                        <li>✓ Standard Email &amp; Ticket Support (24h response)</li>
+                        <li>âœ“ Google &amp; Meta 1-Click Connectors</li>
+                        <li>âœ“ 0â€“100 Lead Integrity Scoring</li>
+                        <li>âœ“ Real-Time Fraud &amp; Bot Blocker</li>
+                        <li>âœ“ Direct CRM Delivery &amp; CSV Export</li>
+                        <li>âœ“ Recovered â‚¹ Spend Audit Log</li>
+                        <li>âœ“ 3,500+ Disposable Email Blacklist</li>
+                        <li>âœ“ Indian Carrier Phone Validation</li>
+                        <li>âœ“ Standard Email &amp; Ticket Support (24h response)</li>
                     </ul>
                     <button type="button" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('starter')">Select Starter</button>
                 </div>
@@ -1350,19 +1350,19 @@
                     <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--color-accent);color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;">Recommended</div>
                     <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Pro</div>
                     <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For high-volume performance marketers.</div>
-                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹14,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">â‚¹14,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
                     <div style="font-size:11px;font-weight:600;color:var(--color-success);margin-bottom:12px;">5,000 Leads / mo</div>
                     <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
-                        <li>✓ Google &amp; Meta 1-Click Connectors</li>
-                        <li>✓ 0–100 Lead Integrity Scoring</li>
-                        <li>✓ Real-Time Fraud &amp; Bot Blocker</li>
-                        <li>✓ Direct CRM Delivery &amp; CSV Export</li>
-                        <li>✓ Recovered ₹ Spend Audit Log</li>
-                        <li>✓ 3,500+ Disposable Email Blacklist</li>
-                        <li>✓ Indian Carrier Phone Validation</li>
-                        <li>✓ Gemini AI Deep Intent Scoring</li>
-                        <li>✓ FraudGraph Shared Threat Network</li>
-                        <li>✓ Priority Support (&lt; 4h SLA response)</li>
+                        <li>âœ“ Google &amp; Meta 1-Click Connectors</li>
+                        <li>âœ“ 0â€“100 Lead Integrity Scoring</li>
+                        <li>âœ“ Real-Time Fraud &amp; Bot Blocker</li>
+                        <li>âœ“ Direct CRM Delivery &amp; CSV Export</li>
+                        <li>âœ“ Recovered â‚¹ Spend Audit Log</li>
+                        <li>âœ“ 3,500+ Disposable Email Blacklist</li>
+                        <li>âœ“ Indian Carrier Phone Validation</li>
+                        <li>âœ“ Gemini AI Deep Intent Scoring</li>
+                        <li>âœ“ FraudGraph Shared Threat Network</li>
+                        <li>âœ“ Priority Support (&lt; 4h SLA response)</li>
                     </ul>
                     <button type="button" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('pro')">Select Pro</button>
                 </div>
@@ -1371,28 +1371,28 @@
                 <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:16px;display:flex;flex-direction:column;position:relative;">
                     <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);margin-bottom:4px;">Agency</div>
                     <div style="font-size:11px;color:var(--color-text-muted);min-height:30px;">For digital agencies handling client brands.</div>
-                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">₹39,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
+                    <div style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin:10px 0 2px;">â‚¹39,999 <span style="font-size:11px;font-weight:400;color:var(--color-text-muted);">/ mo</span></div>
                     <div style="font-size:11px;font-weight:600;color:var(--color-purple);margin-bottom:12px;">Unlimited Leads</div>
                     <ul style="list-style:none;padding:0;font-size:12px;color:var(--color-text-secondary);flex-grow:1;margin-bottom:16px;line-height:1.6;">
-                        <li>✓ Google &amp; Meta 1-Click Connectors</li>
-                        <li>✓ 0–100 Lead Integrity Scoring</li>
-                        <li>✓ Real-Time Fraud &amp; Bot Blocker</li>
-                        <li>✓ Direct CRM Delivery &amp; CSV Export</li>
-                        <li>✓ Recovered ₹ Spend Audit Log</li>
-                        <li>✓ 3,500+ Disposable Email Blacklist</li>
-                        <li>✓ Indian Carrier Phone Validation</li>
-                        <li>✓ Gemini AI Deep Intent Scoring</li>
-                        <li>✓ FraudGraph Shared Threat Network</li>
-                        <li>✓ Unlimited Client Workspaces &amp; Brands</li>
-                        <li>✓ Multi-tenant BM &amp; Multi-CRM Routing</li>
-                        <li>✓ Dedicated Account Manager &amp; VIP SLA</li>
+                        <li>âœ“ Google &amp; Meta 1-Click Connectors</li>
+                        <li>âœ“ 0â€“100 Lead Integrity Scoring</li>
+                        <li>âœ“ Real-Time Fraud &amp; Bot Blocker</li>
+                        <li>âœ“ Direct CRM Delivery &amp; CSV Export</li>
+                        <li>âœ“ Recovered â‚¹ Spend Audit Log</li>
+                        <li>âœ“ 3,500+ Disposable Email Blacklist</li>
+                        <li>âœ“ Indian Carrier Phone Validation</li>
+                        <li>âœ“ Gemini AI Deep Intent Scoring</li>
+                        <li>âœ“ FraudGraph Shared Threat Network</li>
+                        <li>âœ“ Unlimited Client Workspaces &amp; Brands</li>
+                        <li>âœ“ Multi-tenant BM &amp; Multi-CRM Routing</li>
+                        <li>âœ“ Dedicated Account Manager &amp; VIP SLA</li>
                     </ul>
                     <button type="button" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;" onclick="startWorkspaceUpgrade('agency')">Select Agency</button>
                 </div>
             </div>
 
             <div style="text-align:center;font-size:11px;color:var(--color-text-muted);">
-                🔒 Razorpay Sandbox Mode · Instant test activation with Card or UPI QR Simulation
+                ðŸ”’ Razorpay Sandbox Mode Â· Instant test activation with Card or UPI QR Simulation
             </div>
         </div>
     </div>
@@ -1402,13 +1402,13 @@
         <div style="background:var(--color-bg-modal, var(--color-bg-page));border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:24px;width:480px;max-width:94vw;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:18px;">💳</span>
+                    <span style="font-size:18px;">ðŸ’³</span>
                     <div>
                         <h3 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0;">Razorpay Test Checkout</h3>
-                        <span style="font-size:11px;color:var(--color-info);font-weight:600;">Sandbox Mode · ₹0 Charged</span>
+                        <span style="font-size:11px;color:var(--color-info);font-weight:600;">Sandbox Mode Â· â‚¹0 Charged</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="closeWsSandboxModal()">✕</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeWsSandboxModal()">âœ•</button>
             </div>
 
             <div style="background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
@@ -1418,13 +1418,13 @@
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:10px;text-transform:uppercase;color:var(--color-text-muted);">Amount</div>
-                    <div style="font-weight:800;font-size:16px;color:var(--color-success);" id="wsSbxAmountLabel">₹14,999</div>
+                    <div style="font-weight:800;font-size:16px;color:var(--color-success);" id="wsSbxAmountLabel">â‚¹14,999</div>
                 </div>
             </div>
 
             <div style="display:flex;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:3px;margin-bottom:14px;">
-                <button type="button" id="wsTabBtnCard" class="btn btn-sm" style="flex:1;justify-content:center;background:var(--color-accent);color:#fff;" onclick="switchWsSandboxTab('card')">💳 Test Card</button>
-                <button type="button" id="wsTabBtnUpi" class="btn btn-sm btn-secondary" style="flex:1;justify-content:center;border:none;" onclick="switchWsSandboxTab('upi')">📱 UPI / QR Code</button>
+                <button type="button" id="wsTabBtnCard" class="btn btn-sm" style="flex:1;justify-content:center;background:var(--color-accent);color:#fff;" onclick="switchWsSandboxTab('card')">ðŸ’³ Test Card</button>
+                <button type="button" id="wsTabBtnUpi" class="btn btn-sm btn-secondary" style="flex:1;justify-content:center;border:none;" onclick="switchWsSandboxTab('upi')">ðŸ“± UPI / QR Code</button>
             </div>
 
             <!-- CARD PANEL -->
@@ -1443,7 +1443,7 @@
                         <input type="text" value="123" readonly style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-input);color:var(--color-text-primary);font-family:monospace;">
                     </div>
                 </div>
-                <button type="button" class="btn btn-primary" id="wsSbxCardBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('card')">⚡ Pay &amp; Upgrade Workspace</button>
+                <button type="button" class="btn btn-primary" id="wsSbxCardBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('card')">âš¡ Pay &amp; Upgrade Workspace</button>
             </div>
 
             <!-- UPI PANEL -->
@@ -1481,7 +1481,7 @@
                     </svg>
                 </div>
                 <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:10px;">Scan or authorize test payment via UPI</div>
-                <button type="button" class="btn btn-primary" id="wsSbxUpiBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('upi')">📲 Simulate Instant UPI Payment</button>
+                <button type="button" class="btn btn-primary" id="wsSbxUpiBtn" style="width:100%;justify-content:center;padding:10px;" onclick="confirmWsSandboxPayment('upi')">ðŸ“² Simulate Instant UPI Payment</button>
             </div>
 
             <div id="wsSbxMsg" style="display:none;margin-top:12px;font-size:12px;padding:8px 12px;border-radius:6px;text-align:center;"></div>
@@ -1493,10 +1493,10 @@
         <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:26px;width:680px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--color-border);padding-bottom:10px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:22px;">⚡</span>
+                    <span style="font-size:22px;">âš¡</span>
                     <h2 style="font-family:'DM Sans',sans-serif;font-size:17px;color:var(--color-text-primary);">How to Embed AdGuard on Your Landing Pages</h2>
                 </div>
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsEmbedGuideOverlay').style.display='none'">✕</button>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsEmbedGuideOverlay').style.display='none'">âœ•</button>
             </div>
 
             <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:16px;">
@@ -1509,7 +1509,7 @@
 
             <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">2. WordPress / Elementor / Divi</h3>
             <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;">
-                Navigate to <b>Elementor → Custom Code</b> (or WP Admin → Header and Footer Scripts plugin). Create a new snippet, set location to <b>&lt;head&gt;</b> or <b>Body - End</b>, and paste the code above.
+                Navigate to <b>Elementor â†’ Custom Code</b> (or WP Admin â†’ Header and Footer Scripts plugin). Create a new snippet, set location to <b>&lt;head&gt;</b> or <b>Body - End</b>, and paste the code above.
             </p>
 
             <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">3. Google Tag Manager (GTM)</h3>
@@ -1519,16 +1519,16 @@
 
             <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">4. Webflow / Shopify / Unbounce</h3>
             <p style="font-size:12px;color:var(--color-text-muted);margin-bottom:16px;">
-                Go to <b>Project Settings → Custom Code</b> → Paste in <b>Head Code</b> or <b>Footer Code</b>.
+                Go to <b>Project Settings â†’ Custom Code</b> â†’ Paste in <b>Head Code</b> or <b>Footer Code</b>.
             </p>
 
             <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--color-text-primary);margin-bottom:16px;">
-                <strong>💡 Pre-Submit Fail-Open Guarantee:</strong> If the visitor is on an ultra-slow connection or AdGuard server latency exceeds 2.0s, AdGuard gracefully <em>fails open</em> and allows native form submission, ensuring 0% lead loss.
+                <strong>ðŸ’¡ Pre-Submit Fail-Open Guarantee:</strong> If the visitor is on an ultra-slow connection or AdGuard server latency exceeds 2.0s, AdGuard gracefully <em>fails open</em> and allows native form submission, ensuring 0% lead loss.
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('wsEmbedGuideOverlay').style.display='none'">Close</button>
-                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">📋 Copy Script Tag</button>
+                <button class="btn btn-primary" onclick="copyWorkspaceEmbedSnippet()">ðŸ“‹ Copy Script Tag</button>
             </div>
         </div>
     </div>
@@ -1538,10 +1538,10 @@
         <div style="background:var(--color-bg-modal);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:26px;width:640px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--color-border);padding-bottom:10px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:22px;">🎯</span>
+                    <span style="font-size:22px;">ðŸŽ¯</span>
                     <h2 style="font-family:'DM Sans',sans-serif;font-size:17px;color:var(--color-text-primary);">Conversion Signal Dispatch &amp; Realized Spend</h2>
                 </div>
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsSavingsOverlay').style.display='none'">✕</button>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('wsSavingsOverlay').style.display='none'">âœ•</button>
             </div>
 
             <div id="wsSavingsContent" style="font-size:13px;line-height:1.6;">
@@ -1599,9 +1599,9 @@
                 $('wsSavingsContent').innerHTML = `
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                         <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
-                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Realized ₹ Budget Saved</div>
-                            <div style="font-size:24px;font-weight:800;color:var(--color-success);margin-top:2px;">₹${(data.realized_savings_inr || 0).toLocaleString('en-IN')}</div>
-                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Blocked junk × ₹${data.avg_cpl_inr || 350} estimated CPL</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Realized â‚¹ Budget Saved</div>
+                            <div style="font-size:24px;font-weight:800;color:var(--color-success);margin-top:2px;">â‚¹${(data.realized_savings_inr || 0).toLocaleString('en-IN')}</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Blocked junk Ã— â‚¹${data.avg_cpl_inr || 350} estimated CPL</div>
                         </div>
                         <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
                             <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Gated Conversion Signals</div>
@@ -1610,15 +1610,15 @@
                         </div>
                     </div>
                     <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px 14px;font-size:12px;margin-bottom:12px;">
-                        <strong>🚦 Conversion Value Tier Strategy Active:</strong>
+                        <strong>ðŸš¦ Conversion Value Tier Strategy Active:</strong>
                         <ul style="margin:6px 0 0 18px;line-height:1.6;">
-                            <li><b>₹500 Weight:</b> Clean Lead Submitted (Green Band Verdict)</li>
-                            <li><b>₹2,000 Weight:</b> CRM Stage Advanced (Appointment / Qualified)</li>
-                            <li><b>₹10,000 Weight:</b> Customer Converted / Won</li>
+                            <li><b>â‚¹500 Weight:</b> Clean Lead Submitted (Green Band Verdict)</li>
+                            <li><b>â‚¹2,000 Weight:</b> CRM Stage Advanced (Appointment / Qualified)</li>
+                            <li><b>â‚¹10,000 Weight:</b> Customer Converted / Won</li>
                         </ul>
                     </div>
                     <div style="font-size:12px;color:var(--color-text-muted);">
-                        Total Leads Processed: <b>${data.total_leads || 0}</b> · Flagged Garbage: <b>${data.flagged_junk || 0}</b>
+                        Total Leads Processed: <b>${data.total_leads || 0}</b> Â· Flagged Garbage: <b>${data.flagged_junk || 0}</b>
                     </div>
                 `;
             } catch (e) {
@@ -1641,11 +1641,11 @@
             if (!code) return;
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(code).then(() => {
-                    toast('📋 Script tag copied to clipboard! Paste into <head> or <body>', 'success');
+                    toast('ðŸ“‹ Script tag copied to clipboard! Paste into <head> or <body>', 'success');
                     const btn = btnId ? $(btnId) : null;
                     if (btn) {
                         const orig = btn.innerHTML;
-                        btn.innerHTML = '✅ Copied!';
+                        btn.innerHTML = 'âœ… Copied!';
                         setTimeout(() => { btn.innerHTML = orig; }, 2000);
                     }
                 }).catch(() => {
@@ -1703,7 +1703,7 @@
 
             if (isAdmin) {
                 $('sideRoleBadge').className = 'role-pill pill-admin';
-                $('sideRoleBadge').textContent = simWsId ? 'Admin — Simulating' : 'Owner / Admin';
+                $('sideRoleBadge').textContent = simWsId ? 'Admin â€” Simulating' : 'Owner / Admin';
                 $('navAdminBack').style.display = '';
             } else {
                 $('sideRoleBadge').className = 'role-pill pill-customer';
@@ -1779,7 +1779,7 @@
             }
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
             $('sidebarQuotaWidget').style.display = 'block';
-            const planNames = { trial: 'FREE TRIAL', starter: 'STARTER', pro: 'PRO', agency: 'ENTERPRISE', custom: 'CUSTOM' };
+            const planNames = { trial: 'FREE TRIAL', starter: 'STARTER', pro: 'PRO', agency: 'AGENCY', custom: 'CUSTOM' };
             $('quotaPlanTag').textContent = planNames[ws.plan || 'trial'] || (ws.plan || 'trial').toUpperCase();
 
             // Admins never upgrade plans inside subscriber simulation
@@ -1798,13 +1798,13 @@
                 const ms = new Date(ws.plan_expires_at) - new Date();
                 if (ms > 0) {
                     const days = Math.ceil(ms / 86400000);
-                    expiryLine = ' · ' + days + 'd left';
+                    expiryLine = ' Â· ' + days + 'd left';
                 }
             } else if (ws.plan !== 'agency' && ws.plan_expires_at) {
                 const ms = new Date(ws.plan_expires_at) - new Date();
                 if (ms > 0) {
                     const days = Math.ceil(ms / 86400000);
-                    expiryLine = ' · renews in ' + days + 'd';
+                    expiryLine = ' Â· renews in ' + days + 'd';
                 }
             }
             if (quota < 0) {
@@ -1821,11 +1821,11 @@
                 $('quotaBar').className = 'quota-bar' + (pct >= 95 ? ' danger' : pct >= 80 ? ' warn' : '');
                 if (pct >= 100 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
-                    $('quotaAlertTitle').textContent = '🚫 ' + (planNames[ws.plan || 'trial'] || 'Plan') + ' limit reached (' + quota.toLocaleString() + ' leads this month)';
-                    $('quotaAlertBody').textContent = ' New leads are paused. Upgrade to a higher plan to continue protection — your history stays safe.';
+                    $('quotaAlertTitle').textContent = 'ðŸš« ' + (planNames[ws.plan || 'trial'] || 'Plan') + ' limit reached (' + quota.toLocaleString() + ' leads this month)';
+                    $('quotaAlertBody').textContent = ' New leads are paused. Upgrade to a higher plan to continue protection â€” your history stays safe.';
                 } else if (pct >= 80 && !isAdmin) {
                     $('quotaAlertBanner').classList.remove('hidden');
-                    $('quotaAlertTitle').textContent = '⚠️ Plan Quota Alert:';
+                    $('quotaAlertTitle').textContent = 'âš ï¸ Plan Quota Alert:';
                     $('quotaAlertBody').textContent = ' You have used ' + pct + '% of your monthly lead limit (' + count.toLocaleString() + '/' + quota.toLocaleString() + '). Upgrade your plan to prevent lead capture interruptions.';
                 } else {
                     $('quotaAlertBanner').classList.add('hidden');
@@ -1882,8 +1882,8 @@
                 (p.credits === 300 ? '<div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--color-accent);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:2px 8px;">POPULAR</div>' : '') +
                 '<div style="font-size:20px;font-weight:800;color:var(--color-text-primary);">' + p.credits + '</div>' +
                 '<div style="font-size:10px;color:var(--color-text-muted);margin-bottom:8px;">AI verification calls</div>' +
-                '<div style="font-size:16px;font-weight:700;color:var(--color-success-text);">₹' + p.price.toLocaleString('en-IN') + '</div>' +
-                '<div style="font-size:10px;color:var(--color-text-muted);margin:4px 0 10px;">₹' + (p.price / p.credits).toFixed(1) + ' per call</div>' +
+                '<div style="font-size:16px;font-weight:700;color:var(--color-success-text);">â‚¹' + p.price.toLocaleString('en-IN') + '</div>' +
+                '<div style="font-size:10px;color:var(--color-text-muted);margin:4px 0 10px;">â‚¹' + (p.price / p.credits).toFixed(1) + ' per call</div>' +
                 '<button class="btn btn-sm ' + (p.credits === 300 ? 'btn-primary' : 'btn-secondary') + '" style="width:100%;font-size:11px;" onclick="buyCallPack(' + p.credits + ',' + p.price + ')">Buy ' + p.credits + '</button>' +
                 '</div>'
             ).join('');
@@ -1898,9 +1898,9 @@
             const ws = selectedWorkspaceObj;
             closeBuyCallsModal();
             if (!ws) { toast('No workspace selected', 'warn'); return; }
-            const body = 'Call top-up request: ' + credits + ' calls (₹' + price + ') for workspace "' + (ws.display_name || ws.id) +
-                '". I have sent the UPI payment to adguard@upi — sharing the screenshot. Please credit my call bucket.';
-            createTicket('Call Top-up: ' + credits + ' calls (₹' + price + ')', 'billing', body)
+            const body = 'Call top-up request: ' + credits + ' calls (â‚¹' + price + ') for workspace "' + (ws.display_name || ws.id) +
+                '". I have sent the UPI payment to adguard@upi â€” sharing the screenshot. Please credit my call bucket.';
+            createTicket('Call Top-up: ' + credits + ' calls (â‚¹' + price + ')', 'billing', body)
                 .catch(() => toast('Contact shekhar.chlear@gmail.com to credit your calls.', 'info'));
         }
 
@@ -1960,10 +1960,10 @@
 
         function openWsSandboxModal(data, plan) {
             const planNames = { starter: 'Starter Plan (1,000 Leads)', pro: 'Pro Plan (5,000 Leads)', agency: 'Agency Plan (Unlimited)' };
-            const planPrices = { starter: '₹4,999', pro: '₹14,999', agency: '₹39,999' };
+            const planPrices = { starter: 'â‚¹4,999', pro: 'â‚¹14,999', agency: 'â‚¹39,999' };
 
             $('wsSbxPlanLabel').textContent = planNames[plan] || plan.toUpperCase();
-            $('wsSbxAmountLabel').textContent = planPrices[plan] || '₹0';
+            $('wsSbxAmountLabel').textContent = planPrices[plan] || 'â‚¹0';
             $('wsSbxMsg').style.display = 'none';
             switchWsSandboxTab('card');
 
@@ -2029,7 +2029,7 @@
 
                 msg.style.background = 'var(--color-success-light)';
                 msg.style.color = 'var(--color-success-text)';
-                msg.innerHTML = `✓ <strong>Success!</strong> Upgraded to <strong>${result.plan.toUpperCase()} Plan</strong>.`;
+                msg.innerHTML = `âœ“ <strong>Success!</strong> Upgraded to <strong>${result.plan.toUpperCase()} Plan</strong>.`;
 
                 setTimeout(async () => {
                     closeWsSandboxModal();
@@ -2086,11 +2086,11 @@
             const mine = (workspaces || []).filter(w => w.owner_email === (currentUser ? currentUser.email : ''));
             const shown = mine.length ? mine : (workspaces || []);
             shown.forEach(w => {
-                const live = (w.google_is_live || w.meta_is_live) ? ' ●' : '';
+                const live = (w.google_is_live || w.meta_is_live) ? ' â—' : '';
                 list.appendChild(makeNavItem(w.display_name || w.owner_email, w.id, (w.display_name || w.owner_email) + live, selectedWorkspaceObj && String(selectedWorkspaceObj.id) === String(w.id)));
             });
 
-            // Enterprise (agency plan): Add-Workspace button up to plan limit
+            // Agency plan: Add-Workspace button up to plan limit
             if (!isAdmin && selectedWorkspaceObj && (selectedWorkspaceObj.plan === 'agency')) {
                 const limit = 10;
                 if (shown.length < limit) {
@@ -2098,20 +2098,20 @@
                     addBtn.className = 'add-account-btn';
                     addBtn.style.cssText = 'margin-top:6px;width:100%;';
                     addBtn.textContent = '+ Add Brand Workspace';
-                    addBtn.onclick = () => createEnterpriseWorkspace();
+                    addBtn.onclick = () => createAgencyWorkspace();
                     list.appendChild(addBtn);
                 }
                 if (shown.length >= limit) {
                     const cap = document.createElement('div');
                     cap.style.cssText = 'font-size:10px;color:var(--color-text-muted);margin-top:6px;text-align:center;';
-                    cap.textContent = 'Enterprise plan limit: ' + limit + ' brand workspaces';
+                    cap.textContent = 'Agency plan limit: ' + limit + ' brand workspaces';
                     list.appendChild(cap);
                 }
             }
         }
 
-        async function createEnterpriseWorkspace() {
-            const name = prompt('Brand workspace name (e.g. "Brand B — Delhi"):');
+        async function createAgencyWorkspace() {
+            const name = prompt('Brand workspace name (e.g. "Brand B â€” Delhi"):');
             if (!name || !name.trim()) return;
             try {
                 const res = await fetch(API + '/workspaces/create', {
@@ -2159,7 +2159,7 @@
                         </div>
                     </div>`;
             } else {
-                html += `<button class="add-account-btn" id="addAccountBtn" onclick="startConnect()" style="margin-bottom:6px;width:100%;">🔗 Connect Google Ads</button>`;
+                html += `<button class="add-account-btn" id="addAccountBtn" onclick="startConnect()" style="margin-bottom:6px;width:100%;">ðŸ”— Connect Google Ads</button>`;
             }
 
             // Meta Ads
@@ -2178,11 +2178,11 @@
                         </div>
                     </div>`;
             } else {
-                html += `<button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="width:100%;">🔗 Connect Meta Ads</button>`;
+                html += `<button class="add-account-btn" id="addMetaBtn" onclick="startMetaConnect()" style="width:100%;">ðŸ”— Connect Meta Ads</button>`;
             }
 
-            // Script Tag button (always present — the embed snippet for landing pages)
-            html += `<button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;width:100%;">⚡ Script Tag</button>`;
+            // Script Tag button (always present â€” the embed snippet for landing pages)
+            html += `<button class="add-account-btn" onclick="openScriptTagPanel()" style="margin-top:6px;width:100%;">âš¡ Script Tag</button>`;
 
             container.innerHTML = html;
         }
@@ -2197,8 +2197,8 @@
 
         function renderConnPills() {
             const ws = selectedWorkspaceObj;
-            $('pillGoogle').textContent = 'Google: ' + (ws && ws.google_is_live ? 'connected' : '—');
-            $('pillMeta').textContent = 'Meta: ' + (ws && ws.meta_is_live ? 'connected' : '—');
+            $('pillGoogle').textContent = 'Google: ' + (ws && ws.google_is_live ? 'connected' : 'â€”');
+            $('pillMeta').textContent = 'Meta: ' + (ws && ws.meta_is_live ? 'connected' : 'â€”');
             if (!ws || (!ws.google_is_live && !ws.meta_is_live)) {
                 // Banner removed; connector buttons in left panel are the prompt
             }
@@ -2309,7 +2309,7 @@
             const section = $('clientsNavSection');
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
-            // Customers: no client list at all — the workspace IS the account
+            // Customers: no client list at all â€” the workspace IS the account
             if (!isAdmin) {
                 if (section) section.style.display = 'none';
                 clientAccountsList = extractClientAccounts(selectedWorkspaceObj);
@@ -2329,7 +2329,7 @@
             let html = `
                 <div class="client-nav-item ${activeClientId === 'all' ? 'active' : ''}" onclick="selectClient('all', 'All Clients')">
                     <span style="display:flex;align-items:center;gap:7px;">
-                        <span style="font-size:13px;">🌐</span>
+                        <span style="font-size:13px;">ðŸŒ</span>
                         <span>All Clients</span>
                     </span>
                     <span class="client-badge">${clientAccountsList.length}</span>
@@ -2338,7 +2338,7 @@
 
             clientAccountsList.forEach(c => {
                 const isActive = activeClientId === String(c.id);
-                const platIcon = c.platform === 'meta' ? '🟦' : '🟧';
+                const platIcon = c.platform === 'meta' ? 'ðŸŸ¦' : 'ðŸŸ§';
                 html += `
                     <div class="client-nav-item ${isActive ? 'active' : ''}" onclick="selectClient('${escapeHtml(String(c.id))}', '${escapeHtml(c.name)}')" title="${escapeHtml(c.name)} (${escapeHtml(c.formatted || c.id)})">
                         <span style="display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -2450,8 +2450,8 @@
 
             if (titleEl) {
                 titleEl.textContent = activeClientId === 'all'
-                    ? '🛡️ All Accounts — Campaign Screening'
-                    : `🛡️ ${activeClientName} — Campaign Screening`;
+                    ? 'ðŸ›¡ï¸ All Accounts â€” Campaign Screening'
+                    : `ðŸ›¡ï¸ ${activeClientName} â€” Campaign Screening`;
             }
 
             const total = currentAvailableCampaigns.length;
@@ -2459,20 +2459,20 @@
             const liveInView = currentAvailableCampaigns.filter(c => liveCampaignIds.has(c.id)).length;
 
             if (total === 0) {
-                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">⚪ Standby</span> · 0 campaigns`;
-                if (footerEl) footerEl.textContent = '0 selected · 0 live';
+                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">âšª Standby</span> Â· 0 campaigns`;
+                if (footerEl) footerEl.textContent = '0 selected Â· 0 live';
                 listEl.innerHTML = `<div style="font-size:12px;color:var(--color-text-muted);padding:18px 12px;text-align:center;">No active campaigns found under <b>${escapeHtml(activeClientName)}</b>.<br><span style="font-size:11px;opacity:0.8;">Create or activate campaigns in Ads Manager to screen them here.</span></div>`;
                 return;
             }
 
             if (liveInView > 0) {
-                btnText.innerHTML = `<span style="color:#059669;font-weight:700;">🟢 ${liveInView} LIVE</span> · ${selectedCount} of ${total} selected`;
+                btnText.innerHTML = `<span style="color:#059669;font-weight:700;">ðŸŸ¢ ${liveInView} LIVE</span> Â· ${selectedCount} of ${total} selected`;
             } else {
-                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">⚪ Standby</span> · ${selectedCount} of ${total} selected`;
+                btnText.innerHTML = `<span style="color:#64748b;font-weight:600;">âšª Standby</span> Â· ${selectedCount} of ${total} selected`;
             }
 
             if (footerEl) {
-                footerEl.textContent = `${selectedCount} selected · ${liveInView} live`;
+                footerEl.textContent = `${selectedCount} selected Â· ${liveInView} live`;
             }
 
             const q = (ryzeSearchQuery || '').toLowerCase().trim();
@@ -2493,8 +2493,8 @@
                     const isChecked = activeCampaignIds.has(item.id);
                     const isLive = liveCampaignIds.has(item.id);
                     const liveBadge = isLive
-                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">🟢 LIVE</span>'
-                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">⚪ Standby</span>';
+                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">ðŸŸ¢ LIVE</span>'
+                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">âšª Standby</span>';
                     html += `
                         <label class="ryze-popover-item" style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
                             <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRyzeCampaignItem('${escapeHtml(String(item.id))}', this.checked)">
@@ -2510,8 +2510,8 @@
                     const isChecked = activeCampaignIds.has(item.id);
                     const isLive = liveCampaignIds.has(item.id);
                     const liveBadge = isLive
-                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">🟢 LIVE</span>'
-                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">⚪ Standby</span>';
+                        ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(16,185,129,0.15);color:#059669;margin-left:auto;white-space:nowrap;">ðŸŸ¢ LIVE</span>'
+                        : '<span style="font-size:9px;font-weight:600;padding:2px 6px;border-radius:10px;background:rgba(148,163,184,0.15);color:#64748b;margin-left:auto;white-space:nowrap;">âšª Standby</span>';
                     html += `
                         <label class="ryze-popover-item" style="display:flex;align-items:center;gap:8px;padding:6px 10px;">
                             <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleRyzeCampaignItem('${escapeHtml(String(item.id))}', this.checked)">
@@ -2533,7 +2533,7 @@
             }
             const ids = Array.from(activeCampaignIds);
             try {
-                toast('Activating screening for ' + ids.length + ' campaign(s)…');
+                toast('Activating screening for ' + ids.length + ' campaign(s)â€¦');
                 const res = await api('POST', '/workspace/' + selectedWorkspaceObj.id + '/campaigns/activate', {
                     workspace_id: selectedWorkspaceObj.id,
                     campaign_ids: ids,
@@ -2541,7 +2541,7 @@
                     account_id: activeClientId !== 'all' ? activeClientId : null
                 });
                 (res.live_campaign_ids || ids).forEach(id => liveCampaignIds.add(id));
-                toast('🛡️ ' + ids.length + ' campaign(s) are now LIVE for screening!');
+                toast('ðŸ›¡ï¸ ' + ids.length + ' campaign(s) are now LIVE for screening!');
                 renderRyzeCampaignDropdown();
                 renderRyzeDashboard();
             } catch (e) {
@@ -2557,7 +2557,7 @@
             }
             const ids = Array.from(activeCampaignIds);
             try {
-                toast('Pausing screening for ' + ids.length + ' campaign(s)…');
+                toast('Pausing screening for ' + ids.length + ' campaign(s)â€¦');
                 const res = await api('POST', '/workspace/' + selectedWorkspaceObj.id + '/campaigns/activate', {
                     workspace_id: selectedWorkspaceObj.id,
                     campaign_ids: ids,
@@ -2565,7 +2565,7 @@
                     account_id: activeClientId !== 'all' ? activeClientId : null
                 });
                 ids.forEach(id => liveCampaignIds.delete(id));
-                toast('⏸️ ' + ids.length + ' campaign(s) set to standby');
+                toast('â¸ï¸ ' + ids.length + ' campaign(s) set to standby');
                 renderRyzeCampaignDropdown();
                 renderRyzeDashboard();
             } catch (e) {
@@ -2621,7 +2621,7 @@
         }
 
         async function refreshRyzeData() {
-            toast('Refreshing live metrics and campaigns…');
+            toast('Refreshing live metrics and campaignsâ€¦');
             if (selectedWorkspaceObj) {
                 try {
                     await api('POST', '/workspace/' + selectedWorkspaceObj.id + '/sync-campaigns');
@@ -2708,14 +2708,14 @@
                         </svg>
                         <div style="font-size:10px;color:var(--color-text-muted);margin-top:2px;display:flex;align-items:center;gap:4px;">
                             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;"></span>
-                            <span>Live Shield Active · Waiting for leads</span>
+                            <span>Live Shield Active Â· Waiting for leads</span>
                         </div>
                     </div>
                 `;
 
                 if ($('chartSpendIntegrity')) $('chartSpendIntegrity').innerHTML = emptySvg('Audited', '#3b82f6');
                 if ($('chartConversionsRate')) $('chartConversionsRate').innerHTML = emptySvg('Quality %', '#10b981');
-                if ($('chartClicksCtr')) $('chartClicksCtr').innerHTML = emptySvg('₹ Saved', '#059669');
+                if ($('chartClicksCtr')) $('chartClicksCtr').innerHTML = emptySvg('â‚¹ Saved', '#059669');
                 return;
             }
 
@@ -2769,7 +2769,7 @@
 
             drawRyzeChart('chartSpendIntegrity', auditedBars, blockedLines, '#93c5fd', '#ef4444', 'Audited', 'Blocked');
             drawRyzeChart('chartConversionsRate', verifiedBars, passRateLines, '#93c5fd', '#10b981', 'Verified', '% Pass');
-            drawRyzeChart('chartClicksCtr', wouldBeSpendBars, savedSpendLines, '#93c5fd', '#059669', '₹ Cost', '₹ Saved');
+            drawRyzeChart('chartClicksCtr', wouldBeSpendBars, savedSpendLines, '#93c5fd', '#059669', 'â‚¹ Cost', 'â‚¹ Saved');
         }
 
         function renderRyzeKpis(leads) {
@@ -2788,49 +2788,49 @@
             const recoveredSpend = flaggedLeads.length * cplBenchmark;
 
             function formatInr(num) {
-                if (!num || num === 0) return '₹0';
-                if (num >= 10000000) return '₹' + (num / 10000000).toFixed(2) + ' Cr';
-                if (num >= 100000) return '₹' + (num / 100000).toFixed(2) + 'L';
-                if (num >= 1000) return '₹' + (num / 1000).toFixed(1) + 'k';
-                return '₹' + Math.round(num).toLocaleString('en-IN');
+                if (!num || num === 0) return 'â‚¹0';
+                if (num >= 10000000) return 'â‚¹' + (num / 10000000).toFixed(2) + ' Cr';
+                if (num >= 100000) return 'â‚¹' + (num / 100000).toFixed(2) + 'L';
+                if (num >= 1000) return 'â‚¹' + (num / 1000).toFixed(1) + 'k';
+                return 'â‚¹' + Math.round(num).toLocaleString('en-IN');
             }
 
             // 1. Leads Audited (Clean 0 when 0 leads)
             if ($('kpiAuditedLeads')) $('kpiAuditedLeads').textContent = totalLeads ? totalLeads.toLocaleString('en-IN') : '0';
             if ($('kpiAuditedSub')) $('kpiAuditedSub').textContent = totalLeads 
-                ? (googleLeads.toLocaleString('en-IN') + ' Google · ' + metaLeads.toLocaleString('en-IN') + ' Meta')
-                : '0 Google · 0 Meta';
-            if ($('kpiAuditedPill')) $('kpiAuditedPill').textContent = totalLeads ? ('🛡️ ' + totalLeads + ' Screened') : '🛡️ Live Screened';
+                ? (googleLeads.toLocaleString('en-IN') + ' Google Â· ' + metaLeads.toLocaleString('en-IN') + ' Meta')
+                : '0 Google Â· 0 Meta';
+            if ($('kpiAuditedPill')) $('kpiAuditedPill').textContent = totalLeads ? ('ðŸ›¡ï¸ ' + totalLeads + ' Screened') : 'ðŸ›¡ï¸ Live Screened';
 
             // 2. Verified Leads (Passed to CRM)
             if ($('kpiVerifiedLeads')) $('kpiVerifiedLeads').textContent = verifiedLeads.length ? verifiedLeads.length.toLocaleString('en-IN') : '0';
             if ($('kpiVerifiedSub')) $('kpiVerifiedSub').textContent = totalLeads
-                ? (passRate + '% pass rate · Delivered to CRM')
+                ? (passRate + '% pass rate Â· Delivered to CRM')
                 : '0 clean leads passed to CRM';
-            if ($('kpiPassRatePill')) $('kpiPassRatePill').textContent = totalLeads ? ('🟢 ' + passRate + '% Quality') : '🟢 0% Quality';
+            if ($('kpiPassRatePill')) $('kpiPassRatePill').textContent = totalLeads ? ('ðŸŸ¢ ' + passRate + '% Quality') : 'ðŸŸ¢ 0% Quality';
 
             // 3. Blocked Garbage
             if ($('kpiBlockedLeads')) $('kpiBlockedLeads').textContent = flaggedLeads.length ? flaggedLeads.length.toLocaleString('en-IN') : '0';
             if ($('kpiBlockedSub')) $('kpiBlockedSub').textContent = totalLeads
                 ? (flaggedLeads.length.toLocaleString('en-IN') + ' fake & bot leads stopped')
                 : '0 fake & bot leads stopped';
-            if ($('kpiBlockPill')) $('kpiBlockPill').textContent = totalLeads ? ('🛑 ' + junkRate + '% Blocked') : '🛑 0% Blocked';
+            if ($('kpiBlockPill')) $('kpiBlockPill').textContent = totalLeads ? ('ðŸ›‘ ' + junkRate + '% Blocked') : 'ðŸ›‘ 0% Blocked';
 
-            // 4. Recovered ₹ Spend
+            // 4. Recovered â‚¹ Spend
             if ($('kpiSavedSpend')) $('kpiSavedSpend').textContent = formatInr(recoveredSpend);
             if ($('kpiSavedSub')) $('kpiSavedSub').textContent = totalLeads
                 ? (formatInr(recoveredSpend) + ' saved vs ' + formatInr(wouldBeSpend) + ' would-be ad burn')
-                : '₹0 saved vs ₹0 would-be ad burn';
-            if ($('kpiBudgetPill')) $('kpiBudgetPill').textContent = totalLeads ? ('💰 ' + formatInr(recoveredSpend) + ' Saved') : '💰 Budget Saved';
+                : 'â‚¹0 saved vs â‚¹0 would-be ad burn';
+            if ($('kpiBudgetPill')) $('kpiBudgetPill').textContent = totalLeads ? ('ðŸ’° ' + formatInr(recoveredSpend) + ' Saved') : 'ðŸ’° Budget Saved';
 
             // Backward compatibility fallbacks if older IDs referenced
             if ($('kpiSpend')) $('kpiSpend').textContent = formatInr(wouldBeSpend);
             if ($('kpiResults')) $('kpiResults').textContent = totalLeads ? totalLeads.toLocaleString('en-IN') : '0';
-            if ($('kpiPlatformBreakdown')) $('kpiPlatformBreakdown').textContent = googleLeads + ' Google · ' + metaLeads + ' Meta';
-            if ($('kpiCpa')) $('kpiCpa').textContent = totalLeads ? ('₹' + Math.round(wouldBeSpend / Math.max(1, verifiedLeads.length))) : '₹0';
+            if ($('kpiPlatformBreakdown')) $('kpiPlatformBreakdown').textContent = googleLeads + ' Google Â· ' + metaLeads + ' Meta';
+            if ($('kpiCpa')) $('kpiCpa').textContent = totalLeads ? ('â‚¹' + Math.round(wouldBeSpend / Math.max(1, verifiedLeads.length))) : 'â‚¹0';
             if ($('kpiCpaSub')) $('kpiCpaSub').textContent = verifiedLeads.length + ' verified leads delivered to CRM';
             if ($('kpiSaved')) $('kpiSaved').textContent = formatInr(recoveredSpend);
-            if ($('kpiShieldPill')) $('kpiShieldPill').textContent = '🛡️ ' + junkRate + '% Junk Blocked';
+            if ($('kpiShieldPill')) $('kpiShieldPill').textContent = 'ðŸ›¡ï¸ ' + junkRate + '% Junk Blocked';
             if ($('kpiSavedSub')) $('kpiSavedSub').textContent = flaggedLeads.length + ' fake & bot leads blocked from ad waste';
         }
 
@@ -2867,10 +2867,10 @@
 
         // ---------- CRM preference + credential capture ----------
         const CRM_META = {
-            leadsquared: { label: 'LeadSquared', icon: '📣', blurb: 'India\'s leading lead-management CRM' },
-            zoho: { label: 'Zoho CRM', icon: '🟦', blurb: 'Zoho CRM — push verified leads as Contacts/Leads' },
-            hubspot: { label: 'HubSpot', icon: '🧡', blurb: 'HubSpot CRM — leads land as Contacts' },
-            webhook: { label: 'Custom Webhook', icon: '⚙️', blurb: 'Any CRM or internal system with a webhook URL' },
+            leadsquared: { label: 'LeadSquared', icon: 'ðŸ“£', blurb: 'India\'s leading lead-management CRM' },
+            zoho: { label: 'Zoho CRM', icon: 'ðŸŸ¦', blurb: 'Zoho CRM â€” push verified leads as Contacts/Leads' },
+            hubspot: { label: 'HubSpot', icon: 'ðŸ§¡', blurb: 'HubSpot CRM â€” leads land as Contacts' },
+            webhook: { label: 'Custom Webhook', icon: 'âš™ï¸', blurb: 'Any CRM or internal system with a webhook URL' },
         };
 
         const CRM_FIELDS = {
@@ -2918,7 +2918,7 @@
             { key: 'netsuite', label: 'Oracle NetSuite', domain: 'netsuite.com' },
             { key: 'bitrix24', label: 'Bitrix24', domain: 'bitrix24.com' },
             { key: 'vtiger', label: 'Vtiger CRM', domain: 'vtiger.com' },
-            { key: 'webhook', label: 'Custom Webhook', supported: true, icon: '⚙️' },
+            { key: 'webhook', label: 'Custom Webhook', supported: true, icon: 'âš™ï¸' },
         ];
 
         function crmLogoFallback(img, domain) {
@@ -2970,12 +2970,12 @@
             crmPickerCrm = crm;
             crmBridgeLabel = viaLabel || null;
             closeCrmPicker();
-            const m = CRM_META[crm] || { label: crm, icon: '🔗' };
+            const m = CRM_META[crm] || { label: crm, icon: 'ðŸ”—' };
             const display = viaLabel || m.label;
-            $('crmCredsIcon').textContent = viaLabel ? '🔗' : (m.icon || '🔌');
+            $('crmCredsIcon').textContent = viaLabel ? 'ðŸ”—' : (m.icon || 'ðŸ”Œ');
             $('crmCredsTitle').textContent = 'Connect ' + display;
             $('crmCredsSub').textContent = viaLabel
-                ? display + ' is not directly integrated yet. Connect via Universal Webhook — every verified lead is POSTed to your endpoint as JSON, in real time.'
+                ? display + ' is not directly integrated yet. Connect via Universal Webhook â€” every verified lead is POSTed to your endpoint as JSON, in real time.'
                 : 'Enter your ' + m.label + ' credentials to connect.';
             $('crmTestResult').innerHTML = '';
             $('crmCredsFields').innerHTML = (CRM_FIELDS[crm] || []).map(f =>
@@ -3005,15 +3005,15 @@
             crmCard.style.borderColor = connected ? 'var(--color-accent)' : 'var(--color-border)';
             const stateEl = $('crmOptCrmState');
             if (connected) {
-                const m = CRM_META[pref] || { label: pref, icon: '🔌' };
+                const m = CRM_META[pref] || { label: pref, icon: 'ðŸ”Œ' };
                 const label = (pref === 'webhook' && crmBridgeLabel) ? crmBridgeLabel + ' (via webhook)' : m.label;
-                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-success-text);font-weight:600;">✅ Connected — ' + label + '</div>' +
+                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-success-text);font-weight:600;">âœ… Connected â€” ' + label + '</div>' +
                     '<div style="display:flex;gap:10px;margin-top:4px;"><span style="font-size:11px;color:var(--color-accent);cursor:pointer;text-decoration:underline;" onclick="openCrmCreds(\'' + pref + '\')">Update credentials</span>' +
                     '<span style="font-size:11px;color:var(--color-danger-text);cursor:pointer;text-decoration:underline;" onclick="disconnectCrm()">Disconnect</span></div>';
                 st.textContent = 'Verified leads auto-deliver to ' + label + '.';
                 st.style.color = 'var(--color-text-muted)';
             } else {
-                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-accent);font-weight:600;cursor:pointer;" onclick="openCrmPicker()">Connect a CRM →</div>';
+                stateEl.innerHTML = '<div style="font-size:11px;color:var(--color-accent);font-weight:600;cursor:pointer;" onclick="openCrmPicker()">Connect a CRM â†’</div>';
                 st.textContent = 'Leads stay in AdGuard for junk auditing. Downstream CRM push is optional.';
                 st.style.color = 'var(--color-text-muted)';
             }
@@ -3053,9 +3053,9 @@
                 const box = $('crmTestResult');
                 if (!res.ok) { box.innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(data.detail || 'Test failed') + '</span>'; return; }
                 if (data.status === 'pushed') {
-                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ Test lead delivered to ' + ((CRM_META[data.provider] || {}).label || data.provider) + '. Check your CRM.</span>';
+                    box.innerHTML = '<span style="color:var(--color-success-text);">âœ… Test lead delivered to ' + ((CRM_META[data.provider] || {}).label || data.provider) + '. Check your CRM.</span>';
                 } else {
-                    box.innerHTML = '<span style="color:var(--color-danger-text);">❌ ' + escapeHtml(data.error || 'Delivery failed') + '</span>';
+                    box.innerHTML = '<span style="color:var(--color-danger-text);">âŒ ' + escapeHtml(data.error || 'Delivery failed') + '</span>';
                 }
             } catch (e) { $('crmTestResult').innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(e.message) + '</span>'; }
         }
@@ -3101,11 +3101,11 @@
             if (params.get('oauth_success') === 'google') toast('Google Ads connected successfully.');
             else if (params.get('oauth_success') === 'meta') toast('Meta Ads connected successfully.');
             else if (params.get('oauth_error')) {
-                const limitPlans = { trial: 'Free trial', starter: 'Starter', pro: 'Pro', agency: 'Enterprise' };
+                const limitPlans = { trial: 'Free trial', starter: 'Starter', pro: 'Pro', agency: 'Agency' };
                 if (params.get('oauth_error') === 'google_identity_limit') {
-                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Google Ads connection(s). Upgrade to Enterprise for more.', 'error');
+                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Google Ads connection(s). Upgrade to Agency for more.', 'error');
                 } else if (params.get('oauth_error') === 'meta_identity_limit') {
-                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Meta Ads connection(s). Upgrade to Enterprise for more.', 'error');
+                    toast('Plan limit: ' + (limitPlans[params.get('plan')] || 'your plan') + ' allows ' + params.get('limit') + ' Meta Ads connection(s). Upgrade to Agency for more.', 'error');
                 } else {
                     toast('Connection error: ' + params.get('oauth_error'), 'error');
                 }
@@ -3143,8 +3143,8 @@
         function renderMetaButtonState() {
             const btn = $('addMetaBtn');
             if (!btn) return;
-            // Always offer connecting ANOTHER Meta (Facebook) login — multi-identity
-            btn.textContent = '🔗 Connect Meta Ads';
+            // Always offer connecting ANOTHER Meta (Facebook) login â€” multi-identity
+            btn.textContent = 'ðŸ”— Connect Meta Ads';
             btn.onclick = startMetaConnect;
         }
 
@@ -3351,10 +3351,10 @@
             }
             body.innerHTML = rows.map(l => `<tr>
                 <td>${l.received_at ? l.received_at.replace('T', ' ').slice(0, 16) : '-'}</td>
-                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">—</span>'}</td>
+                <td style="font-weight:600;">${escapeHtml(l.full_name) || '<span style="color:var(--color-text-muted)">â€”</span>'}</td>
                 <td>${campaignCell(l)}</td>
                 <td>${contactText(l)}</td>
-                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score ?? '—'}</span></td>
+                <td><span class="score-pill ${scoreClass(l.integrity_score)}">${l.integrity_score ?? 'â€”'}</span></td>
                 <td>${reasonText(l)}</td>
                 <td>${statusBadge(l)}</td>
             </tr>`).join('');
@@ -3364,8 +3364,8 @@
             const bits = [];
             if (l.account_name) bits.push(`<div style="font-weight:600;font-size:12px;color:var(--color-text);">${escapeHtml(l.account_name)}</div>`);
             if (l.campaign_name) bits.push(`<div style="font-size:11px;color:var(--color-text-secondary);">${escapeHtml(l.campaign_name)}</div>`);
-            if (l.page_name) bits.push(`<div style="font-size:10px;color:var(--color-text-muted);">📄 ${escapeHtml(l.page_name)}</div>`);
-            if (!bits.length) bits.push(`<span style="color:var(--color-text-muted)">—</span>`);
+            if (l.page_name) bits.push(`<div style="font-size:10px;color:var(--color-text-muted);">ðŸ“„ ${escapeHtml(l.page_name)}</div>`);
+            if (!bits.length) bits.push(`<span style="color:var(--color-text-muted)">â€”</span>`);
             return bits.join('');
         }
 
@@ -3373,7 +3373,7 @@
             const bits = [];
             if (l.email) bits.push('<div style="font-size:12px;">' + escapeHtml(l.email) + '</div>');
             if (l.phone) bits.push('<div style="font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(l.phone) + '</div>');
-            return bits.join('') || '<span style="color:var(--color-text-muted)">—</span>';
+            return bits.join('') || '<span style="color:var(--color-text-muted)">â€”</span>';
         }
 
         function reasonText(l) {
@@ -3384,7 +3384,7 @@
             if (l.ai_legitimacy_score != null) parts.push('AI ' + l.ai_legitimacy_score);
             const flags = (l.flags || []).map(f => '<span class="flag-chip">' + escapeHtml(f) + '</span>').join(' ');
             if (flags) return parts.join(', ') + '<br>' + flags;
-            return parts.join(', ') || '—';
+            return parts.join(', ') || 'â€”';
         }
 
         function statusBadge(l) {
@@ -3454,30 +3454,30 @@
             const out = $('servicesLiveContent');
             if (!box || !out) return;
             const items = [];
-            // 1. Money Shield — only when the subscriber turned it ON
+            // 1. Money Shield â€” only when the subscriber turned it ON
             if (ws.shield_enabled) {
-                items.push('🛡️ Money Shield active' + (liveCount > 0 ? ` · guarding ${liveCount} campaign${liveCount > 1 ? 's' : ''}` : ''));
+                items.push('ðŸ›¡ï¸ Money Shield active' + (liveCount > 0 ? ` Â· guarding ${liveCount} campaign${liveCount > 1 ? 's' : ''}` : ''));
             }
-            // 2. Campaign screening (Go Live) — only when campaigns are live
-            if (liveCount > 0) items.push('🔍 Campaign screening on');
-            // 3. CRM delivery — only when a CRM is connected
+            // 2. Campaign screening (Go Live) â€” only when campaigns are live
+            if (liveCount > 0) items.push('ðŸ” Campaign screening on');
+            // 3. CRM delivery â€” only when a CRM is connected
             if (ws.crm_preference && ws.crm_preference !== 'none') {
                 const lbl = { leadsquared: 'LeadSquared', zoho: 'Zoho CRM', hubspot: 'HubSpot', webhook: 'Webhook', salesforce: 'Salesforce' }[ws.crm_preference] || ws.crm_preference;
-                items.push('📩 ' + lbl + ' delivery on');
+                items.push('ðŸ“© ' + lbl + ' delivery on');
             }
-            // 4. FraudGraph — always on when connected (every lead feeds the network)
-            if (ws.google_is_live || ws.meta_is_live) items.push('🕸️ FraudGraph network on');
-            // 5. Email alerts — only when configured
+            // 4. FraudGraph â€” always on when connected (every lead feeds the network)
+            if (ws.google_is_live || ws.meta_is_live) items.push('ðŸ•¸ï¸ FraudGraph network on');
+            // 5. Email alerts â€” only when configured
             try {
                 const alerts = typeof ws.alert_emails === 'string' ? JSON.parse(ws.alert_emails || '[]') : (ws.alert_emails || []);
-                if (alerts && alerts.length) items.push('✉️ ' + alerts.length + ' alert email' + (alerts.length > 1 ? 's' : '') + ' set');
+                if (alerts && alerts.length) items.push('âœ‰ï¸ ' + alerts.length + ' alert email' + (alerts.length > 1 ? 's' : '') + ' set');
             } catch (e) {}
             // Fallback state
             if (!items.length) {
-                out.textContent = '⚪ Services on standby — connect an ad account or turn on Money Shield in Settings';
+                out.textContent = 'âšª Services on standby â€” connect an ad account or turn on Money Shield in Settings';
                 return;
             }
-            out.textContent = items.join('  ·  ');
+            out.textContent = items.join('  Â·  ');
             // Green when shield on (protection live), amber otherwise
             box.style.borderColor = ws.shield_enabled ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.25)';
             box.style.background = ws.shield_enabled ? 'var(--color-success-light)' : 'var(--color-warning-light)';
@@ -3497,7 +3497,7 @@
                 const data = await res.json();
                 Object.assign(selectedWorkspaceObj, data);
                 toast(key === 'shield_enabled'
-                    ? (value ? '🛡️ Money Shield ON — junk campaigns will be paused before they burn budget' : 'Shield off')
+                    ? (value ? 'ðŸ›¡ï¸ Money Shield ON â€” junk campaigns will be paused before they burn budget' : 'Shield off')
                     : 'Shield setting saved');
             } catch (e) { toast(e.message, 'error'); }
         }
@@ -3517,10 +3517,10 @@
                 if (!data.shield_enabled && !(data.campaigns_scanned)) {
                     box.innerHTML = '<span style="color:var(--color-text-muted);">No live campaigns active to scan.</span>';
                 } else if ((data.breached || []).length) {
-                    box.innerHTML = '<span style="color:var(--color-danger-text);font-weight:600;">⚠️ ' + data.breached.length + ' campaign(s) breached:</span>' +
-                        data.breached.map(b => '<div>' + escapeHtml(b.campaign) + ' — ' + b.junk_pct + '% junk (' + b.flagged + '/' + b.leads_24h + ')</div>').join('');
+                    box.innerHTML = '<span style="color:var(--color-danger-text);font-weight:600;">âš ï¸ ' + data.breached.length + ' campaign(s) breached:</span>' +
+                        data.breached.map(b => '<div>' + escapeHtml(b.campaign) + ' â€” ' + b.junk_pct + '% junk (' + b.flagged + '/' + b.leads_24h + ')</div>').join('');
                 } else {
-                    box.innerHTML = '<span style="color:var(--color-success-text);">✅ 24/7 Watchdog Verified — ' + (data.campaigns_scanned || 0) + ' campaign(s) safe.</span>';
+                    box.innerHTML = '<span style="color:var(--color-success-text);">âœ… 24/7 Watchdog Verified â€” ' + (data.campaigns_scanned || 0) + ' campaign(s) safe.</span>';
                 }
             } catch (e) { toast(e.message, 'error'); }
         }
@@ -3528,7 +3528,7 @@
         async function syncExclusions() {
             if (!selectedWorkspaceObj) { toast('No workspace selected', 'error'); return; }
             const box = $('exclusionSyncResult');
-            box.innerHTML = '<span style="color:var(--color-text-muted);">⏳ Pushing blocked scammers to Google/Meta exclusion lists…</span>';
+            box.innerHTML = '<span style="color:var(--color-text-muted);">â³ Pushing blocked scammers to Google/Meta exclusion listsâ€¦</span>';
             try {
                 const res = await fetch(API + '/shield/exclusions/sync', {
                     method: 'POST',
@@ -3538,7 +3538,7 @@
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) { box.innerHTML = '<span style="color:var(--color-danger-text);">' + escapeHtml(data.detail || 'Sync failed') + '</span>'; return; }
                 const parts = [];
-                if (data.google) parts.push('Google: ' + (data.google.ok ? '<span style="color:var(--color-success-text);">✓ ' + (data.google.added || 0) + ' pushed</span>' : '<span style="color:var(--color-danger-text);">✗ ' + escapeHtml(data.google.error || 'failed') + '</span>'));
+                if (data.google) parts.push('Google: ' + (data.google.ok ? '<span style="color:var(--color-success-text);">âœ“ ' + (data.google.added || 0) + ' pushed</span>' : '<span style="color:var(--color-danger-text);">âœ— ' + escapeHtml(data.google.error || 'failed') + '</span>'));
                 if (data.meta_results && data.meta_results.length) {
                     const okM = data.meta_results.filter(r => r.ok).length;
                     const failM = data.meta_results.filter(r => !r.ok);
@@ -3561,7 +3561,7 @@
                 const data = await res.json();
                 box.style.display = 'block';
                 box.innerHTML = (data.actions || []).length
-                    ? data.actions.slice().reverse().map(a => '<div style="padding:2px 0;border-bottom:1px solid var(--color-border);">🛡️ <b>' + escapeHtml(a.action) + '</b> ' + escapeHtml(a.campaign || '') + '<br><span style="color:var(--color-text-muted);">' + escapeHtml(a.detail || '') + '</span></div>').join('')
+                    ? data.actions.slice().reverse().map(a => '<div style="padding:2px 0;border-bottom:1px solid var(--color-border);">ðŸ›¡ï¸ <b>' + escapeHtml(a.action) + '</b> ' + escapeHtml(a.campaign || '') + '<br><span style="color:var(--color-text-muted);">' + escapeHtml(a.detail || '') + '</span></div>').join('')
                     : '<span style="color:var(--color-text-muted);">No shield actions yet.</span>';
             } catch (e) { toast(e.message, 'error'); }
         }
@@ -3636,8 +3636,8 @@
                     '<tr><td style="font-weight:600;">' + escapeHtml(c.campaign) + '</td>' +
                     '<td>' + c.leads + '</td><td style="color:var(--color-success-text);">' + c.verified + '</td>' +
                     '<td style="color:var(--color-danger-text);">' + c.flagged + '</td>' +
-                    '<td>' + (c.junk_pct >= 40 ? '<b style="color:var(--color-danger);">' : '') + c.junk_pct + '%' + (c.junk_pct >= 40 ? ' ⚠️' : '') + '</td>' +
-                    '<td style="font-weight:600;">₹' + c.recovered_spend_inr.toLocaleString('en-IN') + '</td></tr>'
+                    '<td>' + (c.junk_pct >= 40 ? '<b style="color:var(--color-danger);">' : '') + c.junk_pct + '%' + (c.junk_pct >= 40 ? ' âš ï¸' : '') + '</td>' +
+                    '<td style="font-weight:600;">â‚¹' + c.recovered_spend_inr.toLocaleString('en-IN') + '</td></tr>'
                 ).join('') || '<tr><td colspan="6"><div class="empty-state"><h3>No leads in this period</h3></div></td></tr>';
 
                 const fb = flags.breakdown || [];
@@ -3688,13 +3688,13 @@
                                     '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
                                     '<b style="font-size:12px;flex:1;">' + escapeHtml(i.email) + '</b>' +
                                     '<span class="badge badge-green" style="font-size:9px;">' + accs.length + '</span>' +
-                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectIdentity(\'' + escapeHtml(i.email) + '\')">✕</button></div>' +
+                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectIdentity(\'' + escapeHtml(i.email) + '\')">âœ•</button></div>' +
                                     (accs.length ? accs.map(a =>
                                         '<div style="display:flex;align-items:center;gap:8px;padding:3px 0 3px 16px;font-size:12px;">' +
                                         '<span class="account-dot" style="width:5px;height:5px;"></span>' +
                                         '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
                                         (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered — click Re-scan</div>') +
+                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered â€” click Re-scan</div>') +
                                     '</div>';
                             }).join('');
                         } else {
@@ -3704,7 +3704,7 @@
                                 '<span class="account-dot" style="width:6px;height:6px;"></span>' +
                                 '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
                                 (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
+                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered â€” click Re-scan</div>';
                         }
                     } else if (platform === 'meta') {
                         const metaIdents = (info.identities || []).filter(i => i.label);
@@ -3718,13 +3718,13 @@
                                     '<span class="account-dot" style="width:6px;height:6px;background:var(--color-accent);"></span>' +
                                     '<b style="font-size:12px;flex:1;">' + escapeHtml(i.label) + '</b>' +
                                     '<span class="badge badge-green" style="font-size:9px;">' + all.length + '</span>' +
-                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectMetaIdentity(\'' + escapeHtml(i.label) + '\')">✕</button></div>' +
+                                    '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:9px;" onclick="disconnectMetaIdentity(\'' + escapeHtml(i.label) + '\')">âœ•</button></div>' +
                                     (all.length ? all.map(a =>
                                         '<div style="display:flex;align-items:center;gap:8px;padding:3px 0 3px 16px;font-size:12px;">' +
                                         '<span class="account-dot" style="width:5px;height:5px;"></span>' +
                                         '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
                                         (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered — click Re-scan</div>') +
+                                    ).join('') : '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 0 0 16px;">no accounts discovered â€” click Re-scan</div>') +
                                     '</div>';
                             }).join('');
                         } else {
@@ -3734,7 +3734,7 @@
                                 '<span class="account-dot" style="width:6px;height:6px;"></span>' +
                                 '<span style="flex:1;">' + escapeHtml(a.name || a.id) + '</span>' +
                                 (a.formatted ? '<span style="color:var(--color-text-muted);">' + escapeHtml(a.formatted) + '</span>' : '') + '</div>'
-                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered — click Re-scan</div>';
+                            ).join('') : '<div style="font-size:12px;color:var(--color-text-muted);">no accounts discovered â€” click Re-scan</div>';
                         }
                     } else {
                         const accs = (info.accounts || []);
@@ -3749,7 +3749,7 @@
                         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                         '<div><b>' + label + '</b> ' + (connected ? '<span class="badge badge-green">connected</span>' : '<span class="badge badge-gray">not connected</span>') + '</div>' +
                         '<div style="display:flex;gap:6px;">' + (connected
-                            ? '<button class="btn btn-secondary btn-sm" onclick="rediscover(\'' + platform + '\')">🔄 Re-scan</button>' +
+                            ? '<button class="btn btn-secondary btn-sm" onclick="rediscover(\'' + platform + '\')">ðŸ”„ Re-scan</button>' +
                               '<button class="btn btn-secondary btn-sm" onclick="disconnectPlatform(\'' + platform + '\')">Disconnect</button>'
                             : '<button class="btn btn-primary btn-sm" onclick="' + (platform === 'google' ? 'startConnect()' : 'startMetaConnect()') + '">Connect</button>') + '</div></div>' +
                         '<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;">Last sync: <b>' + lastSync + '</b>' + (platform === 'meta' && connected ? ' (auto-polls every 5 min)' : '') + '</div>' +
@@ -3802,7 +3802,7 @@
 
         // ---------- Support tickets & Email Help Desk ----------
         let currentTicketId = null;
-        let activeSupportEmail = 'support@adguard.ai';
+        let activeSupportEmail = 'shekhar.chlear@gmail.com';
 
         async function loadSupportConfig() {
             try {
@@ -3853,8 +3853,8 @@
             }
             navigator.clipboard.writeText(activeSupportEmail).then(() => {
                 const orig = btn ? btn.textContent : '';
-                if (btn) btn.textContent = '✓ Copied!';
-                setTimeout(() => { if (btn) btn.textContent = orig || '📋 Copy'; }, 2000);
+                if (btn) btn.textContent = 'âœ“ Copied!';
+                setTimeout(() => { if (btn) btn.textContent = orig || 'ðŸ“‹ Copy'; }, 2000);
             }).catch(() => {
                 prompt('Copy support email address:', activeSupportEmail);
             });
@@ -3871,7 +3871,7 @@
                         '<td><span class="badge badge-gray">' + escapeHtml(t.category) + '</span></td>' +
                         '<td><span class="badge ' + statusCls + '">' + t.status + '</span></td>' +
                         '<td style="font-size:12px;">' + (t.updated_at || '').replace('T', ' ').slice(0, 16) + '</td>' +
-                        '<td>›</td></tr>';
+                        '<td>â€º</td></tr>';
                 }).join('') || '<tr><td colspan="6"><div class="empty-state"><h3>No tickets yet</h3><p>Need help? Raise a ticket or write to ' + escapeHtml(activeSupportEmail) + '</p></div></td></tr>';
             } catch (e) { toast(e.message, 'error'); }
         }
@@ -3891,7 +3891,7 @@
                     subject, category, body,
                     workspace_id: selectedWorkspaceObj ? selectedWorkspaceObj.id : null
                 });
-                toast('Ticket #' + t.id + ' created — the team will respond soon');
+                toast('Ticket #' + t.id + ' created â€” the team will respond soon');
                 loadTickets();
                 openTicket(t.id);
             } catch (e) { toast(e.message, 'error'); }
@@ -3902,10 +3902,10 @@
                 const t = await api('GET', '/support/tickets/' + id);
                 currentTicketId = id;
                 $('ticketThreadCard').classList.remove('hidden');
-                $('ticketThreadTitle').textContent = '#' + t.id + ' — ' + t.subject + ' (' + t.status + ')';
+                $('ticketThreadTitle').textContent = '#' + t.id + ' â€” ' + t.subject + ' (' + t.status + ')';
                 $('ticketThread').innerHTML = (t.messages || []).map(m =>
                     '<div style="margin-bottom:10px;' + (m.sender === 'owner' ? 'background:var(--color-accent-light);border-radius:10px;padding:10px 12px;' : 'background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;') + '">' +
-                    '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' · ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
+                    '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' Â· ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
                     '<div style="font-size:13px;white-space:pre-wrap;">' + escapeHtml(m.body) + '</div></div>'
                 ).join('');
                 $('ticketThread').scrollTop = $('ticketThread').scrollHeight;
@@ -3951,7 +3951,7 @@
             };
             try {
                 await api('PUT', '/settings?workspace_id=' + selectedWorkspaceObj.id, body);
-                $('settingsResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">✅ Settings saved.</span>';
+                $('settingsResult').innerHTML = '<span style="color:var(--color-success-text);font-weight:600;">âœ… Settings saved.</span>';
                 toast('Settings saved');
                 loadWorkspaces();
             } catch (e) { toast(e.message, 'error'); }
@@ -3963,7 +3963,7 @@
             renderThemeIcon();
         }
         function renderThemeIcon() {
-            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? '☀' : '☾';
+            $('themeToggle').textContent = document.documentElement.classList.contains('dark-mode') ? 'â˜€' : 'â˜¾';
         }
         function toggleSection(headerEl) {
             headerEl.parentElement.classList.toggle('open');
@@ -3987,7 +3987,7 @@
             bar.id = 'tosGrandfatherBar';
             bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:200;background:#1a2332;border-top:2px solid #f59e0b;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,.4);';
             bar.innerHTML = '<div style="flex:1;min-width:260px;font-size:13px;color:#e2e8f0;">' +
-                '<b style="color:#fbbf24;">📜 Action needed:</b> Please review and accept our updated ' +
+                '<b style="color:#fbbf24;">ðŸ“œ Action needed:</b> Please review and accept our updated ' +
                 '<a href="/terms" target="_blank" style="color:#fbbf24;text-decoration:underline;">Terms of Service v2.0</a> &amp; ' +
                 '<a href="/privacy" target="_blank" style="color:#fbbf24;text-decoration:underline;">Privacy Policy</a> to continue using AdGuard.</div>' +
                 '<button class="btn btn-primary btn-sm" onclick="acceptTosNow()" style="flex-shrink:0;">Accept &amp; Continue</button>';
@@ -4006,7 +4006,7 @@
                 if (bar) bar.remove();
                 toast('Terms of Service accepted. Thank you.');
                 if (currentUser) currentUser.tos_pending = false;
-            } catch (e) { toast('Could not record acceptance — try again.', 'error'); }
+            } catch (e) { toast('Could not record acceptance â€” try again.', 'error'); }
         }
 
         // ---------- Deep links from welcome email (?tab=connections etc.) ----------

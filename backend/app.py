@@ -1,4 +1,4 @@
-"""
+﻿"""
 AdOptima AI - Google Ads Optimization Assistant
 FastAPI application entry point.
 """
@@ -344,9 +344,9 @@ def get_terms(request: Request):
     <h2>2. What &ldquo;Audit&rdquo; Means (Important &mdash; No Guarantee of Detection)</h2>
     <p><strong>&ldquo;Audit&rdquo; or &ldquo;lead audit&rdquo; means automated, algorithmic scoring of leads received from advertising platforms through their official APIs and webhooks. Scoring is statistical and AI-assisted &mdash; it is not a human verification of each lead, and it is not a certification.</strong> AdGuard scores, flags, blocks, and produces evidence files, but we do NOT guarantee that every fraudulent or junk lead is detected, that any particular percentage of leads is genuine, that advertising costs will be recovered or refunded by any platform, or that your campaign performance will improve. Any accuracy figures we publish (internal or marketing materials) are engineering targets, not contractual promises. Advertising-platform refunds (including Google invalid-click credits) are granted or denied by the platform at its sole discretion; AdGuard only facilitates the evidence and the claim process.</p>
     <h2>3. Plans, Quotas &amp; Fair Use</h2>
-    <p>Each plan includes a defined monthly lead-audit quota (Free/Shadow: 300 leads and 14 days from activation; Starter: 1,000/month; Pro: 5,000/month; Enterprise: unmetered leads with up to 10 brand workspaces) and, on Pro and Enterprise plans, a prepaid bundle of AI call-verification credits (Pro: 300; Enterprise: 500). Quotas operate as hard stops: when the monthly lead quota is exhausted or a free trial expires (300 leads or 14 days, whichever occurs first), new lead intake pauses until you upgrade or the quota renews. Monthly lead quotas reset on each 30-day billing anniversary; <strong>unused monthly lead quota does not carry over</strong>.</p>
+    <p>Each plan includes a defined monthly lead-audit quota (Free/Shadow: 300 leads and 14 days from activation; Starter: 1,000/month; Pro: 5,000/month; Agency: unmetered leads with up to 10 brand workspaces) and, on Pro and Agency plans, a prepaid bundle of AI call-verification credits (Pro: 300; Agency: 500). Quotas operate as hard stops: when the monthly lead quota is exhausted or a free trial expires (300 leads or 14 days, whichever occurs first), new lead intake pauses until you upgrade or the quota renews. Monthly lead quotas reset on each 30-day billing anniversary; <strong>unused monthly lead quota does not carry over</strong>.</p>
     <p>AI call-verification credits are a <strong>prepaid, non-expiring bucket</strong>: credits granted with a plan or purchased as top-ups (100/300/500 packs) remain available across renewal cycles and are consumed only when a verification call is actually completed. Call credits are non-refundable once consumed but never expire while the account is active. Accounts frozen at plan expiry keep their remaining credits for up to sixty (60) days; thereafter forfeited credits may be restored at our discretion upon reactivation.</p>
-    <p>Plan connection limits (e.g., one Google Ads and one Meta Ads authorisation per workspace on Trial/Starter/Pro; additional brand workspaces only on Enterprise) are enforced in-product. You may connect unlimited campaigns within each authorised account.</p>
+    <p>Plan connection limits (e.g., one Google Ads and one Meta Ads authorisation per workspace on Trial/Starter/Pro; additional brand workspaces only on the Agency plan) are enforced in-product. You may connect unlimited campaigns within each authorised account.</p>
     <h2>4. Your Account</h2>
     <p>You are responsible for the accuracy of your registration details and for keeping your credentials secure. One account per business entity; creating multiple accounts to repeatedly consume free-trial quotas (including via email aliases, reused phone numbers, or the same company/domain) is a material breach. We may detect, flag, suspend, or merge such accounts, and may require identity verification before restoring access.</p>
     <h2>5. Platform Authorisations</h2>
@@ -359,7 +359,7 @@ def get_terms(request: Request):
     <h2>8. Beta Service &amp; Availability</h2>
     <p>AdGuard is currently provided in BETA. Features, thresholds, copy, and plan structures may change without notice during beta. Until the public launch date, no uptime or support SLA applies, and the service may be temporarily unavailable for maintenance. We will always export or preserve your historical lead data on request during and after beta (30-day export window after any termination).</p>
     <h2>9. Billing &amp; Plans</h2>
-    <p>Paid plans are prepaid monthly and billed per the pricing shown at sign-up (exclusive of GST). Plan upgrades take effect immediately; downgrades apply at the next renewal. Call-credit top-up packs are billed when purchased. AI verification beyond plan inclusions is billed only via prepaid packs; we do not surprise-bill per-call. Except as required by law, fees already consumed (including consumed call credits) are non-refundable; unused complete months on annual arrangements, if any, are handled case-by-case — contact us below.</p>
+    <p>Paid plans are prepaid monthly and billed per the pricing shown at sign-up (exclusive of GST). Plan upgrades take effect immediately; downgrades apply at the next renewal. Call-credit top-up packs are billed when purchased. AI verification beyond plan inclusions is billed only via prepaid packs; we do not surprise-bill per-call. Except as required by law, fees already consumed (including consumed call credits) are non-refundable; unused complete months on annual arrangements, if any, are handled case-by-case â€” contact us below.</p>
     <h2>10. Data Protection &amp; Your Leads</h2>
     <p>Lead data (including your prospective customers&rsquo; names, phones, and emails) is processed solely to provide the service, is stored per-workspace with access restricted to you and (where applicable) administrators acting in a support capacity, and is encrypted in transit and at rest where feasible. You remain the controller of your lead data; we act as a processor. On termination you may export your data for 30 days, after which it is deleted. We never sell lead data and never share it beyond the platforms and CRMs you authorise.</p>
     <h2>11. Disclaimer of Warranties</h2>
@@ -367,12 +367,12 @@ def get_terms(request: Request):
     <h2>12. Limitation of Liability</h2>
     <p>To the maximum extent permitted by law, our aggregate liability for any claim arising from or relating to the service is limited to the subscription fees you paid us in the three (3) months preceding the claim. In no event are we liable for indirect, incidental, or consequential damages, including lost profits, lost leads, wasted ad spend outside the fees paid to us, or missed business opportunities.</p>
     <h2>13. Termination &amp; Suspension</h2>
-    <p>You may stop using AdGuard and delete your account at any time. We may suspend or terminate accounts that violate these terms, abuse free trials, attack or probe the platform, or breach applicable law — with notice where practicable, and immediately where abuse or security risk is involved.</p>
+    <p>You may stop using AdGuard and delete your account at any time. We may suspend or terminate accounts that violate these terms, abuse free trials, attack or probe the platform, or breach applicable law â€” with notice where practicable, and immediately where abuse or security risk is involved.</p>
     <h2>14. Governing Law</h2>
     <p>These terms are governed by the laws of India, with courts in Bengaluru, Karnataka having exclusive jurisdiction.</p>
     <h2>15. Contact</h2>
-    <p>Questions: <a href="mailto:support@chlear.in">support@chlear.in</a> · Customer Care: 80509 97977</p>
-    <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Version 2.0 — Last updated: October 2026</p>
+    <p>Questions: <a href="mailto:shekhar.chlear@gmail.com">shekhar.chlear@gmail.com</a> Â· Customer Care: 80509 97977</p>
+    <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Version 2.0 â€” Last updated: October 2026</p>
 </body>
 </html>""")
 
@@ -392,7 +392,7 @@ def get_privacy(request: Request):
     <h2>1. Information We Collect</h2>
     <p>We collect information you provide when registering an account, connecting advertising accounts (Google Ads, Meta Ads), and configuring integrations. This may include account IDs, OAuth tokens, campaign metrics, and CRM data.</p>
     <h2>2. How We Use Information</h2>
-    <p>We use the information to provide optimisation recommendations, reports, dashboards, notifications, and to keep connected accounts synchronised. For AdGuard workspaces, this includes scoring incoming leads for quality, flagging suspected junk/fraudulent leads, and pushing flagged audiences to your connected ad platforms (Google Customer Match, Meta Custom Audiences) as exclusions — only within accounts you have authorised.</p>
+    <p>We use the information to provide optimisation recommendations, reports, dashboards, notifications, and to keep connected accounts synchronised. For AdGuard workspaces, this includes scoring incoming leads for quality, flagging suspected junk/fraudulent leads, and pushing flagged audiences to your connected ad platforms (Google Customer Match, Meta Custom Audiences) as exclusions â€” only within accounts you have authorised.</p>
     <h2>3. Data Sharing</h2>
     <p>We do not sell personal information. Data is shared only with the advertising platforms and CRM systems you authorise (Google, Meta, LeadSquared, Salesforce, HubSpot, Zoho, etc.).</p>
     <h2>4. Data Security</h2>
@@ -402,7 +402,7 @@ def get_privacy(request: Request):
     <h2>6. Changes</h2>
     <p>We may update this policy. Continued use after changes constitutes acceptance.</p>
     <h2>7. Contact</h2>
-    <p>For privacy questions, contact <a href="mailto:support@chlear.in">support@chlear.in</a>.</p>
+    <p>For privacy questions, contact <a href="mailto:shekhar.chlear@gmail.com">shekhar.chlear@gmail.com</a>.</p>
     <p style="margin-top:2rem;color:#666;font-size:0.9rem;">Last updated: September 2026</p>
 </body>
 </html>""")

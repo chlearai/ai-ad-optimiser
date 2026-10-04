@@ -1,4 +1,4 @@
-"""
+﻿"""
 Generates the management pitch word document:
   docs/AdGuard_Management_Proposal_Oct2026.docx
 
@@ -134,15 +134,15 @@ def build():
     bullets(doc, [
         "Platform built and live in production (Railway + Supabase/Postgres).",
         "Self-serve signup live: customer signs up, verifies email, sets password, gets workspace in under 5 minutes.",
-        "Trial + Starter + Pro + Enterprise plans provisioned automatically; plan rules enforced in-product.",
+        "Trial + Starter + Pro + Agency plans provisioned automatically; plan rules enforced in-product.",
         "Beta subscribers onboarded and using workspaces; welcome/verify email journey working end-to-end.",
         "Legal base live: Terms of Service v2.0 (audit disclaimer, liability cap, IP protection) accepted at signup.",
         "20-CRM delivery catalog, Money Shield, Script Tag interceptor, admin cockpit all shipped.",
     ])
     para(doc, "What is missing:", bold=True, space_after=2)
-    para(doc, "Payments. Plan selection currently works but the payment step is bypassed for beta — a customer "
-              "clicking “Choose Starter” gets the workspace without paying. Razorpay LIVE activation is the single "
-              "remaining blocker between the product and its first rupee of revenue.")
+    para(doc, 'Payments. Plan selection currently works but the payment step is bypassed for beta — a customer '
+              'clicking "Choose Starter" gets the workspace without paying. Razorpay LIVE activation is the single '
+              'remaining blocker between the product and its first rupee of revenue.')
     add_table(doc,
               ["Launch date", "The blocker", "The ask"],
               [["October 10, 2026", "Razorpay LIVE not yet activated", "Approve Razorpay LIVE + KYC/bank activation now"]],
@@ -151,13 +151,13 @@ def build():
 
     # ---------- 2. PRODUCT ----------
     doc.add_heading("2. What AdGuard Does (Product Walkthrough)", level=1)
-    para(doc, "The journey: marketer connects Google/Meta via official OAuth → leads flow into AdGuard's audit "
-              "pipeline → each lead is device-fingerprinted, deduplicated, geo-checked, email/phone validated and "
-              "AI-scored in ~2 seconds → verified leads reach the CRM, junk leads are blocked with evidence → "
-              "Money Shield auto-pauses campaigns that attract junk → weekly reports show recovered spend in ₹.")
+    para(doc, "The journey: marketer connects Google/Meta via official OAuth â†’ leads flow into AdGuard's audit "
+              "pipeline â†’ each lead is device-fingerprinted, deduplicated, geo-checked, email/phone validated and "
+              "AI-scored in ~2 seconds â†’ verified leads reach the CRM, junk leads are blocked with evidence â†’ "
+              "Money Shield auto-pauses campaigns that attract junk â†’ weekly reports show recovered spend in ₹.")
 
     shot(doc, "01_landing_hero.png", "Fig 2.1 — Public landing page (ai-ad-optimiser-production-dd12.up.railway.app/adguard-landing)")
-    shot(doc, "02_how_it_works.png", "Fig 2.2 — How it works: connect → screen → shield → CRM")
+    shot(doc, "02_how_it_works.png", "Fig 2.2 — How it works: connect â†’ screen â†’ shield â†’ CRM")
     shot(doc, "03_live_stream.png", "Fig 2.3 — Live lead stream demo on the landing page")
     shot(doc, "10_workspace_dashboard.png", "Fig 2.4 — Customer workspace: starter plan quota meter, KPIs, live feed, Money Shield")
     shot(doc, "11_workspace_connections.png", "Fig 2.5 — Connections tab: OAuth connectors + campaign screening")
@@ -168,16 +168,16 @@ def build():
     doc.add_heading("2.1 Feature maturity (honest status)", level=2)
     add_table(doc, ["Capability", "Status"],
               [["Lead audit pipeline (Google + Meta webhooks, AI scoring, dedupe, geo, validation)", "LIVE"],
-               ["Self-serve signup + email journey (verify → password → welcome)", "LIVE"],
+               ["Self-serve signup + email journey (verify â†’ password â†’ welcome)", "LIVE"],
                ["Plans, monthly hard-stop quotas, trial 14-day expiry", "LIVE"],
                ["CRM delivery (20 CRMs incl. LeadSquared, Zoho, HubSpot direct)", "LIVE"],
                ["Money Shield monitor/protect + auto-pause governor", "LIVE"],
                ["Pre-Submit Interceptor script tag (fail-open, 2.0s)", "LIVE"],
                ["Admin cockpit (subscribers, plans, quotas, call credits, simulate)", "LIVE"],
-               ["Prepaid call-verification credits (Pro 300 / Enterprise 500)", "METERED (Samvaad debit pending)"],
+               ["Prepaid call-verification credits (Pro 300 / Agency 500)", "METERED (Samvaad debit pending)"],
                ["AI call verification (Samvaad integration)", "NEXT (Q4)"],
                ["WhatsApp OTP step-up", "PARKED (clients run OTP in own forms)"],
-               ["Bot Traps", "PARKED (Enterprise roadmap)"],
+               ["Bot Traps", "PARKED (Agency roadmap)"],
                ["Invalid-click evidence CSV writer", "SCOPED (approved, in build)"]],
               widths=[5.4, 1.8])
     doc.add_page_break()
@@ -190,7 +190,7 @@ def build():
               "exposed. The advertiser pays the platform for every one of these, then pays a sales team to call them.")
     bullets(doc, [
         "Nobody audits lead quality at capture time — platforms optimise on volume, agencies optimise on CPL, and junk flows through the entire funnel.",
-        "Worse: when Meta/Google “learn” from fake leads, their optimisation findsmore fake leads — the waste compounds every week.",
+        'Worse: when Meta/Google "learn" from fake leads, their optimisation finds more fake leads — the waste compounds every week.',
         "Existing click-fraud tools (ClickCease, Lunio, TrafficGuard) block clicks — but none of them audit the LEADS arriving via your own ad accounts, score them, and push exclusion audiences back to the platforms.",
     ])
     para(doc, "AdGuard's wedge: we sit inside the customer's own ad accounts, audit the leads, block the junk, and "
@@ -204,7 +204,7 @@ def build():
               [["Shadow (Free trial)", "₹0 · 14 days", "300 total, hard stop", "—", "1 + 1", "1"],
                ["Starter", "₹4,999", "1,000/month", "—", "1 + 1", "1"],
                ["Pro", "₹14,999", "5,000/month", "300 included", "1 + 1", "1"],
-               ["Enterprise", "₹39,999", "Unlimited", "500 included", "2 + 2", "10 brand workspaces"]],
+               ["Agency", "₹39,999", "Unlimited", "500 included", "2 + 2", "10 brand workspaces"]],
               widths=[1.6, 1.2, 1.4, 1.2, 1.0, 1.6])
     shot(doc, "05_pricing.png", "Fig 4.1 — Public pricing table as customers see it")
     para(doc, "Policy design (already enforced in-product):", bold=True, space_after=2)
@@ -212,7 +212,7 @@ def build():
         "Lead quotas are hard stops with monthly reset — unused quota does not carry over (capacity provision, industry standard).",
         "AI call credits are a prepaid bucket that NEVER expires — ethical and defensible: credits carry across renewals; customers top up 100/₹799, 300/₹1,999, 500/₹2,999 packs.",
         "Trial clock starts at password activation (not signup) — no lost trial days to slow email verification.",
-        "Connection limits (1 Google + 1 Meta) enforced at OAuth; upsell path to Enterprise is in-product.",
+        "Connection limits (1 Google + 1 Meta) enforced at OAuth; upsell path to Agency is in-product.",
     ])
     shot(doc, "07_signup_modal_tos.png", "Fig 4.2 — Signup modal with mandatory ToS acceptance (legal cover built into the flow)")
     doc.add_page_break()
@@ -224,30 +224,30 @@ def build():
     add_table(doc, ["Plan", "Price", "Variable cost*", "Gross ₹", "Gross %"],
               [["Starter (1,000 leads)", "₹4,999", "~₹300", "~₹4,700", "~94%"],
                ["Pro (5,000 leads + 300 calls)", "₹14,999", "~₹600", "~₹14,400", "~96%"],
-               ["Enterprise (10 ws + 500 calls)", "₹39,999", "~₹2,500", "~₹37,500", "~94%"]],
+               ["Agency (10 ws + 500 calls)", "₹39,999", "~₹2,500", "~₹37,500", "~94%"]],
               widths=[2.4, 1.1, 1.4, 1.2, 1.0])
     para(doc, "*Variable = compute, storage growth, 30 min support. Gateway adds 2% of revenue (Razorpay). "
-              "AI-call cost sits inside the plans' call bundles (Samvaad ~₹2–4/call; prepaid packs retail at "
-              "₹6–8/call — 33–50% margin on top-ups).", size=9, color=GREY)
+              "AI-call cost sits inside the plans' call bundles (Samvaad ~₹2â€“4/call; prepaid packs retail at "
+              "₹6â€“8/call — 33â€“50% margin on top-ups).", size=9, color=GREY)
     doc.add_heading("5.2 Fixed infrastructure", level=2)
     add_table(doc, ["Item", "₹/month"],
-              [["Railway (app + scheduler, 24/7)", "2,000–3,500"],
-               ["Supabase Postgres (free tier → Pro at growth)", "0–2,100"],
+              [["Railway (app + scheduler, 24/7)", "2,000â€“3,500"],
+               ["Supabase Postgres (free tier â†’ Pro at growth)", "0â€“2,100"],
                ["Domain + SSL + email", "~100"],
-               ["Total fixed", "≈ ₹3,000–5,000"]],
+               ["Total fixed", "â‰ˆ ₹3,000â€“5,000"]],
               widths=[4.4, 1.8])
     doc.add_heading("5.3 P&L at the 60-day post-launch state", level=2)
     add_table(doc, ["Line", "₹/month"],
-              [["Revenue: 10 Starter + 4 Pro + 2 Enterprise", "1,89,984"],
+              [["Revenue: 10 Starter + 4 Pro + 2 Agency", "1,89,984"],
                ["Infrastructure (scaled)", "(8,000)"],
                ["Gateway 2%", "(3,800)"],
                ["Support/dev salary", "(60,000)"],
-               ["Operating profit", "≈₹1,18,000 → ~62% net margin"]],
+               ["Operating profit", "â‰ˆ₹1,18,000 â†’ ~62% net margin"]],
               widths=[4.4, 1.8])
     add_table(doc, ["Break-even milestones", "Value"],
               [["Fixed infra break-even", "1 Starter subscriber"],
-               ["True break-even (with salary)", "6–8 subscribers (~₹65–70k MRR)"],
-               ["Before that", "Founder-run: 1–2 subscribers = already cash-positive"]],
+               ["True break-even (with salary)", "6â€“8 subscribers (~₹65â€“70k MRR)"],
+               ["Before that", "Founder-run: 1â€“2 subscribers = already cash-positive"]],
               widths=[3.4, 2.8])
     doc.add_page_break()
 
@@ -258,15 +258,15 @@ def build():
               "purchase friction — but it means the funnel stops exactly where revenue starts.")
     doc.add_heading("6.1 What Razorpay LIVE unlocks", level=2)
     bullets(doc, [
-        "Checkout: customer picks Starter/Pro/Enterprise → Razorpay (UPI, cards, netbanking, wallets) → subscription active instantly, no manual UPI transfers and no support tickets.",
+        "Checkout: customer picks Starter/Pro/Agency â†’ Razorpay (UPI, cards, netbanking, wallets) â†’ subscription active instantly, no manual UPI transfers and no support tickets.",
         "Automatic provisioning: plan + quota + call credits applied the moment payment succeeds (webhook-driven).",
-        "Prepaid call-pack purchases inside the workspace (Buy Calls → Razorpay checkout → instant credit).",
+        "Prepaid call-pack purchases inside the workspace (Buy Calls â†’ Razorpay checkout â†’ instant credit).",
         "Subscriptions with auto-recharge links for quota top-ups later, recurring billing at renewal.",
     ])
     doc.add_heading("6.2 Gateway comparison", level=2)
     add_table(doc, ["Gateway", "Fees (Indian cards)", "Settlement", "Why/why not"],
               [["Razorpay", "~2% + GST", "T+2 days", "Best developer docs, subscriptions, payment pages; industry standard"],
-               ["Cashfree", "~1.75–2%", "T+1", "Cheaper, fewer product features (links/subscriptions weaker)"],
+               ["Cashfree", "~1.75â€“2%", "T+1", "Cheaper, fewer product features (links/subscriptions weaker)"],
                ["PayU", "~2% + GST", "T+2", "Comparable; docs and support weaker for startups"]],
               widths=[1.2, 1.4, 1.0, 3.6])
     para(doc, "Recommendation: Razorpay. Fees are standard, the subscription & payment-page APIs are the strongest, "
@@ -274,7 +274,7 @@ def build():
     doc.add_heading("6.3 Activation steps (owner actions)", level=2)
     add_table(doc, ["Step", "Owner", "Time"],
               [["KYC on Razorpay dashboard (PAN, GST, bank account of CHLEAR)", "Management + Shekhar", "Same day (docs ready)"],
-               ["Business verification review by Razorpay", "Razorpay", "2–7 working days"],
+               ["Business verification review by Razorpay", "Razorpay", "2â€“7 working days"],
                ["Bank settlement activation", "Razorpay", "With activation"],
                ["Flip code to LIVE keys (env var change + deploy)", "Shekhar/agent", "1 hour"]],
               widths=[3.8, 1.8, 1.4])
@@ -293,18 +293,18 @@ def build():
         "Subscriber enablement already shipped: gated AdGuard Academy (8 lessons) + 10-step Setup Guide — reduces support load from day one.",
     ])
     add_table(doc, ["Weekly KPI board (from admin dashboard)", "Target by Nov 30"],
-              [["Trial → paid conversion", "> 25%"],
+              [["Trial â†’ paid conversion", "> 25%"],
                ["MRR", "₹1,00,000 by Jan (stated in ask)"],
                ["Leads audited (cumulative)", "50,000"],
                ["Junk rate found (proof of value)", "> 15%"],
-               ["₹ recovered (customer-visible)", "₹15–20L cumulative"]],
+               ["₹ recovered (customer-visible)", "₹15â€“20L cumulative"]],
               widths=[4.0, 2.4])
     doc.add_page_break()
 
     # ---------- 8. RISKS ----------
     doc.add_heading("8. Risks & Mitigations", level=1)
     add_table(doc, ["Risk", "Mitigation (in place / planned)"],
-              [["Subscriber legal claim: “you didn't really audit”", "ToS v2.0 §2: audit = automated algorithmic scoring via official APIs, explicitly not human verification; no detection guarantees; accuracy claims are targets, not contracts. Acceptance recorded per user with version + timestamp."],
+              [["Subscriber legal claim: 'you did not really audit'", "ToS v2.0 §2: audit = automated algorithmic scoring via official APIs, explicitly not human verification; no detection guarantees; accuracy claims are targets, not contracts. Acceptance recorded per user with version + timestamp."],
                ["Ad platform refund decisions", "ToS §2: refunds are at the platform's sole discretion; AdGuard only facilitates evidence + claim files."],
                ["Liability exposure", "ToS §12: liability capped at 3 months' fees; no indirect damages."],
                ["Free-trial farming / abuse", "Signup abuse guard live (phone/company pattern detection, admin flags); hard-stop quotas cap any abuse at 300 leads."],
@@ -324,9 +324,9 @@ def build():
               widths=[0.4, 2.2, 4.4])
     para(doc, "", space_after=10)
     para(doc, "The close:", bold=True, space_after=2)
-    para(doc, "“One mid-size Meta lead-gen client wastes ₹20,000–50,000 every month on junk leads. AdGuard charges "
-              "₹4,999 to stop it — with proof in rupees the client can see. The math sells the product. The only "
-              "thing between us and the market is a Razorpay activation.”", size=12, bold=True)
+    para(doc, '"One mid-size Meta lead-gen client wastes ₹20,000–50,000 every month on junk leads. AdGuard charges '
+              '₹4,999 to stop it — with proof in rupees the client can see. The math sells the product. The only '
+              'thing between us and the market is a Razorpay activation."', size=12, bold=True)
     para(doc, "", space_after=24)
     add_table(doc, ["Approved by (Management)", "Date", "Signature"],
               [["", "", ""], ["", "", ""], ["", "", ""]],

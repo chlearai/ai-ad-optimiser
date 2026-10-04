@@ -984,7 +984,7 @@ class AdGuardAccount(Base):
     # SaaS subscription & Commercial Metadata (set by admin / offline onboarding)
     plan = Column(String(20), default="trial")  # trial | starter | pro | agency | custom
     plan_expires_at = Column(DateTime, nullable=True)
-    lead_quota = Column(Integer, default=100)  # max stored leads; -1 = unlimited
+    lead_quota = Column(Integer, default=300)  # max stored leads; -1 = unlimited; trial default 300
     leads_this_month = Column(Integer, default=0, nullable=False)  # monthly audited-lead counter (hard-stop plans)
     leads_month_reset = Column(DateTime, nullable=True)  # when the monthly counter was last reset (billing anniversary)
     # AI call verification credits: PREPAID bucket — never expire, carry across renewals

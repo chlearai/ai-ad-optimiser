@@ -2299,6 +2299,7 @@
                                 <li>AI call verification (300 calls included, more via prepaid packs)</li>
                                 <li>Exclusion audiences on all campaigns</li>
                                 <li>AI intent scoring</li>
+                                <li>Contributes to and protected by FraudGraph</li>
                             </ul>
                         </div>
                     </div>
@@ -2307,10 +2308,10 @@
                     </button>
                 </div>
 
-                <!-- Plan 4: Enterprise -->
+                <!-- Plan 4: Agency -->
                 <div class="pricing-card">
                     <div class="pricing-card-content">
-                        <div class="plan-name">Enterprise</div>
+                        <div class="plan-name">Agency</div>
                         <div class="plan-price">₹39,999 <span style="font-size:14px;color:var(--text-muted);font-weight:400;">/ mo</span></div>
                         <div class="plan-tagline">Multiple brands, maximum protection</div>
                         <div class="plan-features-list">
@@ -2325,8 +2326,8 @@
                             </ul>
                         </div>
                     </div>
-                    <button onclick="openDemoModal()" class="btn btn-outline-green">
-                        Book a demo
+                    <button onclick="handlePlanSelect('agency')" class="btn btn-outline-green">
+                        Choose Agency
                     </button>
                 </div>
             </div>
@@ -2485,7 +2486,7 @@
                     <div class="footer-col-title">Company</div>
                     <ul class="footer-links">
                         <li><a href="https://chlear.in" target="_blank" rel="noopener">About CHLEAR</a></li>
-                        <li><a href="mailto:support@chlear.in">Contact</a></li>
+                        <li><a href="mailto:shekhar.chlear@gmail.com">Contact</a></li>
                         <li><a href="https://chlear.in/careers" target="_blank" rel="noopener">Careers</a></li>
                     </ul>
                 </div>
@@ -2502,14 +2503,14 @@
                 <div>
                     <div class="footer-col-title">Contact</div>
                     <ul class="footer-links">
-                        <li><a href="mailto:support@chlear.in">support@chlear.in</a></li>
+                        <li><a href="mailto:shekhar.chlear@gmail.com">shekhar.chlear@gmail.com</a></li>
                         <li><a href="tel:8050977977">Customer Care: 80509 97977</a></li>
                     </ul>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                © 2026 AdGuard by CHLEAR · CHL Marketing Solutions Pvt. Ltd., Bengaluru · support@chlear.in · <span style="color:#fbbf24;font-weight:600;">BETA — early access, not a public release</span>
+                © 2026 AdGuard by CHLEAR · CHL Marketing Solutions Pvt. Ltd., Bengaluru · shekhar.chlear@gmail.com · <span style="color:#fbbf24;font-weight:600;">BETA — early access, not a public release</span>
             </div>
             <div style="margin-top:8px;font-size:10.5px;color:#64748b;">
                 AdGuard™ software, scoring models and fraud rules are proprietary &amp; confidential to CHLEAR. Unauthorised copying, reverse-engineering or derivative products are prohibited and actioned under law.
@@ -3047,7 +3048,7 @@
         const PLAN_BRANDING = {
             starter: { chip: 'STARTER PLAN — ₹4,999/mo', heading: 'Get started with Starter', note: 'Starter plan (1,000 leads/mo) will be activated on your workspace — payment is bypassed during BETA testing.' },
             pro: { chip: 'PRO PLAN — ₹14,999/mo', heading: 'Get started with Pro', note: 'Pro plan (5,000 leads/mo) will be activated on your workspace — payment is bypassed during BETA testing.' },
-            agency: { chip: 'ENTERPRISE PLAN — ₹39,999/mo', heading: 'Get started with Enterprise', note: 'Enterprise plan (10 workspaces) will be activated on your workspace — payment is bypassed during BETA testing.' }
+            agency: { chip: 'AGENCY PLAN — ₹39,999/mo', heading: 'Get started with Agency', note: 'Agency plan (10 brand workspaces) will be activated on your workspace — payment is bypassed during BETA testing.' }
         };
 
         function applyPendingPlanBranding() {
@@ -3136,12 +3137,12 @@
 
                 btn.innerText = '✓ Account Created';
                 msg.style.color = '#34d399';
-                const planLabel = { starter: 'Starter', pro: 'Pro', agency: 'Enterprise' }[pendingPaidPlan];
+                const planLabel = { starter: 'Starter', pro: 'Pro', agency: 'Agency' }[pendingPaidPlan];
                 if (data.email_sent) {
                     msg.innerHTML = '<b>📧 Verify & Set Password link emailed to ' + d.email + '</b><br>' +
                         (planLabel ? '<b>' + planLabel + ' plan will be active when you verify.</b> Payment bypassed in BETA.<br>' : '') +
                         'It expires in 60 minutes. Check spam if you don\'t see it.<br>' +
-                        'Customer Care: 80509 97977 · support@chlear.in';
+                        'Customer Care: 80509 97977 · shekhar.chlear@gmail.com';
                 } else if (data.verify_link) {
                     msg.innerHTML = '<b>Email failed - use this verify link directly:</b><br>' +
                         '<a href="' + data.verify_link + '" style="color:#34d399;word-break:break-all;">Set your password now →</a>';

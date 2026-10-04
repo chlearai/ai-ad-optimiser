@@ -641,12 +641,12 @@ def _get_or_create_workspace(db: Session, user: User) -> AdGuardAccount:
             owner_email=user.email,
             display_name="AdGuard System Admin" if is_admin else (user.full_name or user.email),
             plan="agency" if is_admin else "trial",
-            lead_quota=-1 if is_admin else 100,
+            lead_quota=-1 if is_admin else 300,
         )
         db.add(ws)
         db.commit()
         db.refresh(ws)
-    elif is_admin and (ws.plan == "trial" or ws.lead_quota == 100):
+    elif is_admin and (ws.plan == "trial" or ws.lead_quota == 300):
         ws.plan = "agency"
         ws.lead_quota = -1
         db.commit()
@@ -691,7 +691,7 @@ def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db),
         owner_email=user.email,
         display_name=name,
         plan=plan,
-        lead_quota=(PLAN_LIMITS.get(plan, {}).get("lead_quota", 1000)),
+        lead_quota=(PLAN_LIMITS.get(plan, {}).get("lead_quota", 300)),
         verification_threshold=source_ws.verification_threshold if source_ws else 70,
         shield_enabled=bool(source_ws.shield_enabled) if source_ws else True,
         shield_junk_threshold=source_ws.shield_junk_threshold if source_ws else 40,
@@ -1633,7 +1633,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             .order_by(AdGuardLead.received_at.desc())
             .first()
         )
-        quota = ws.lead_quota if ws.lead_quota is not None else 100
+        quota = ws.lead_quota if ws.lead_quota is not None else 300
         subs.append({
             "id": ws.id,
             "owner_email": ws.owner_email,
