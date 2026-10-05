@@ -120,20 +120,45 @@ def _test_postgres_fast(url):
         return None, False
 
 
+def _session_pooler_url(url: str):
+    """Return a session-mode URL with transaction-pooler port 6543 swapped to 5432.
+
+    Supabase transaction pooler (6543) does NOT support server-side prepared
+    statements: statements collide across multiplexed sessions
+    (DuplicatePreparedStatement "_pg3_N" / InvalidSqlStatementName). Session
+    pooler (5432) does not multiplex, so it is always preferred when present.
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.port == 6543:
+            return urlunparse(parsed._replace(netloc=f"{parsed.username}:{parsed.password}@{parsed.hostname}:5432"))
+    except Exception:
+        pass
+    return None
+
+
 engine = None
 active_db = "unknown"
 
 if DATABASE_URL:
-    # Try primary PostgreSQL URL
-    eng, ok = _test_postgres_fast(DATABASE_URL)
-    if ok:
-        engine = eng
-        active_db = "postgresql"
-        logger.info("Using PostgreSQL database")
-    else:
-        # Try Supabase transaction pooler (port 6543) as fallback if port was 5432
+    # Always try the session pooler first (prepared statements safe).
+    candidates = []
+    session_url = _session_pooler_url(DATABASE_URL)
+    if session_url:
+        candidates.append(session_url)
+    candidates.append(DATABASE_URL)
+    for candidate in candidates:
+        eng, ok = _test_postgres_fast(candidate)
+        if ok:
+            engine = eng
+            active_db = "postgresql"
+            if candidate == session_url:
+                logger.info("Using Supabase session pooler (5432) - transaction pooler breaks prepared statements")
+            break
+    if engine is None:
+        # Legacy fallback: if primary URL was session mode, try transaction pooler
+        parsed = urlparse(DATABASE_URL)
         try:
-            parsed = urlparse(DATABASE_URL)
             if parsed.port == 5432:
                 pooler_parts = parsed._replace(netloc=f"{parsed.username}:{parsed.password}@{parsed.hostname}:6543")
                 pooler_url = urlunparse(pooler_parts)
