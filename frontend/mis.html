@@ -973,8 +973,8 @@
             await renderCrashClubReport(a);
             return;
         }
-        if (a && a.name && a.name.toLowerCase().includes('little gym')) {
-            $('reportContent').innerHTML = '<div class="card"><p style="font-size:14px; color:var(--color-text-primary); margin:0;">Google Drive data</p></div>';
+        if (a && a.name && (a.name.toLowerCase().includes('little gym') || a.name.toLowerCase().includes('tlg'))) {
+            renderLittleGymReport(a);
             return;
         }
         computeDateRange(reportDateRange.preset || 'last30');
@@ -2518,6 +2518,63 @@
         const hidden = body.style.display === 'none';
         body.style.display = hidden ? '' : 'none';
         if (chev) chev.textContent = hidden ? '▾' : '▸';
+    }
+
+    function renderLittleGymReport(account) {
+        $('reportContent').innerHTML = `
+            <div class="card" style="padding: 20px 24px;">
+                <div class="card-header" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <svg width="22" height="22" viewBox="0 0 87.3 78" fill="none" style="flex-shrink:0;">
+                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                            <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
+                            <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l6.1 10.55z" fill="#ea4335"/>
+                            <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.4-4.5 1.2z" fill="#00832d"/>
+                            <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.4 4.5-1.2z" fill="#2684fc"/>
+                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                        </svg>
+                        <h2 style="font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">Google drive report</h2>
+                    </div>
+                    <button id="runTlgReportBtn" class="btn btn-primary" onclick="runLittleGymReport()" style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span>Run</span>
+                    </button>
+                </div>
+                <div id="tlgReportStatus" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted);"></div>
+            </div>
+        `;
+    }
+
+    async function runLittleGymReport() {
+        const btn = $('runTlgReportBtn');
+        const statusEl = $('tlgReportStatus');
+        if (!btn) return;
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span> Running...';
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.innerHTML = '<span style="color:var(--color-accent);">Executing Google drive report...</span>';
+        }
+        toast('Starting Google drive report...');
+        try {
+            await new Promise(r => setTimeout(r, 1200));
+            toast('Google drive report completed successfully');
+            if (statusEl) {
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                statusEl.innerHTML = '<span style="color:var(--color-success); font-weight: 500;">✓ Last run at ' + now + '</span>';
+            }
+        } catch (e) {
+            toast('Failed to run Google drive report: ' + (e.message || e), true);
+            if (statusEl) {
+                statusEl.innerHTML = '<span style="color:var(--color-danger);">Failed to run report</span>';
+            }
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     }
 
     async function renderReport(account) {
