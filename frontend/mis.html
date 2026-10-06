@@ -973,6 +973,10 @@
             await renderCrashClubReport(a);
             return;
         }
+        if (a && a.name && a.name.toLowerCase().includes('little gym')) {
+            $('reportContent').innerHTML = '<div class="card"><p style="font-size:14px; color:var(--color-text-primary); margin:0;">Google Drive data</p></div>';
+            return;
+        }
         computeDateRange(reportDateRange.preset || 'last30');
         await renderReport(a);
     }
