@@ -339,9 +339,10 @@ def daily_report(
 
     by_date: Dict[date, Dict[str, Dict[str, float]]] = {}
     for s in snapshots:
-        by_date.setdefault(s.date, {}).setdefault(s.platform, {"leads": 0.0, "amount_spent": 0.0})
+        by_date.setdefault(s.date, {}).setdefault(s.platform, {"leads": 0.0, "amount_spent": 0.0, "crm": 0.0})
         by_date[s.date][s.platform]["leads"] += s.leads
         by_date[s.date][s.platform]["amount_spent"] += s.amount_spent
+        by_date[s.date][s.platform]["crm"] += getattr(s, "crm_leads", 0.0) or 0.0
 
     rows = []
     s_date = _parse_date(effective_start)
@@ -349,26 +350,31 @@ def daily_report(
     current = s_date
     while current <= e_date:
         if platform == "combined":
-            meta = by_date.get(current, {}).get("meta", {"leads": 0.0, "amount_spent": 0.0})
-            google = by_date.get(current, {}).get("google", {"leads": 0.0, "amount_spent": 0.0})
-            total_leads = meta["leads"] + google["leads"]
+            meta = by_date.get(current, {}).get("meta", {"leads": 0.0, "amount_spent": 0.0, "crm": 0.0})
+            google = by_date.get(current, {}).get("google", {"leads": 0.0, "amount_spent": 0.0, "crm": 0.0})
+            meta_leads = max(meta["leads"], meta["crm"])
+            google_leads = max(google["leads"], google["crm"])
+            crm_used = meta_leads > meta["leads"] or google_leads > google["leads"]
+            total_leads = meta_leads + google_leads
             total_spend = meta["amount_spent"] + google["amount_spent"]
             rows.append({
                 "date": current.isoformat(),
                 "display_date": _ordinal_date(current),
-                "meta_leads": round(meta["leads"]),
-                "meta_cpl": round(meta["amount_spent"] / meta["leads"]) if meta["leads"] else 0,
+                "meta_leads": round(meta_leads),
+                "meta_cpl": round(meta["amount_spent"] / meta_leads) if meta_leads else 0,
                 "meta_amount_spent": round(meta["amount_spent"]),
-                "google_leads": round(google["leads"]),
-                "google_cpl": round(google["amount_spent"] / google["leads"]) if google["leads"] else 0,
+                "google_leads": round(google_leads),
+                "google_cpl": round(google["amount_spent"] / google_leads) if google_leads else 0,
                 "google_amount_spent": round(google["amount_spent"]),
                 "leads": round(total_leads),
                 "cpl": round(total_spend / total_leads) if total_leads else 0,
                 "amount_spent": round(total_spend),
             })
         else:
-            agg = by_date.get(current, {}).get(platform, {"leads": 0.0, "amount_spent": 0.0})
-            leads = agg["leads"]
+            agg = by_date.get(current, {}).get(platform, {"leads": 0.0, "amount_spent": 0.0, "crm": 0.0})
+            # CRM (Salesforce) is the source of truth: show whichever is higher,
+            # platform-reported conversions or the CRM's count for that day.
+            leads = max(agg["leads"], agg["crm"])
             spend = agg["amount_spent"]
             rows.append({
                 "date": current.isoformat(),
@@ -420,6 +426,83 @@ def daily_report(
             "google_amount_spent": sum(r.get("google_amount_spent", 0) for r in rows),
         },
     }
+
+
+@router.post("/crm-leads/import")
+def import_crm_leads(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_required),
+):
+    """Recount per-day CRM leads from the latest uploaded Salesforce export.
+
+    Writes google_paid leads into mis_daily_snapshots.crm_leads (platform=google)
+    and Facebook/Landing Page leads into platform=meta rows, creating missing
+    snapshot rows (leads=0, spend=0) where none exist. Called automatically after
+    each Salesforce upload; can also be triggered manually.
+    """
+    from backend.routes.salesforce_mantri import _latest_upload, _get_mantri_project, _parse_xlsx_bytes, REPORT_START
+
+    project = _get_mantri_project(db)
+    if not project:
+        raise HTTPException(status_code=404, detail="Mantri MIS project not found")
+    upload = _latest_upload(db, project.id)
+    if not upload:
+        raise HTTPException(status_code=404, detail="No Salesforce file uploaded yet")
+
+    end_date = date.today() - timedelta(days=1)
+    try:
+        leads = _parse_xlsx_bytes(upload.content, REPORT_START, end_date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("CRM leads import: failed to parse uploaded file")
+        raise HTTPException(status_code=400, detail=f"Failed to read the uploaded file: {e}")
+
+    counts: Dict[tuple, int] = {}
+    for item in leads:
+        key = (item["platform"].lower(), item["create_date"])
+        counts[key] = counts.get(key, 0) + 1
+
+    written = 0
+    for (platform, d), count in counts.items():
+        existing = db.query(MisDailySnapshot).filter(
+            MisDailySnapshot.project_id == project.id,
+            MisDailySnapshot.platform == platform,
+            MisDailySnapshot.date == d,
+        ).first()
+        if existing:
+            existing.crm_leads = float(count)
+        else:
+            db.add(MisDailySnapshot(
+                project_id=project.id,
+                platform=platform,
+                date=d,
+                leads=0.0,
+                amount_spent=0.0,
+                cpl=0,
+                crm_leads=float(count),
+            ))
+        written += 1
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    log_activity(
+        module="InsightDesk",
+        action="Mantri CRM Leads Import",
+        description=f"Imported CRM lead counts from '{upload.filename}' into {written} platform-day rows ({end_date.isoformat() - (REPORT_START.isoformat()) if False else ''}window {REPORT_START.isoformat()} to {end_date.isoformat()})",
+        user_id=user.id,
+        user_name=user.full_name or user.email,
+        account_id=project.client_id,
+        entity_type="mis_project",
+        entity_id=str(project.id),
+        details={"filename": upload.filename, "rows_written": written},
+        db=db,
+    )
+
+    return {"status": "success", "rows_written": written, "end_date": end_date.isoformat()}
 
 
 @router.post("/refresh")

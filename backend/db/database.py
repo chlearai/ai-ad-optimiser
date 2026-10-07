@@ -248,6 +248,12 @@ def init_db():
             run_mis_migration()
         except Exception as me:
             logger.warning(f"Additive MIS Mantri migration skipped/failed: {me}")
+        # Run safe additive migration for mis_daily_snapshots.crm_leads column
+        try:
+            from backend.migrations.add_mis_crm_leads_column import run_migration as run_crm_leads_migration
+            run_crm_leads_migration()
+        except Exception as me:
+            logger.warning(f"Additive crm_leads migration skipped/failed: {me}")
         # Run safe additive migration for rev_clients.account_id column
         try:
             from backend.migrations.add_rev_clients_account_id import run_migration as run_rev_clients_account_id_migration

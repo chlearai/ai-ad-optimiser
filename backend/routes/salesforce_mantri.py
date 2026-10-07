@@ -229,6 +229,16 @@ async def upload_salesforce_file(
     db.commit()
     db.refresh(upload)
 
+    # Recount per-day CRM lead counts into mis_daily_snapshots.crm_leads so the
+    # Daily reports can use Salesforce as the lead source of truth.
+    try:
+        from backend.routes.mis_mantri import import_crm_leads as _import_crm
+        _import_crm(db=db, user=user)
+    except HTTPException:
+        pass  # no project/upload edge cases — the upload itself already succeeded
+    except Exception as e:
+        logger.warning(f"crm_leads recount after upload failed: {e}")
+
     log_activity(
         module="InsightDesk",
         action="Mantri Salesforce File Uploaded",

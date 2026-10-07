@@ -851,6 +851,7 @@ class MisDailySnapshot(Base):
     leads = Column(Float, default=0.0)
     amount_spent = Column(Float, default=0.0)
     cpl = Column(Float, nullable=True)
+    crm_leads = Column(Float, default=0.0)  # lead count from uploaded Salesforce export (per platform/day)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -865,6 +866,7 @@ class MisDailySnapshot(Base):
             "leads": self.leads,
             "amount_spent": self.amount_spent,
             "cpl": self.cpl,
+            "crm_leads": self.crm_leads,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
