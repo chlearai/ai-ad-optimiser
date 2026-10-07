@@ -200,6 +200,37 @@ def list_mis_projects(db: Session = Depends(get_db), user: User = Depends(get_cu
     return [p.to_dict() for p in projects]
 
 
+def _google_leads_gap(db: Session, project_id: int, end_dt: date) -> Optional[Dict[str, Any]]:
+    """Detect when Google Ads stopped recording conversions while spend continued.
+
+    Returns None if Google leads are healthy (some lead in the last 7 days of
+    the range) or if there is no data at all. Otherwise returns the last date
+    a Google conversion was recorded and how many days the gap has lasted.
+    """
+    last_lead = db.query(func.max(MisDailySnapshot.date)).filter(
+        MisDailySnapshot.project_id == project_id,
+        MisDailySnapshot.platform == "google",
+        MisDailySnapshot.leads > 0,
+    ).scalar()
+    if not last_lead:
+        return None
+    last_lead_date = last_lead if isinstance(last_lead, date) else _parse_date(str(last_lead))
+    recent_spend = db.query(func.sum(MisDailySnapshot.amount_spent)).filter(
+        MisDailySnapshot.project_id == project_id,
+        MisDailySnapshot.platform == "google",
+        MisDailySnapshot.date > last_lead_date,
+        MisDailySnapshot.date <= end_dt,
+    ).scalar() or 0.0
+    gap_days = (end_dt - last_lead_date).days
+    if gap_days <= 7 or recent_spend < 500:
+        return None
+    return {
+        "last_leads_date": last_lead_date.isoformat(),
+        "gap_days": gap_days,
+        "spend_since": round(recent_spend),
+    }
+
+
 @router.get("/overall")
 def overall_summary(
     project_id: int = Query(...),
@@ -261,6 +292,7 @@ def overall_summary(
         "both_connected": both_connected,
         "google_connected": google_connected,
         "meta_connected": meta_connected,
+        "google_leads_gap": _google_leads_gap(db, project_id, e_date),
         "start": s_date.isoformat(),
         "end": e_date.isoformat(),
         "rows": rows,
@@ -374,6 +406,7 @@ def daily_report(
         "platform": platform,
         "start": effective_start,
         "end": e_date.isoformat(),
+        "google_leads_gap": _google_leads_gap(db, project_id, e_date) if platform in ("google", "combined") else None,
         "rows": rows,
         "total": {
             "date": "",

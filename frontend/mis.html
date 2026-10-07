@@ -2536,10 +2536,15 @@
                         <h2 style="font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">Google drive report</h2>
                     </div>
                     <button id="runTlgReportBtn" class="btn btn-primary" onclick="runLittleGymReport()" style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        <svg width="14" height="14" viewBox="0 0 87.3 78" fill="none" style="flex-shrink:0;">
+                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#ffffff"/>
+                            <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#ffffff"/>
+                            <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l6.1 10.55z" fill="#ffffff"/>
+                            <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.4-4.5 1.2z" fill="#ffffff"/>
+                            <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.4 4.5-1.2z" fill="#ffffff"/>
+                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5z" fill="#ffffff"/>
                         </svg>
-                        <span>Run</span>
+                        <span>Google Drive</span>
                     </button>
                 </div>
                 <div id="tlgReportStatus" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted);"></div>
@@ -3059,16 +3064,25 @@
     function _mantriConnectionBadgeHtml(data) {
         if (!data) return '';
         const both = data.both_connected || (data.google_connected && data.meta_connected);
+        let html = '';
         if (both) {
-            return `<div class="report-notice" style="background:#dcfce7; border-color:#16a34a; color:#15803d;">
+            html += `<div class="report-notice" style="background:#dcfce7; border-color:#16a34a; color:#15803d;">
                 ✓ Both Meta Ads and Google Ads are connected for Mantri Developers.
             </div>`;
+        } else {
+            const gStatus = data.google_connected ? 'Connected' : 'Disconnected';
+            const mStatus = data.meta_connected ? 'Connected' : 'Disconnected';
+            html += `<div class="report-notice" style="background:#dbeafe; border-color:#3b9eff; color:#1e40af;">
+                ⚠️ Mantri reports require both Meta and Google Ads to be connected. Current status: Google Ads (${gStatus}), Meta Ads (${mStatus}).
+            </div>`;
         }
-        const gStatus = data.google_connected ? 'Connected' : 'Disconnected';
-        const mStatus = data.meta_connected ? 'Connected' : 'Disconnected';
-        return `<div class="report-notice" style="background:#dbeafe; border-color:#3b9eff; color:#1e40af;">
-            ⚠️ Mantri reports require both Meta and Google Ads to be connected. Current status: Google Ads (${gStatus}), Meta Ads (${mStatus}).
-        </div>`;
+        const gap = data.google_leads_gap;
+        if (gap) {
+            html += `<div class="report-notice" style="background:#fef3c7; border-color:#d97706; color:#92400e; margin-top:8px;">
+                ⚠ Data check: Google Ads has recorded <strong>0 leads since ${escapeHtml(gap.last_leads_date)}</strong> while spending ₹${_fmtInt(gap.spend_since)} in the same period (${gap.gap_days} days). These "Leads" figures reflect only what Google's conversion tag reports; actual enquiries continue in Salesforce/CRM (see Salesforce Report tab). Please get the landing-page conversion tracking checked.
+            </div>`;
+        }
+        return html;
     }
 
     async function _renderMantriOverall(container) {
