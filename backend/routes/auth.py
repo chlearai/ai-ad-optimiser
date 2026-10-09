@@ -709,29 +709,28 @@ def update_user(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_
         user.email = req.email
     if req.mobile is not None:
         user.mobile = req.mobile
-    if req.password:
-        user.hashed_password = get_password_hash(req.password)
-        if req.role is not None:
-            if req.role not in ("superadmin", "admin", "user", "newuser"):
-                raise HTTPException(status_code=400, detail="Invalid role")
-            user.role = req.role
-        if req.rev_role is not None:
-            user.rev_role = req.rev_role
-        if req.assigned_account_ids is not None:
-            _sync_account_assignments(user, req.assigned_account_ids, db)
-        if req.is_active is not None:
-            user.is_active = req.is_active
-        if req.access_adpulse is not None:
-            user.access_adpulse = req.access_adpulse
-        if req.access_insightdesk is not None:
-            user.access_insightdesk = req.access_insightdesk
-        if req.access_revenueops is not None:
-            user.access_revenueops = req.access_revenueops
-        if req.access_audit_review is not None:
-            user.access_audit_review = req.access_audit_review
-        if req.access_adguard is not None:
-            user.access_adguard = req.access_adguard
+    if req.role is not None:
+        if req.role not in ("superadmin", "admin", "user", "newuser"):
+            raise HTTPException(status_code=400, detail="Invalid role")
+        user.role = req.role
+    if req.rev_role is not None:
+        user.rev_role = req.rev_role
+    if req.assigned_account_ids is not None:
+        _sync_account_assignments(user, req.assigned_account_ids, db)
+    if req.is_active is not None:
+        user.is_active = req.is_active
+    if req.access_adpulse is not None:
+        user.access_adpulse = req.access_adpulse
+    if req.access_insightdesk is not None:
+        user.access_insightdesk = req.access_insightdesk
+    if req.access_revenueops is not None:
+        user.access_revenueops = req.access_revenueops
+    if req.access_audit_review is not None:
+        user.access_audit_review = req.access_audit_review
+    if req.access_adguard is not None:
+        user.access_adguard = req.access_adguard
 
+    db.commit()
     db.refresh(user)
     log_activity(
         module="System",
