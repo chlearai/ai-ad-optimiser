@@ -5,11 +5,11 @@ from typing import Optional
 from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import func, select, union_all
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.db.models import AdGuardAccount, AdGuardLead, AdGuardSupportTicket, User, AdGuardConversionEvent
-from backend.db.adguard_ops import AdGuardNotification, AdGuardInternalNote
+from backend.db.adguard_ops import AdGuardNotification, AdGuardInternalNote, AdGuardAuditUsage
 from backend.routes.auth import get_current_user_required
 from backend.services.adguard_subscription import allowance, operations, next_period, access_reason
 from backend.services.adguard_support_ops import ticket_dict, ticket_operations
@@ -179,9 +179,29 @@ def overview(db: Session = Depends(get_db), user: User = Depends(get_current_use
                             'last_success_at':delivery.isoformat() if delivery else None}})
     tickets = [ticket_dict(db, t, user) for t in db.query(AdGuardSupportTicket).filter_by(status='open').all()]
     email_failures = db.query(AdGuardNotification).filter(AdGuardNotification.status.in_(['retry','failed'])).count()
+    # Count each reserved audit once; include historic leads without a usage record.
+    # This preserves older activity without counting linked leads a second time.
+    events = union_all(
+        select(AdGuardAuditUsage.created_at.label('occurred_at')),
+        select(AdGuardLead.received_at.label('occurred_at')).where(
+            ~select(AdGuardAuditUsage.id).where(AdGuardAuditUsage.lead_id == AdGuardLead.id).exists()
+        ),
+    ).subquery()
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=29)
+    daily = dict(db.query(func.date(events.c.occurred_at), func.count()).filter(
+        events.c.occurred_at >= start, events.c.occurred_at <= now
+    ).group_by(func.date(events.c.occurred_at)).all())
+    daily = {str(day): count for day, count in daily.items()}
+    activity = [{'date':(start + timedelta(days=i)).date().isoformat(),
+                 'audits':daily.get((start + timedelta(days=i)).date().isoformat(), 0)} for i in range(30)]
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_audits = db.query(func.count()).select_from(events).filter(
+        events.c.occurred_at >= month_start, events.c.occurred_at <= now).scalar() or 0
     db.commit()
-    return {'payment_mode':'testing_bypass', 'calling':'deferred_exotel', 'workspaces':rows,
-            'summary':{'workspaces':len(rows), 'needs_attention':sum(bool(r['issues']) for r in rows),
+    return {'payment_mode':'testing_bypass', 'calling':'deferred_exotel', 'workspaces':rows, 'audit_activity':activity, 'activity_timezone':'UTC',
+            'summary':{'workspaces':len(rows), 'audits_this_month':monthly_audits,
+                       'active_subscribers':sum(r['activation_status']=='active' and r['account_status']=='active' and (not r['plan_expires_at'] or r['plan_expires_at'] > now.isoformat()) for r in rows),
+                       'near_quota':sum(r['quota_pct'] is not None and r['quota_pct'] >= 80 for r in rows), 'needs_attention':sum(bool(r['issues']) for r in rows),
                        'pending_activation':sum(r['activation_status']=='pending' for r in rows),
                        'overdue_tickets':sum(t['overdue'] for t in tickets), 'open_tickets':len(tickets), 'email_failures':email_failures}}
 

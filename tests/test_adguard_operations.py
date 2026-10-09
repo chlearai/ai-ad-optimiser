@@ -290,4 +290,23 @@ class OperationsTests(unittest.TestCase):
             send.assert_not_called();scan.assert_not_called()
         self.assertEqual(evt.status,'held')
 
+    def test_dashboard_activity_counts_usage_and_historic_leads_once(self):
+        from backend.routes.adguard_operations import overview
+        from fastapi import HTTPException
+        lead = AdGuardLead(adguard_account_id=self.ws.id, verdict='green', received_at=datetime.utcnow())
+        historic = AdGuardLead(adguard_account_id=self.ws.id, verdict='green', received_at=datetime.utcnow())
+        old = AdGuardLead(adguard_account_id=self.ws.id, verdict='green', received_at=datetime.utcnow()-timedelta(days=45))
+        self.db.add_all([lead,historic,old]); self.db.flush()
+        self.db.add(AdGuardAuditUsage(workspace_id=self.ws.id,event_key='dashboard-one',period_start=datetime.utcnow(),lead_id=lead.id))
+        self.db.add(AdGuardAuditUsage(workspace_id=self.ws.id,event_key='dashboard-two',period_start=datetime.utcnow()))
+        self.db.commit()
+        data = overview(self.db,self.admin)
+        self.assertEqual(len(data['audit_activity']),30)
+        self.assertEqual(sum(day['audits'] for day in data['audit_activity']),3)
+        self.assertEqual(data['audit_activity'][-1]['audits'],3)
+        self.assertEqual(data['summary']['audits_this_month'],3)
+        self.assertEqual(data['activity_timezone'],'UTC')
+        with self.assertRaises(HTTPException) as ctx: overview(self.db,self.owner)
+        self.assertEqual(ctx.exception.status_code,403)
+
 if __name__=='__main__': unittest.main()

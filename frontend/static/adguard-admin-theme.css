@@ -66,3 +66,78 @@ html.dark-mode body.owner-console{--color-bg-page:#0f172a;--color-bg-card:#1e293
 .owner-console .nav-item[hidden]{display:none}
 .workspace-picker{display:block;width:calc(100% - 20px);margin:8px 10px;padding:8px 5px;border:1px solid #3a4d66;border-radius:6px;background:#17273e;color:#e2e8f0;font:inherit;font-size:12px}
 @media(min-width:761px) and (max-height:800px){.owner-console .content{padding-top:10px;padding-bottom:10px}.owner-console #subscriberTable td{padding-top:5px;padding-bottom:5px}.owner-console .kpi-card .kpi-label{min-height:16px}.owner-console .kpi-card .kpi-value{font-size:21px}.owner-console .installation-card{margin-bottom:8px!important}}
+/* Sample-approved overview composition: metrics, two aligned rows, audit graph. */
+.overview-active #kpiGrid,.overview-active #adminInstallationPanel{display:none!important}
+.owner-dashboard{min-width:0}
+.overview-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.overview-heading h2{font-family:Inter,sans-serif;font-size:26px;letter-spacing:-.7px;line-height:1.2;color:var(--color-text-primary)}
+.overview-heading p{margin-top:4px;color:var(--color-text-secondary);font-size:12px}
+.overview-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.overview-metric{display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:9px;min-width:0}
+.overview-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:34px;height:34px;border-radius:8px;background:#ecfdf5;color:#059669}
+.overview-icon svg{width:22px;height:22px}
+.overview-icon.is-warning{background:#fffbeb;color:#d97706}
+.overview-metric-label{display:block;color:var(--color-text-secondary);font-size:12px;font-weight:500}
+.overview-metric strong{display:block;font-size:27px;letter-spacing:-.5px;line-height:1.35}
+.overview-metric small{display:block;color:var(--color-text-muted);font-size:10px;margin-top:3px}
+.overview-grid{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(280px,1fr);gap:14px;align-items:stretch}
+.overview-panel{background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:9px;min-width:0;overflow:hidden}
+.overview-panel>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--color-border);min-height:44px}
+.overview-panel h3{font-family:Inter,sans-serif;font-size:14px;font-weight:700;letter-spacing:-.2px}
+.overview-panel header p{font-size:10px;color:var(--color-text-muted);margin-top:2px}
+.overview-link{border:0;background:none;color:#047857;font:inherit;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.overview-link:hover{text-decoration:underline}
+.owner-console .overview-subscriber-table{border:0;border-radius:0;font-size:11px}
+.owner-console .overview-subscriber-table th{padding:8px 12px;text-transform:none;font-size:10px;letter-spacing:0}
+.owner-console .overview-subscriber-table td{padding:12px;line-height:1.35}
+.overview-subscriber-table th:first-child{width:34%}
+.overview-subscriber-table th:nth-child(2){width:12%}
+.overview-subscriber-table th:nth-child(3){width:22%}
+.overview-subscriber-table th:nth-child(4){width:16%}
+.overview-subscriber-table th:nth-child(5){width:16%}
+.overview-company{display:flex;gap:9px;align-items:center;min-width:0}
+.company-avatar{display:flex;justify-content:center;align-items:center;width:28px;height:28px;flex-shrink:0;background:#eff6ff;color:#2563eb;border-radius:50%;font-size:12px;font-weight:700}
+.overview-company b{font-size:11px;font-weight:600;display:block}
+.overview-company small{display:block;color:var(--color-text-muted);font-size:9px;margin-top:2px;overflow-wrap:anywhere}
+.overview-plan{text-transform:capitalize}
+.usage-number{font-size:10px;color:var(--color-text-secondary)}
+.usage-track{height:5px;margin-top:6px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.usage-track span{display:block;height:100%;background:#10b981;border-radius:4px}
+.usage-track span.warning{background:#f59e0b}
+.overview-status{display:inline-block;border-radius:20px;padding:4px 8px;font-size:10px;white-space:nowrap;font-weight:500}
+.overview-status.healthy{background:#ecfdf5;color:#047857}
+.overview-status.warning{background:#fffbeb;color:#a16207}
+.overview-status.neutral{background:#f1f5f9;color:#64748b}
+.attention-item{display:flex;align-items:center;text-align:left;gap:10px;padding:16px 14px;width:100%;border:0;border-bottom:1px solid var(--color-border);background:none;color:var(--color-text-primary);font:inherit;cursor:pointer}
+.attention-item:hover{background:var(--color-bg-card-hover)}
+.attention-item b{display:block;font-size:11px;font-weight:600}
+.attention-item small{display:block;font-size:11px;margin-top:5px;color:var(--color-text-secondary);line-height:1.4;overflow-wrap:anywhere}
+.attention-chevron{margin-left:auto;font-size:18px;color:var(--color-text-muted)}
+.attention-more{padding:7px 14px;font-size:10px;color:var(--color-text-muted)}
+.overview-period{font-size:10px;color:var(--color-text-secondary);border:1px solid var(--color-border);border-radius:5px;padding:5px 8px}
+#overviewActivity{padding:12px 14px 8px}
+.audit-chart{width:100%;height:190px;display:block;overflow:visible}
+.audit-chart text{font-family:Inter,sans-serif;font-size:10px;fill:var(--color-text-muted)}
+.audit-chart .chart-zero-message{font-size:12px}
+.chart-caption{font-size:10px;color:var(--color-text-secondary);display:flex;justify-content:space-between;gap:10px;padding-left:30px}
+.chart-caption span{color:var(--color-text-muted);font-size:9px}
+.integration-health-row{display:flex;align-items:center;gap:9px;padding:14px;border-bottom:1px solid var(--color-border)}
+.integration-health-row:last-child{border-bottom:0}
+.integration-symbol{display:flex;color:#059669;flex-shrink:0}
+.integration-symbol svg{width:20px;height:20px}
+.integration-health-row>div{flex:1;min-width:0}
+.integration-health-row b{display:block;font-size:11px;font-weight:600}
+.integration-health-row small{display:block;font-size:9px;color:var(--color-text-muted);margin-top:3px}
+.overview-empty{padding:28px 16px;color:var(--color-text-muted);font-size:12px;text-align:center}
+.overview-empty button{display:block;margin:10px auto 0}
+#overviewLoadStatus:empty{display:none}
+#overviewLoadStatus{padding:12px;background:var(--color-warning-light);border-radius:8px;margin-top:12px;font-size:12px}
+@media(min-width:1000px) and (max-height:800px){.overview-heading{margin-bottom:10px}.overview-heading h2{font-size:23px}.overview-metric{padding:12px}.overview-metric strong{font-size:25px}.overview-metrics{margin-bottom:10px}.overview-grid{gap:10px}.overview-panel>header{padding:10px 12px;min-height:40px}.owner-console .overview-subscriber-table td{padding:10px}.attention-item{padding:12px}.integration-health-row{padding:11px 12px}.audit-chart{height:156px}#overviewActivity{padding-top:8px}.chart-caption span{display:none}}
+@media(max-width:1100px){.overview-grid{grid-template-columns:minmax(0,1.9fr) minmax(245px,1fr)}.overview-company small{display:none}.overview-company{gap:6px}.company-avatar{width:22px;height:22px}.owner-console .overview-subscriber-table td{padding:9px 6px}.overview-metric{gap:8px;padding:10px}.overview-icon{width:28px;height:28px}.overview-metric-label{font-size:11px}.overview-status{padding:3px 5px;font-size:9px}}
+@media(max-width:900px){.overview-grid{grid-template-columns:minmax(0,1fr)}.overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.overview-heading{align-items:flex-start}.overview-heading h2{font-size:22px}.chart-caption span{display:none}}
+@media(min-width:1000px) and (max-height:800px){.owner-console .overview-subscriber-table td{padding-top:6px;padding-bottom:6px}.integration-health-row{padding-top:7px;padding-bottom:7px}.overview-metric{padding-top:10px;padding-bottom:10px}.overview-heading{margin-bottom:8px}}
+.overview-company>div{min-width:0}
+.overview-company b,.overview-company small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attention-item>span:nth-child(2){min-width:0;flex:1}
+.attention-item b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.attention-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

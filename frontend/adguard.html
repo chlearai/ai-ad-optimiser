@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -234,7 +234,7 @@
             .kpi-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
-<link rel="stylesheet" href="/static/adguard-admin-theme.css?v=20261009">
+<link rel="stylesheet" href="/static/adguard-admin-theme.css?v=20261009-overview">
 </head>
 <body>
     
@@ -274,7 +274,8 @@
                     <span class="nav-section-arrow">▶</span><span>Master Controls</span>
                 </div>
                 <div class="nav-section-items">
-                    <div class="nav-item active" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
+                    <div class="nav-item active" id="navOverview" onclick="showMasterView('overview')"><span class="nav-symbol">⌂</span> Overview</div>
+                    <div class="nav-item" id="navAllSubs" onclick="showMasterView('subscribers')">📊 Subscribers &amp; Plans</div>
                     <div class="nav-item" id="navAdminReports" onclick="showMasterView('reports')">📈 Reports &amp; Fraud Trends</div>
                     <div class="nav-item" id="navGlobalLeads" onclick="showMasterView('global_leads')">🛡️ Global Lead Stream</div>
                     <div class="nav-item" id="navCleanup" onclick="showMasterView('cleanup')">🧹 Test Lead Cleanup</div>
@@ -348,6 +349,18 @@
                     One click. Sign in with Google or Meta, approve access, and your ad lead forms appear here automatically.
                 </p>
             </div>
+
+            <section id="ownerDashboard" class="owner-dashboard hidden admin-only" aria-label="Owner overview">
+                <div class="overview-heading"><div><h2>Overview</h2><p>Your subscribers and operations at a glance.</p></div><button class="btn btn-secondary btn-sm" onclick="loadOperationsOverview()">Refresh overview</button></div>
+                <div id="overviewMetrics" class="overview-metrics" aria-live="polite"></div>
+                <div class="overview-grid">
+                    <section class="overview-panel overview-subscribers"><header><h3>Subscribers</h3><button class="overview-link" onclick="showMasterView('subscribers')">View all →</button></header><div id="overviewSubscribers" aria-live="polite">Loading subscribers…</div></section>
+                    <section class="overview-panel overview-attention"><header><h3>Needs Attention</h3><button class="overview-link" onclick="showMasterView('subscribers')">View all →</button></header><div id="overviewAttention" aria-live="polite">Loading attention items…</div></section>
+                    <section class="overview-panel overview-activity"><header><div><h3>Audit Activity</h3><p>Recorded audits · UTC</p></div><span class="overview-period">Last 30 days</span></header><div id="overviewActivity" aria-live="polite">Loading audit activity…</div></section>
+                    <section class="overview-panel overview-integrations"><header><h3>Integration Health</h3><button class="overview-link" onclick="showMasterView('subscribers')">Manage →</button></header><div id="overviewIntegrations" aria-live="polite">Loading integration health…</div></section>
+                </div>
+                <div id="overviewLoadStatus" role="status"></div>
+            </section>
 
             <!-- KPI GRID -->
             <div class="kpi-grid" id="kpiGrid"></div>
@@ -972,7 +985,7 @@
             handleOAuthResult();
             await loadWorkspaces();
             maybeShowPickerAfterConnect();
-            showMasterView('subscribers');
+            showMasterView('overview');
         }
 
         function applyRoleLayout(isAdmin) {
@@ -1109,6 +1122,8 @@
         }
 
         function selectClient(el, wsObj = null) {
+            document.body.classList.remove('overview-active');
+            $('ownerDashboard').classList.add('hidden');
             if ($('workspacePicker')) $('workspacePicker').value = String(el.dataset.accountId || '');
             document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
@@ -1119,8 +1134,8 @@
             const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
 
             if (isAdmin && !selectedClientId) {
-                // "All Workspaces" clicked — route back to Subscribers & Plans master view
-                showMasterView('subscribers');
+                // "All Workspaces" returns to the owner overview.
+                showMasterView('overview');
                 return;
             }
 
@@ -1203,6 +1218,8 @@
 
         // ---------- Master View Toggles for Admin ----------
         function showMasterView(view) {
+            document.body.classList.toggle('overview-active', view === 'overview');
+            $('ownerDashboard').classList.toggle('hidden', view !== 'overview');
             // Deselect all Master Controls nav items
             document.querySelectorAll('#adminMasterSection .nav-item').forEach(n => n.classList.remove('active'));
             // Deselect all Workspace Simulator nav items (except "All Workspaces" for subscribers view)
@@ -1222,7 +1239,11 @@
             $('supportCard').classList.add('hidden');
             $('leadFeedCard').classList.add('hidden');
 
-            if (view === 'subscribers') {
+            if (view === 'overview') {
+                $('navOverview').classList.add('active');
+                $('pageTitle').textContent = 'Owner Console';
+                loadOperationsOverview();
+            } else if (view === 'subscribers') {
                 $('navAllSubs').classList.add('active');
                 // Also highlight "All Workspaces" in sidebar
                 const allWsItem = document.querySelector('#accountList .nav-item[data-account-id=""]');
@@ -2293,6 +2314,6 @@
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); updateAdminEmbedSnippet(); checkAuth(); });
     </script>
-    <script src="/static/adguard-operations.js"></script>
+    <script src="/static/adguard-operations.js?v=20261009-overview"></script>
 </body>
 </html>
