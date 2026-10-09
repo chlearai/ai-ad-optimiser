@@ -42,6 +42,7 @@ async function configureInstallation(id) {
         const origins = prompt('Allowed website origins, separated by commas (e.g. https://example.com). Leave empty to allow any origin with this workspace’s public installation token.', install.allowed_origins.join(', '));
         if (origins === null) return;
         await api('PUT', '/workspaces/' + id + '/installation', {allowed_origins: origins.split(',').map(x=>x.trim()).filter(Boolean)});
+        $('adminInstallationPanel').open = true;
         $('embedSubSelect').value = String(id);
         await updateAdminEmbedSnippet();
         toast('Installation settings saved. Copy the workspace script tag above.');

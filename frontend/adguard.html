@@ -234,6 +234,7 @@
             .kpi-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
+<link rel="stylesheet" href="/static/adguard-admin-theme.css?v=20261009">
 </head>
 <body>
     
@@ -352,8 +353,9 @@
             <div class="kpi-grid" id="kpiGrid"></div>
 
             <!-- PRE-SUBMIT INTERCEPTOR SCRIPT TAG (CLIENT LANDING PAGES) -->
-            <div class="card" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
-                <div class="card-header" style="margin-bottom:10px;">
+            <details class="card installation-card" id="adminInstallationPanel" style="border:1px solid rgba(16, 185, 129, 0.4);background:linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(14, 165, 233, 0.03) 100%);margin-bottom:20px;">
+                <summary class="installation-summary">Website installation <span>Workspace script tags &amp; setup guide</span></summary>
+<div class="card-header" style="margin-bottom:10px;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <span style="font-size:22px;">⚡</span>
                         <div>
@@ -381,7 +383,7 @@
                     </div>
                     <a href="javascript:void(0)" onclick="openEmbedGuideModal()" style="color:var(--color-accent);text-decoration:none;font-weight:600;">📖 Installation Guide (GTM / Webflow / WP / Elementor) →</a>
                 </div>
-            </div>
+            </details>
 
             <!-- ADMIN: SUBSCRIBERS PANEL -->
             <div class="card admin-only" id="adminSubscribersCard">
@@ -395,7 +397,7 @@
                 <div id="operationsOverview" aria-live="polite" style="margin-bottom:16px;"></div>
                 <div id="adminTotals" style="margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);"></div>
                 <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:12px;">
-                    <span style="color:var(--color-text-muted);">Show:</span>
+                    <input id="subscriberSearch" class="filter-input" type="search" placeholder="Search subscribers…" aria-label="Search subscribers" oninput="applySubsTypeFilter()"><span style="color:var(--color-text-muted);">Show:</span>
                     <select id="subsTypeFilter" class="filter-select" style="padding:4px 8px;font-size:12px;" onchange="applySubsTypeFilter()">
                         <option value="all">All subscribers (testing)</option>
                         <option value="paid">Paid / Invited subscribers only</option>
@@ -405,13 +407,14 @@
                     </select>
                 </div>
                 <div class="table-wrap">
-                    <table>
+                    <table id="subscriberTable">
                         <thead><tr>
                             <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Call Credits</th><th>Payment</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
                         </tr></thead>
                         <tbody id="adminSubsBody" aria-live="polite"><tr><td colspan="10">Loading subscribers...</td></tr></tbody>
                     </table>
                 </div>
+                <div class="subscriber-pagination"><span id="subscriberPageLabel" aria-live="polite"></span><button id="subscriberPrev" class="btn btn-secondary btn-sm" onclick="changeSubscriberPage(-1)" disabled>Previous</button><button id="subscriberNext" class="btn btn-secondary btn-sm" onclick="changeSubscriberPage(1)" disabled>Next</button></div>
             </div>
 
             <!-- ADMIN: CLEANUP TEST LEADS PANEL -->
@@ -973,6 +976,8 @@
         }
 
         function applyRoleLayout(isAdmin) {
+            document.body.classList.toggle("owner-console", isAdmin);
+            $("adminInstallationPanel").open = !isAdmin;
             document.querySelectorAll('.admin-only').forEach(el => {
                 el.style.display = isAdmin ? '' : 'none';
             });
@@ -981,7 +986,7 @@
             if (isAdmin) {
                 badge.className = 'role-pill pill-admin';
                 badge.textContent = 'Owner / Admin';
-                $('workspaceSectionTitle').textContent = 'Workspace Simulator';
+                $('workspaceSectionTitle').textContent = 'Workspaces';
             } else {
                 badge.className = 'role-pill pill-customer';
                 badge.textContent = 'Customer Portal';
@@ -1061,12 +1066,23 @@
             list.innerHTML = '';
 
             if (isAdmin) {
-                list.appendChild(makeNavItem('', '', 'All Workspaces (Global)', true));
+                list.appendChild(makeNavItem('', '', 'All Workspaces', true));
+                const picker = document.createElement('select');
+                picker.id = 'workspacePicker'; picker.setAttribute('aria-label', 'Select workspace');
+                picker.className = 'workspace-picker';
+                picker.innerHTML = '<option value="">Select workspace…</option>';
+                picker.onchange = () => {
+                    const node = Array.from(list.querySelectorAll('[data-account-id]')).find(n => n.dataset.accountId === picker.value);
+                    if (node) selectClient(node, workspaces.find(w => String(w.id) === picker.value) || null);
+                };
+                list.appendChild(picker);
                 workspaces.forEach(w => {
                     const name = w.display_name || w.owner_email;
                     const duplicateName = workspaces.filter(x => (x.display_name || x.owner_email) === name).length > 1;
                     const label = name + (duplicateName ? ' (ID: ' + w.id + ')' : '') + (w.is_archived ? ' (archived)' : '');
-                    list.appendChild(makeNavItem(w.display_name || w.owner_email, w.id, label, false, w));
+                    const option = document.createElement('option'); option.value = String(w.id); option.textContent = label; picker.appendChild(option);
+                    const node = makeNavItem(w.display_name || w.owner_email, w.id, label, false, w);
+                    node.hidden = true; list.appendChild(node);
                 });
             } else {
                 const ws = selectedWorkspaceObj || workspaces[0];
@@ -1093,6 +1109,7 @@
         }
 
         function selectClient(el, wsObj = null) {
+            if ($('workspacePicker')) $('workspacePicker').value = String(el.dataset.accountId || '');
             document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
             selectedAccount = el.dataset.account || '';
@@ -1192,6 +1209,7 @@
             document.querySelectorAll('#accountList .nav-item').forEach(n => n.classList.remove('active'));
             // Reset selected client state
             selectedClientId = '';
+            if ($('workspacePicker')) $('workspacePicker').value = '';
             selectedAccount = '';
             selectedWorkspaceObj = null;
             // Hide quota widget and alert since we're in master view
@@ -1210,7 +1228,7 @@
                 const allWsItem = document.querySelector('#accountList .nav-item[data-account-id=""]');
                 if (allWsItem) allWsItem.classList.add('active');
                 $('adminSubscribersCard').classList.remove('hidden');
-                $('pageTitle').innerHTML = '<span>All Subscribers Master</span>';
+                $('pageTitle').innerHTML = '<span>Subscriber Overview</span>';
                 loadAdminSubscribers();
             } else if (view === 'reports') {
                 if ($('navAdminReports')) $('navAdminReports').classList.add('active');
@@ -1397,6 +1415,12 @@
 
         // ---------- Admin: subscribers ----------
         let _lastSubsData = null;
+        let subscriberPage = 0;
+        function subscriberRowsPerPage() { return window.innerHeight >= 900 ? 5 : window.innerHeight >= 800 ? 4 : 3; }
+        function changeSubscriberPage(delta) {
+            subscriberPage += delta;
+            if (_lastSubsData) renderAdminSubscribers(_lastSubsData);
+        }
         function _filterSubs(subs) {
             const mode = ($('subsTypeFilter') || {}).value || 'all';
             if (mode === 'all') return subs;
@@ -1405,6 +1429,7 @@
             return subs.filter(s => !s.is_beta);  // paid = anything admin-created
         }
         function applySubsTypeFilter() {
+            subscriberPage = 0;
             if (_lastSubsData) renderAdminSubscribers(_lastSubsData);
         }
 
@@ -1449,7 +1474,17 @@
 
                 const plans = ['trial', 'starter', 'pro', 'agency', 'custom'];
                 _lastSubsData = data;
-                $('adminSubsBody').innerHTML = _filterSubs(data.subscribers || []).map(s => {
+                const matching = _filterSubs(data.subscribers || []).filter(s => {
+                    const query = ($('subscriberSearch').value || '').toLowerCase().trim();
+                    return !query || [s.company_name,s.display_name,s.owner_email,s.id].join(' ').toLowerCase().includes(query);
+                });
+                const subscriberPageSize = subscriberRowsPerPage();
+                const pageCount = Math.max(1, Math.ceil(matching.length / subscriberPageSize));
+                subscriberPage = Math.max(0, Math.min(subscriberPage, pageCount - 1));
+                $('subscriberPageLabel').textContent = matching.length + ' subscribers · Page ' + (subscriberPage + 1) + ' of ' + pageCount;
+                $('subscriberPrev').disabled = subscriberPage === 0;
+                $('subscriberNext').disabled = subscriberPage >= pageCount - 1;
+                $('adminSubsBody').innerHTML = matching.slice(subscriberPage * subscriberPageSize, (subscriberPage + 1) * subscriberPageSize).map(s => {
                 const monthly = s.leads_this_month !== undefined ? s.leads_this_month : s.lead_count;
                 const limit = s.audit_limit !== undefined ? s.audit_limit : s.lead_quota;
                 const quota = limit < 0 ? 'Unlimited (' + monthly + ' audited)' : monthly + '/' + limit.toLocaleString() + ' this period' + (s.bonus_audits ? ' (+' + s.bonus_audits + ' bonus)' : '');
@@ -1501,7 +1536,7 @@
                         '<div>Expiry: ' + (s.plan_expires_at ? s.plan_expires_at.slice(0, 10) : '—') + '</div>' +
                         '<div style="color:var(--color-text-muted);">Last: ' + (s.last_lead_at ? s.last_lead_at.replace('T', ' ').slice(0, 16) : '—') + '</div>' +
                     '</td>' +
-                    '<td style="white-space:nowrap;">' +
+                    '<td class="subscriber-actions"><details><summary class="btn btn-secondary btn-sm">Actions</summary><div class="subscriber-action-menu">' +
                         '<button class="btn btn-secondary btn-sm" onclick="adminConnectFor(' + s.id + ', \'google\')" title="Connect Google Ads on behalf of this subscriber">' + (s.google_is_live ? '🔄G' : '🔗G') + '</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="adminConnectFor(' + s.id + ', \'meta\')" title="Connect Meta Ads on behalf of this subscriber">' + (s.meta_is_live ? '🔄M' : '🔗M') + '</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace exactly as the customer sees it">👁 View</button> ' +
@@ -1511,10 +1546,10 @@
                         '<button class="btn btn-secondary btn-sm" onclick="addBonusQuotaPrompt(' + s.id + ')" title="Add emergency bonus leads">+ Bonus</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="resendInvite(' + s.id + ')" title="Re-send setup email">📧</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="deleteSubscriber(' + s.id + ', \'' + escapeHtml(s.owner_email) + '\')" title="Delete permanently" style="color:var(--color-danger);">🗑</button> ' +
-                        '<button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button>' +
+                        '<button class="btn btn-secondary btn-sm" onclick="toggleArchive(' + s.id + ', ' + (!s.is_archived) + ')">' + (s.is_archived ? 'Unarchive' : 'Archive') + '</button></div></details>' +
                     '</td>' +
                 '</tr>';
-            }).join('') || '<tr><td colspan="10"><div class="empty-state"><h3>' + ((data.subscribers || []).length ? 'No subscribers match this filter' : 'No subscribers yet') + '</h3><p>' + ((data.subscribers || []).length ? 'Choose another subscriber filter to see other accounts.' : 'Create a subscriber to get started.') + '</p></div></td></tr>';
+            }).join('') || '<tr><td colspan="10"><div class="empty-state"><h3>' + ((data.subscribers || []).length ? 'No subscribers match this filter' : 'No subscribers yet') + '</h3><p>' + ((data.subscribers || []).length ? 'Try another search or subscriber filter.' : 'Create a subscriber to get started.') + '</p></div></td></tr>';
         }
 
         async function setPlan(subId, plan) {
