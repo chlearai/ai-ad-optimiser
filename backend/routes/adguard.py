@@ -1612,6 +1612,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
         raise HTTPException(status_code=403, detail="Admin access required")
     subs = []
     for ws in db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.desc()).all():
+        ws_user = db.query(User).filter(User.email == ws.owner_email).first()
         lead_count = (
             db.query(func.count(AdGuardLead.id))
             .filter(AdGuardLead.adguard_account_id == ws.id)
@@ -1658,7 +1659,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "lead_count": lead_count,
             "flagged_count": flagged_count,
             "storage_bytes": int(raw_bytes),
-            "quota_pct": None if quota < 0 else round(100 * lead_count / quota, 1),
+            "quota_pct": None if quota <= 0 else round(100 * int(ws.leads_this_month or 0) / quota, 1),
             "google_is_live": ws.google_is_live,
             "meta_is_live": ws.meta_is_live,
             "is_archived": bool(ws.is_archived),
