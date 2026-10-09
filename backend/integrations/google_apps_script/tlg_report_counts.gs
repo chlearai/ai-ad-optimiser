@@ -15,9 +15,14 @@ function publishTlgDailyCounts() {
   const sheet = book.getSheets().find(s => s.getSheetId() === TLG_REPORT_CONFIG.gid);
   if (!sheet) throw new Error('Master worksheet not found');
   const rows = sheet.getDataRange().getValues();
-  const timestampIndex = rows[0].findIndex(h => String(h).trim().toLowerCase() === 'timestamp');
-  if (timestampIndex < 0) throw new Error('Timestamp header missing');
-  const counts = {};
+  const headers = rows[0].map(h => String(h).trim().toLowerCase());
+  const timestampIndex = headers.indexOf('timestamp');
+  const nameIndex = headers.indexOf('parent name');
+  const emailIndex = headers.indexOf('email');
+  if ([timestampIndex, nameIndex, emailIndex].some(i => i < 0)) {
+    throw new Error('Timestamp, Parent Name and Email headers are required');
+  }
+  const counts = {}, tests = {};
   rows.slice(1).forEach((row, index) => {
     if (!row.some(v => String(v).trim())) return;
     const value = row[timestampIndex];
@@ -25,13 +30,15 @@ function publishTlgDailyCounts() {
       ? Utilities.formatDate(value, book.getSpreadsheetTimeZone(), 'yyyy-MM-dd')
       : String(value).trim().match(/^\d{4}-\d{2}-\d{2}(?=[ T]|$)/)?.[0];
     if (!day) throw new Error('Invalid Timestamp in master row ' + (index + 2));
-    counts[day] = (counts[day] || 0) + 1;
+    const isTest = [row[nameIndex], row[emailIndex]].some(value => /test/i.test(String(value || '')));
+    if (isTest) tests[day] = (tests[day] || 0) + 1;
+    else counts[day] = (counts[day] || 0) + 1;
   });
   const response = UrlFetchApp.fetch(TLG_REPORT_CONFIG.url, {
     method: 'post',
     contentType: 'application/json',
     headers: {Authorization: 'Bearer ' + TLG_REPORT_CONFIG.token},
-    payload: JSON.stringify({daily_counts: counts}),
+    payload: JSON.stringify({daily_counts: counts, daily_test_counts: tests, filter_version: 1}),
     muteHttpExceptions: true
   });
   if (response.getResponseCode() !== 200) {

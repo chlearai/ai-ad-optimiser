@@ -2564,8 +2564,8 @@
             <p id="tlgReportStatus" class="tlg-subtitle" role="status">Loading branches…</p>
             <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
             <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Live campaigns · Results from master lead sheets · Spend from Meta</p></div>
-            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label></div></div>
-            <p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><div id="tlgMis"></div></section></div>`;
+            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div></div>
+            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><div id="tlgMis"></div></section></div>`;
         tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
             if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
@@ -2647,6 +2647,12 @@
             const el=$('tlg'+key+r.id); if (el) { const status=tlgStatuses[r.name]?.[platform] || 'Not started'; el.textContent=status; el.classList.toggle('live',status==='Live'); }
         }});
     }
+    async function tlgRefreshMis() {
+        const button=$('tlgRefreshMis'); if(!button||button.disabled) return;
+        button.disabled=true; button.textContent='Refreshing…';
+        try { await tlgPerformance(); }
+        finally { button.disabled=false; button.textContent='Refresh MIS'; }
+    }
     async function tlgPerformance() {
         const id=selectedAccountId;
         if (!$('tlgStart')) return;
@@ -2664,6 +2670,8 @@
             const prettyDate=value=>{const [y,m,d]=value.split('-').map(Number);const suffix=d%100>=11&&d%100<=13?'th':({1:'st',2:'nd',3:'rd'}[d%10]||'th');return d+suffix+' '+new Date(y,m-1,d).toLocaleDateString('en-GB',{month:'short'})+' '+y;};
             const pending=[...new Set(rows.filter(r=>r.lead_error).map(r=>r.centre+': '+r.lead_error))];
             $('tlgMisStatus').textContent=data.errors.meta || pending.join(' · ');
+            const excluded=complete?rows.reduce((sum,r)=>sum+(r.excluded_tests||0),0):null;
+            $('tlgMisFreshness').textContent='Sheet counts sync every 5 minutes · MIS refreshed '+new Date(data.checked_at).toLocaleTimeString()+(excluded===null?'':' · Test leads excluded: '+excluded);
             $('tlgMis').innerHTML=`<div class="tlg-client-report"><table aria-label="TLG Meta report"><colgroup><col style="width:32%"><col style="width:16%"><col style="width:15%"><col style="width:17%"><col style="width:20%"></colgroup><thead><tr><th colspan="5" class="tlg-client-title">TLG - Meta</th></tr><tr><th colspan="5" class="tlg-client-period">${prettyDate($('tlgStart').value)} - ${prettyDate($('tlgEnd').value)}</th></tr><tr><th>Campaign name</th><th>Result type</th><th>Results</th><th>Cost per result</th><th>Amount spent</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>Leads (Website)</td><td>${number(r.results)}</td><td>${number(r.cost_per_result)}</td><td>${number(r.spend)}</td></tr>`).join('')||'<tr><td colspan="5">'+(data.errors.meta?'Meta report unavailable':'No live campaigns')+'</td></tr>'}</tbody><tfoot><tr><th>TOTAL (Leads)</th><th>-</th><th>${number(results)}</th><th>${number(results?spend/results:null)}</th><th>${number(spend)}</th></tr></tfoot></table></div>`;
         } catch(e) { if($('tlgMisStatus')) $('tlgMisStatus').textContent=e.message; }
     }

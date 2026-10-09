@@ -13,7 +13,7 @@ exec(compile(ast.Module(body=[node], type_ignores=[]), 'sheet_counts', 'exec'), 
 
 class CountTests(unittest.TestCase):
     def report(self, **kw):
-        values = dict(source_url='master', updated_at=datetime.utcnow(), daily_counts=json.dumps({'2026-10-01':3,'2026-10-02':2,'2026-10-09':4}))
+        values = dict(source_url='master', updated_at=datetime.utcnow(), daily_counts=json.dumps({'version':1,'leads':{'2026-10-01':3,'2026-10-02':2,'2026-10-09':4},'tests':{'2026-10-01':2}}))
         values.update(kw)
         return SimpleNamespace(**values)
 
@@ -24,7 +24,11 @@ class CountTests(unittest.TestCase):
         for report in [None, self.report(updated_at=None), self.report(updated_at=datetime.utcnow()-timedelta(minutes=16)), self.report(source_url='old')]:
             self.assertIsNone(ns['report_lead_count'](report, 'master', date(2026,10,1), date(2026,10,2)))
 
+    def test_test_counts_and_legacy_unfiltered_counts(self):
+        self.assertEqual(ns['report_lead_count'](self.report(), 'master', date(2026,10,1), date(2026,10,2), 'tests'), 2)
+        self.assertIsNone(ns['report_lead_count'](self.report(daily_counts='{"2026-10-01":99}'), 'master', date(2026,10,1), date(2026,10,2)))
+
     def test_connected_sheet_without_leads_returns_zero(self):
-        self.assertEqual(ns['report_lead_count'](self.report(daily_counts='{}'), 'master', date(2026,10,1), date(2026,10,2)), 0)
+        self.assertEqual(ns['report_lead_count'](self.report(daily_counts='{"version":1,"leads":{},"tests":{}}'), 'master', date(2026,10,1), date(2026,10,2)), 0)
 
 if __name__ == '__main__': unittest.main()

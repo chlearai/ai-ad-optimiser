@@ -28,6 +28,8 @@ def serial(row):
 
 class SheetCounts(BaseModel):
     daily_counts: dict[str, int]
+    daily_test_counts: dict[str, int] = Field(default_factory=dict)
+    filter_version: int = 0
 
 @router.post("/{account_id}/centres/{centre_id}/reporting-script")
 def reporting_script(account_id: int, centre_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
@@ -59,23 +61,28 @@ def receive_sheet_counts(account_id: int, centre_id: int, body: SheetCounts, aut
         raise HTTPException(401, "Invalid reporting connection")
     if row.source_url != centre.source_url:
         raise HTTPException(409, "Master sheet changed; reconnect lead counts")
-    if len(body.daily_counts) > 10000:
+    if body.filter_version != 1:
+        raise HTTPException(409, "Update Reporting.gs to exclude test leads")
+    if len(body.daily_counts) + len(body.daily_test_counts) > 10000:
         raise HTTPException(400, "Too many dates")
-    for day, count in body.daily_counts.items():
+    for day, count in list(body.daily_counts.items()) + list(body.daily_test_counts.items()):
         try:
             if date.fromisoformat(day).isoformat() != day or count < 0:
                 raise ValueError()
         except ValueError:
             raise HTTPException(400, "Invalid daily lead counts")
-    row.daily_counts = json.dumps(body.daily_counts)
+    row.daily_counts = json.dumps({"version":1, "leads":body.daily_counts, "tests":body.daily_test_counts})
     row.updated_at = datetime.utcnow()
     db.commit()
     return {"saved":True}
 
-def report_lead_count(report, source_url, start, end):
+def report_lead_count(report, source_url, start, end, kind="leads"):
     if not report or report.source_url != source_url or not report.updated_at or report.updated_at < datetime.utcnow() - timedelta(minutes=15):
         return None
-    return sum(count for day, count in json.loads(report.daily_counts).items() if str(start) <= day <= str(end))
+    data = json.loads(report.daily_counts)
+    if data.get("version") != 1:
+        return None
+    return sum(count for day, count in data.get(kind, {}).items() if str(start) <= day <= str(end))
 
 @router.get("/{account_id}/centres")
 def centres(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
@@ -175,7 +182,9 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
     rows, errors = [], {}
     saved_centres = db.query(TlgCentre).filter_by(account_id=account_id).all()
     saved_names = [r.name for r in saved_centres]
-    counts = {r.name: report_lead_count(db.query(TlgSheetReport).filter_by(centre_id=r.id).first(), r.source_url, start, end) for r in saved_centres}
+    reports = {r.id: db.query(TlgSheetReport).filter_by(centre_id=r.id).first() for r in saved_centres}
+    counts = {r.name: report_lead_count(reports[r.id], r.source_url, start, end) for r in saved_centres}
+    test_counts = {r.name: report_lead_count(reports[r.id], r.source_url, start, end, "tests") for r in saved_centres}
     names = saved_names or CENTRES
     statuses = {c: {"meta": "Not connected", "google": "Not connected"} for c in names}
     from backend.services.connectors import GoogleAdsConnector, get_meta_access_token
@@ -216,7 +225,7 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
                     continue
                 live_matches = [x for x in campaigns if x["status"] in ("ACTIVE", "ENABLED") and centre_name(x["name"], names) == centre]
                 results = counts.get(centre) if platform == "meta" and len(live_matches) == 1 else None
-                rows.append({**c, "platform": platform, "centre": centre, "results":results, "result_type":"Leads (Website)", "cost_per_result":c["spend"] / results if results else None, "lead_error":("Multiple live campaigns need a campaign column in the master sheet" if len(live_matches)>1 else "Connect master sheet lead counts") if results is None else None})
+                rows.append({**c, "platform": platform, "centre": centre, "results":results, "excluded_tests":test_counts.get(centre), "result_type":"Leads (Website)", "cost_per_result":c["spend"] / results if results else None, "lead_error":("Multiple live campaigns need a campaign column in the master sheet" if len(live_matches)>1 else "Connect updated Reporting.gs for lead counts excluding tests") if results is None else None})
         except Exception:
             errors[platform] = "Connection or API access failed. Check the account integration and permissions."
             for centre in names:
