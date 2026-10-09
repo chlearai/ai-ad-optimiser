@@ -719,6 +719,30 @@
             .sidebar { width: 180px; }
             .content { padding: 12px; }
         }
+        .tlg-workspace { display:grid; gap:24px; }
+        .tlg-panel { padding:28px; border:1px solid var(--border-color, #dce3ed); border-radius:16px; background:var(--bg-card, var(--card-bg, #fff)); box-shadow:0 4px 20px rgba(15,23,42,.04); }
+        .tlg-panel h2 { margin:0 0 8px; font-size:28px; font-weight:750; letter-spacing:-.5px; }
+        .tlg-panel h3 { font-size:23px; margin:0; }
+        .tlg-subtitle { color:var(--text-muted, #64748b); margin:0 0 22px; line-height:1.6; }
+        .tlg-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+        .tlg-add { display:flex; gap:10px; flex-wrap:wrap; }
+        .tlg-workspace input { padding:10px 12px; border:1px solid var(--border-color, #cbd5e1); border-radius:8px; background:var(--bg-input, transparent); color:inherit; font:inherit; }
+        .tlg-add input { min-width:240px; }
+        .tlg-workspace .data-table th { padding:16px; font-size:13px; text-transform:uppercase; letter-spacing:.045em; background:rgba(100,116,139,.08); white-space:nowrap; }
+        .tlg-workspace .data-table td { padding:16px; vertical-align:middle; border-bottom:1px solid var(--border-color, #e2e8f0); }
+        .tlg-workspace .data-table tbody tr:hover { background:rgba(59,130,246,.035); }
+        .tlg-sheet-input { width:100%; min-width:220px; box-sizing:border-box; }
+        .tlg-name { display:flex; align-items:center; gap:10px; min-width:190px; }
+        .tlg-edit { border:0; background:transparent; color:var(--primary, #2563eb); cursor:pointer; font:inherit; font-size:12px; padding:6px; }
+        .tlg-badge { display:inline-block; padding:5px 10px; border-radius:20px; background:rgba(100,116,139,.1); font-size:12px; font-weight:600; white-space:nowrap; }
+        .tlg-badge.live { color:#047857; background:rgba(16,185,129,.12); }
+        .tlg-platform-report { margin-top:24px; border:1px solid var(--border-color, #e2e8f0); border-radius:12px; overflow:hidden; }
+        .tlg-platform-heading { padding:20px; background:rgba(59,130,246,.07); }
+        .tlg-platform-report tfoot { background:rgba(59,130,246,.07); font-weight:700; }
+        .tlg-dates { display:flex; gap:16px; flex-wrap:wrap; }
+        .tlg-dates label { display:flex; align-items:center; gap:8px; font-size:13px; }
+        #reportTitle { font-size:30px; font-weight:750; letter-spacing:-.5px; }
+        @media(max-width:640px) { .tlg-panel { padding:18px; } .tlg-panel h2, #reportTitle { font-size:25px; } .tlg-add { width:100%; } .tlg-add input { min-width:0; flex:1; } }
     </style>
     <script src="/india_states.js"></script>
 </head>
@@ -2526,15 +2550,15 @@
         clearInterval(tlgTimer);
         tlgRows = []; tlgStatuses = {};
         const today = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
-        $('reportContent').innerHTML = `<div class="card" style="padding:24px">
-            <h2>Google Drive lead routing</h2><p id="tlgReportStatus">Loading sync status…</p>
-            <p id="tlgSheetsConnection">Checking Google Sheets connection...</p><h3>Centre Lead Routing</h3><p>Automatic sync every minute · Starting with Yelahanka and Whitefield · Existing leads and repeat submissions included</p>
-            <div style="display:flex;gap:12px;margin-bottom:16px"><button class="btn" onclick="tlgConnect('meta')">Connect Meta Ads</button><button class="btn" onclick="tlgConnect('google')">Connect Google Ads</button></div>
-            <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1100px"><thead><tr><th>Centre Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th><th>Lead Sync</th><th>Sync Status</th></tr></thead><tbody id="tlgCentres"></tbody></table></div>
-            <h3 style="margin-top:30px">Advertising Performance</h3>
-            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label></div>
-            <p id="tlgMisStatus"></p><div id="tlgMis"></div></div>`;
-        tlgLoadCentres(); tlgPerformance(); tlgSheetsConnection();
+        $('reportContent').innerHTML = `<div class="tlg-workspace">
+            <section class="tlg-panel"><h2>Branch Directory</h2><p class="tlg-subtitle">Manage your centres, advertising status and lead sheet links.</p>
+            <div class="tlg-toolbar"><form class="tlg-add" onsubmit="event.preventDefault();tlgAddBranch()"><input id="tlgNewBranch" aria-label="New branch name" placeholder="Enter new branch name" maxlength="120" required><button class="btn btn-primary" id="tlgAddButton" type="submit">+ Add branch</button></form><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="tlgConnect('meta')">Connect Meta Ads</button><button class="btn" onclick="tlgConnect('google')">Connect Google Ads</button></div></div>
+            <p id="tlgReportStatus" class="tlg-subtitle" role="status">Loading branches…</p>
+            <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
+            <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Campaign results and spend across your branches.</p></div>
+            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label></div></div>
+            <p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><div id="tlgMis"></div></section></div>`;
+        tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
             if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
             if (!$('tlgCentres').contains(document.activeElement)) tlgLoadCentres();
@@ -2559,26 +2583,48 @@
             const rows = await api('GET', `/tlg/${id}/centres`);
             if (id !== selectedAccountId || !$('tlgCentres')) return;
             tlgRows = rows;
-            $('tlgCentres').innerHTML = rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td id="tlgMeta${r.id}">Checking…</td><td id="tlgGoogle${r.id}">Checking…</td>
-                <td><input aria-label="${escapeHtml(r.name)} master sheet" id="tlgSource${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.source_url || '')}" onchange="tlgSave(${r.id})"></td>
-                <td><input aria-label="${escapeHtml(r.name)} branch sheet" id="tlgDest${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.destination_url || '')}" onchange="tlgSave(${r.id})"></td>
-                <td><input aria-label="Enable lead sync" type="checkbox" id="tlgEnabled${r.id}" ${r.enabled?'checked':''} onchange="tlgSave(${r.id})"></td>
-                <td>${escapeHtml(r.error || (r.last_sync ? new Date(r.last_sync).toLocaleString() + ' · ' + r.copied + ' copied' : 'Awaiting sheet setup'))}</td></tr>`).join('');
-            const dates = rows.filter(r=>r.last_sync).map(r=>r.last_sync).sort();
-            $('tlgReportStatus').textContent = dates.length ? 'Last successful centre sync: ' + new Date(dates[dates.length-1]).toLocaleString() : 'No successful sync yet. Add sheet links and grant sheet access.';
+            $('tlgCentres').innerHTML = rows.map(r => `<tr><td><div class="tlg-name" id="tlgNameCell${r.id}"><strong>${escapeHtml(r.name)}</strong><button class="tlg-edit" aria-label="Edit branch name" onclick="tlgEditName(${r.id})">Edit</button></div></td><td><span class="tlg-badge" id="tlgMeta${r.id}">Checking…</span></td><td><span class="tlg-badge" id="tlgGoogle${r.id}">Checking…</span></td>
+                <td><input class="tlg-sheet-input" aria-label="${escapeHtml(r.name)} master sheet" id="tlgSource${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.source_url || '')}" onchange="tlgSave(${r.id})"></td>
+                <td><input class="tlg-sheet-input" aria-label="${escapeHtml(r.name)} branch sheet" id="tlgDest${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.destination_url || '')}" onchange="tlgSave(${r.id})"></td></tr>`).join('');
+            $('tlgReportStatus').textContent = rows.length + (rows.length===1?' branch':' branches');
             tlgApplyStatuses();
         } catch(e) { if ($('tlgReportStatus')) $('tlgReportStatus').textContent=e.message; }
     }
     async function tlgSave(id) {
         try {
-            await api('PUT', `/tlg/${selectedAccountId}/centres/${id}`, {source_url:$('tlgSource'+id).value.trim(),destination_url:$('tlgDest'+id).value.trim(),enabled:$('tlgEnabled'+id).checked});
-            toast('Saved. Automatic syncing will use these settings.');
+            const row=tlgRows.find(r=>r.id===id);
+            await api('PUT', `/tlg/${selectedAccountId}/centres/${id}`, {source_url:$('tlgSource'+id).value.trim(),destination_url:$('tlgDest'+id).value.trim(),enabled:row.enabled});
+            toast('Sheet links saved.');
+        } catch(e) { toast(e.message,true); }
+    }
+    async function tlgAddBranch() {
+        const input=$('tlgNewBranch'), button=$('tlgAddButton'), accountId=selectedAccountId;
+        const name=input.value.trim(); if(!name) { input.focus(); return; }
+        button.disabled=true;
+        try {
+            await api('POST', `/tlg/${accountId}/centres`, {name});
+            if(accountId!==selectedAccountId) return;
+            input.value=''; await tlgLoadCentres(); await tlgPerformance(); toast('Branch added.');
+        } catch(e) { toast(e.message,true); }
+        finally { button.disabled=false; }
+    }
+    function tlgEditName(id) {
+        const row=tlgRows.find(r=>r.id===id); if(!row) return;
+        $('tlgNameCell'+id).innerHTML=`<form onsubmit="event.preventDefault();tlgRenameBranch(${id})" style="display:flex;gap:6px;flex-wrap:wrap"><input id="tlgName${id}" aria-label="Branch name" maxlength="120" required value="${escapeHtml(row.name)}"><button class="btn" type="submit">Save</button><button class="tlg-edit" type="button" onclick="tlgLoadCentres()">Cancel</button></form>`;
+        $('tlgName'+id).focus();
+    }
+    async function tlgRenameBranch(id) {
+        const name=$('tlgName'+id).value.trim(), accountId=selectedAccountId; if(!name) return;
+        try {
+            await api('PATCH', `/tlg/${accountId}/centres/${id}`, {name});
+            if(accountId!==selectedAccountId) return;
+            await tlgLoadCentres(); await tlgPerformance(); toast('Branch name saved.');
         } catch(e) { toast(e.message,true); }
     }
     let tlgStatuses = {};
     function tlgApplyStatuses() {
         tlgRows.forEach(r => { for (const [key,platform] of [['Meta','meta'],['Google','google']]) {
-            const el=$('tlg'+key+r.id); if (el) { const status=tlgStatuses[r.name]?.[platform] || 'Checking…'; el.textContent=status; el.style.color=status==='Live'?'var(--color-success)':'var(--color-text-muted)'; }
+            const el=$('tlg'+key+r.id); if (el) { const status=tlgStatuses[r.name]?.[platform] || 'Not started'; el.textContent=status; el.classList.toggle('live',status==='Live'); }
         }});
     }
     async function tlgPerformance() {
@@ -2592,8 +2638,8 @@
             const money=v=>v==null?'—':new Intl.NumberFormat('en-IN',{style:'currency',currency:data.currency||'INR'}).format(v);
             $('tlgMis').innerHTML=['meta','google'].map(platform=>{
                 const rows=data.rows.filter(r=>r.platform===platform), spend=rows.reduce((s,r)=>s+r.spend,0), results=rows.reduce((s,r)=>s+r.results,0);
-                if(data.errors[platform]) return `<h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3><p>Report unavailable until connected.</p>`;
-                return `<h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3><div style="overflow:auto"><table class="data-table" style="width:100%"><thead><tr><th>Centre</th><th>Campaign Name</th><th>Result Type</th><th>Results</th><th>Cost per Result</th><th>Amount Spent</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.centre)}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.result_type)}</td><td>${r.results}</td><td>${money(r.cost_per_result)}</td><td>${money(r.spend)}</td></tr>`).join('') || '<tr><td colspan="6">No campaigns returned for this period.</td></tr>'}</tbody><tfoot><tr><th colspan="3">Total</th><th>${results}</th><th>${money(results?spend/results:null)}</th><th>${money(spend)}</th></tr></tfoot></table></div>`;
+                if(data.errors[platform]) return `<section class="tlg-platform-report"><div class="tlg-platform-heading"><h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3></div><p style="padding:20px">Report unavailable until connected.</p></section>`;
+                return `<section class="tlg-platform-report"><div class="tlg-platform-heading"><h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3></div><div style="overflow:auto"><table class="data-table" style="width:100%"><thead><tr><th>Branch</th><th>Campaign Name</th><th>Result Type</th><th>Results</th><th>Cost per Result</th><th>Amount Spent</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.centre)}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.result_type)}</td><td>${r.results}</td><td>${money(r.cost_per_result)}</td><td>${money(r.spend)}</td></tr>`).join('') || '<tr><td colspan="6">No campaigns returned for this period.</td></tr>'}</tbody><tfoot><tr><th colspan="3">Total</th><th>${results}</th><th>${money(results?spend/results:null)}</th><th>${money(spend)}</th></tr></tfoot></table></div></section>`;
             }).join('');
         } catch(e) { if($('tlgMisStatus')) $('tlgMisStatus').textContent=e.message; }
     }

@@ -50,6 +50,37 @@ class Settings(BaseModel):
     destination_url: str = Field(default="", max_length=2048)
     enabled: bool = True
 
+class BranchName(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+def validate_branch_name(name, account_id, db, exclude_id=None):
+    name = " ".join(name.split())
+    if not name or not normalized(name):
+        raise HTTPException(400, "Enter a branch name")
+    for other in db.query(TlgCentre).filter_by(account_id=account_id).all():
+        if other.id != exclude_id and normalized(other.name) == normalized(name):
+            raise HTTPException(409, "A branch with this name already exists")
+    return name
+
+@router.post("/{account_id}/centres", status_code=201)
+def create_centre(account_id: int, body: BranchName, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user, edit=True)
+    row = TlgCentre(account_id=account_id, name=validate_branch_name(body.name, account_id, db), enabled=False)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return serial(row)
+
+@router.patch("/{account_id}/centres/{centre_id}")
+def rename_centre(account_id: int, centre_id: int, body: BranchName, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user, edit=True)
+    row = db.query(TlgCentre).filter_by(id=centre_id, account_id=account_id).with_for_update().first()
+    if not row:
+        raise HTTPException(404, "Branch not found")
+    row.name = validate_branch_name(body.name, account_id, db, centre_id)
+    db.commit()
+    return serial(row)
+
 @router.put("/{account_id}/centres/{centre_id}")
 def save(account_id: int, centre_id: int, body: Settings, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user, edit=True)
@@ -78,8 +109,8 @@ def save(account_id: int, centre_id: int, body: Settings, db: Session = Depends(
 def normalized(value):
     return "".join(c for c in value.lower() if c.isalnum())
 
-def centre_name(name):
-    matches = [c for c in CENTRES if normalized(c) in normalized(name)]
+def centre_name(name, names=None):
+    matches = [c for c in (CENTRES if names is None else names) if normalized(c) in normalized(name)]
     return matches[0] if len(matches) == 1 else "Unmapped"
 
 @router.get("/{account_id}/performance")
@@ -88,7 +119,9 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
     if start > end or (end-start).days > 366:
         raise HTTPException(400, "Choose an ordered range up to one year")
     rows, errors = [], {}
-    statuses = {c: {"meta": "Not connected", "google": "Not connected"} for c in CENTRES}
+    saved_names = [r.name for r in db.query(TlgCentre).filter_by(account_id=account_id).all()]
+    names = saved_names or CENTRES
+    statuses = {c: {"meta": "Not connected", "google": "Not connected"} for c in names}
     from backend.services.connectors import GoogleAdsConnector, get_meta_access_token
     for platform in ("google", "meta"):
         try:
@@ -119,15 +152,15 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
                         campaigns.append({"name": c["name"], "status": c["effective_status"], "spend": spend, "results": leads, "result_type": "Leads (Meta)"})
                     url = payload.get("paging", {}).get("next")
                     params = None
-            for centre in CENTRES:
-                linked = [c for c in campaigns if centre_name(c["name"]) == centre]
+            for centre in names:
+                linked = [c for c in campaigns if centre_name(c["name"], names) == centre]
                 statuses[centre][platform] = "Live" if any(c["status"] in ("ACTIVE", "ENABLED") for c in linked) else "Paused" if linked else "Not started"
             for c in campaigns:
-                if centre_name(c["name"]) not in ACTIVE_CENTRES:
+                if centre_name(c["name"], names) == "Unmapped":
                     continue
-                rows.append({**c, "platform": platform, "centre": centre_name(c["name"]), "cost_per_result": c["spend"] / c["results"] if c["results"] else None})
+                rows.append({**c, "platform": platform, "centre": centre_name(c["name"], names), "cost_per_result": c["spend"] / c["results"] if c["results"] else None})
         except Exception:
             errors[platform] = "Connection or API access failed. Check the account integration and permissions."
-            for centre in CENTRES:
+            for centre in names:
                 statuses[centre][platform] = "Unavailable"
     return {"rows": rows, "statuses": statuses, "errors": errors, "currency": account.currency, "checked_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}
