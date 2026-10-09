@@ -121,6 +121,7 @@ def evaluate_submit_verdict(
     session_uuid: str,
     form_data: Dict[str, Any],
     client_ip: Optional[str] = None,
+    commit: bool = True,
 ) -> Dict[str, Any]:
     """Calculate submit-time risk score and verdict (Green/Grey/Red).
 
@@ -270,13 +271,13 @@ def evaluate_submit_verdict(
     # If Red, record to Shared Fraud Network & create exclusion member
     if verdict == "red":
         if email:
-            record_offence(db, "email", email, ws_id)
+            record_offence(db, "email", email, ws_id, commit=commit)
         if phone:
-            record_offence(db, "phone", phone, ws_id)
+            record_offence(db, "phone", phone, ws_id, commit=commit)
         if fp_hash:
-            record_offence(db, "fingerprint", fp_hash, ws_id)
+            record_offence(db, "fingerprint", fp_hash, ws_id, commit=commit)
         if client_ip or (session and session.ip):
-            record_offence(db, "ip_subnet", client_ip or session.ip, ws_id)
+            record_offence(db, "ip_subnet", client_ip or session.ip, ws_id, commit=commit)
 
         # Queue exclusion member for 15-min sync
         if ws_id and str(ws_id).isdigit():
@@ -305,10 +306,11 @@ def evaluate_submit_verdict(
                 ))
 
     try:
-        db.commit()
+        db.commit() if commit else db.flush()
     except Exception as e:
         db.rollback()
         logger.warning(f"[Interceptor] verdict commit error: {e}")
+        raise
 
     return {
         "verdict": verdict,

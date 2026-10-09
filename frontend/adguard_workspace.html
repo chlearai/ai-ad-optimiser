@@ -1081,7 +1081,7 @@
                         <button class="btn btn-primary btn-sm" id="btnCopyWsEmbedConn" onclick="copyWorkspaceEmbedSnippet('btnCopyWsEmbedConn')">ðŸ“‹ Copy Script Tag</button>
                     </div>
                     <div style="background:rgba(0,0,0,0.3);border:1px solid var(--color-border);border-radius:8px;padding:12px 14px;font-family:Consolas, monospace;font-size:12px;color:#34d399;white-space:pre-wrap;word-break:break-all;position:relative;" id="wsEmbedCodeBoxConn">&lt;!-- AdGuard Pre-Submit Lead Integrity &amp; Conversion Firewall --&gt;
-&lt;script async src="http://127.0.0.1:8000/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
+&lt;script async src="/api/v1/tag/adguard.js" data-account-id="YOUR_WORKSPACE_ID"&gt;&lt;/script&gt;</div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-muted);">
                         <div style="display:flex;gap:12px;flex-wrap:wrap;">
                             <span>ðŸ›¡ï¸ <b>Canvas &amp; WebGL Signals</b></span>
@@ -1626,14 +1626,19 @@
             }
         }
 
-        function updateWorkspaceEmbedSnippet() {
-            const host = window.location.origin || 'http://127.0.0.1:8000';
-            const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : (currentUser ? currentUser.email : 'YOUR_WORKSPACE_ID');
-            const code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
-                         '<script async src="' + host + '/api/v1/tag/adguard.js" data-account-id="' + escapeHtml(wsId) + '"><\/script>';
-            if ($('wsEmbedCodeBoxPanel')) $('wsEmbedCodeBoxPanel').textContent = code;
-            if ($('wsEmbedCodeBoxConn')) $('wsEmbedCodeBoxConn').textContent = code;
-            if ($('wsModalEmbedSnippet')) $('wsModalEmbedSnippet').textContent = code;
+        async function updateWorkspaceEmbedSnippet() {
+            const wsId = selectedWorkspaceObj ? selectedWorkspaceObj.id : null;
+            let code = 'Select a workspace to generate its installation tag.';
+            if (wsId) {
+                try {
+                    const install = await api('GET', '/workspaces/' + wsId + '/installation');
+                    if (!selectedWorkspaceObj || selectedWorkspaceObj.id !== wsId) return;
+                    code = '<script async src="' + window.location.origin + '/api/v1/tag/adguard.js" data-account-id="' + wsId + '" data-installation-token="' + install.installation_token + '"><\/script>';
+                } catch (e) { code = 'Unable to generate installation tag: ' + e.message; }
+            }
+            for (const id of ['wsEmbedCodeBoxPanel', 'wsEmbedCodeBoxConn', 'wsModalEmbedSnippet']) {
+                if ($(id)) $(id).textContent = code;
+            }
         }
 
         function copyWorkspaceEmbedSnippet(btnId) {
@@ -1789,7 +1794,7 @@
             }
 
             // Monthly counter (hard-stop plan quota) with fallback to stored-lead count for legacy rows
-            const quota = ws.lead_quota;
+            const quota = ws.audit_limit !== undefined ? ws.audit_limit : ws.lead_quota;
             const monthly = (ws.leads_this_month !== undefined && ws.leads_this_month !== null) ? ws.leads_this_month : (ws.lead_count || 0);
             const count = monthly;
             // Trial expiry countdown
@@ -1804,7 +1809,7 @@
                 const ms = new Date(ws.plan_expires_at) - new Date();
                 if (ms > 0) {
                     const days = Math.ceil(ms / 86400000);
-                    expiryLine = ' Â· renews in ' + days + 'd';
+                    expiryLine = ' · expires in ' + days + 'd';
                 }
             }
             if (quota < 0) {

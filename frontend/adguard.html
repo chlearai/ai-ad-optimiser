@@ -365,7 +365,7 @@
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <select class="filter-select" id="embedSubSelect" onchange="updateAdminEmbedSnippet()" style="font-weight:600;">
-                            <option value="">All Workspaces (Default)</option>
+                            <option value="">Select a workspace to install</option>
                         </select>
                         <button class="btn btn-primary btn-sm" id="btnCopyAdminEmbed" onclick="copyAdminEmbedSnippet()">📋 Copy Script Tag</button>
                     </div>
@@ -392,20 +392,22 @@
                         <button class="btn btn-secondary btn-sm" onclick="loadAdminSubscribers()">Refresh</button>
                     </div>
                 </div>
+                <div id="operationsOverview" aria-live="polite" style="margin-bottom:16px;"></div>
                 <div id="adminTotals" style="margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);"></div>
                 <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;font-size:12px;">
                     <span style="color:var(--color-text-muted);">Show:</span>
                     <select id="subsTypeFilter" class="filter-select" style="padding:4px 8px;font-size:12px;" onchange="applySubsTypeFilter()">
+                        <option value="all">All subscribers (testing)</option>
                         <option value="paid">Paid / Invited subscribers only</option>
                         <option value="beta">Beta (self-serve) accounts</option>
                         <option value="demo">Demo requests 🔥</option>
-                        <option value="all">All (beta + paid)</option>
+
                     </select>
                 </div>
                 <div class="table-wrap">
                     <table>
                         <thead><tr>
-                            <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Call Credits</th><th>Storage</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
+                            <th>Subscriber</th><th>Plan</th><th>Leads</th><th>Quota</th><th>Call Credits</th><th>Payment</th><th>Google</th><th>Meta</th><th>Last Lead</th><th>Actions</th>
                         </tr></thead>
                         <tbody id="adminSubsBody" aria-live="polite"><tr><td colspan="10">Loading subscribers...</td></tr></tbody>
                     </table>
@@ -442,6 +444,8 @@
                     <div class="filters">
                         <select class="filter-select" id="ticketStatusFilter" onchange="loadSupportInbox()">
                             <option value="">All</option>
+                            <option value="overdue">Overdue</option>
+                            <option value="unassigned">Unassigned open tickets</option>
                             <option value="open">Open</option>
                             <option value="answered">Answered</option>
                             <option value="closed">Closed</option>
@@ -459,18 +463,19 @@
                             <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin-top:2px;">
                                 <span id="adminSupportEmailVal">shekhar.chlear@gmail.com</span>
                                 <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;" onclick="configureAdminSupportEmail()">✏️ Configure Email</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="configureSupportTargets()">Response targets</button>
                             </div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--color-text-muted);">
                         <span class="badge badge-green" style="font-size:11px;">✓ Auto-notify subscriber on reply</span>
-                        <span class="badge badge-gray" style="font-size:11px;">SMTP / Mailer Ready</span>
+                        <span class="badge badge-gray" style="font-size:11px;">Delivery status tracked per ticket</span>
                     </div>
                 </div>
 
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>#</th><th>Subscriber</th><th>Subject</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+                        <thead><tr><th>#</th><th>Subscriber</th><th>Subject</th><th>Category</th><th>Status</th><th>Priority / Response deadline</th><th></th></tr></thead>
                         <tbody id="adminTicketsBody"></tbody>
                     </table>
                 </div>
@@ -487,7 +492,7 @@
                         <button class="btn btn-secondary btn-sm" onclick="adminCloseTicket()">Close Ticket</button>
                     </div>
                     <div style="font-size:11px;color:var(--color-text-muted);">
-                        ℹ️ Submitting a reply saves the message to the thread and automatically dispatches an AdGuard email notification to the customer.
+                        ℹ️ Submitting a reply saves the message to the thread and queues an AdGuard email notification with delivery tracking and retries to the customer.
                     </div>
                 </div>
             </div>
@@ -700,8 +705,8 @@
                     <label style="font-size:11px;font-weight:600;">Overage Policy</label>
                     <select class="filter-select" id="esOverage" style="width:100%;">
                         <option value="block">Hard Block (Stop leads at 100%)</option>
-                        <option value="alert">Alert Only (Accept extra leads)</option>
-                        <option value="charge">Pay-As-You-Go</option>
+                        <option disabled value="alert">Alert Only (Accept extra leads)</option>
+                        <option disabled value="charge">Pay-As-You-Go</option>
                     </select>
                 </div>
                 <div>
@@ -849,8 +854,8 @@
                     <label style="font-size:11px;font-weight:600;">Overage Policy</label>
                     <select class="filter-select" id="csOverage" style="width:100%;">
                         <option value="block">Hard Block (Stop leads at 100% quota)</option>
-                        <option value="alert">Alert Only (Keep scoring & notify)</option>
-                        <option value="charge">Pay-As-You-Go per extra lead</option>
+                        <option disabled value="alert">Alert Only (Keep scoring & notify)</option>
+                        <option disabled value="charge">Pay-As-You-Go per extra lead</option>
                     </select>
                 </div>
                 <div>
@@ -1296,7 +1301,7 @@
                         '<td>' + escapeHtml(t.subject) + '</td>' +
                         '<td><span class="badge badge-gray">' + escapeHtml(t.category) + '</span></td>' +
                         '<td><span class="badge ' + statusCls + '">' + t.status + '</span></td>' +
-                        '<td style="font-size:12px;">' + (t.updated_at || '').replace('T', ' ').slice(0, 16) + '</td>' +
+                        '<td style="font-size:12px;">' + escapeHtml(t.priority) + ' · ' + escapeHtml(t.assigned_to || 'Unassigned') + '<br>' + (t.response_due_at ? 'Due: ' + escapeHtml(t.response_due_at.slice(0,16).replace('T',' ')) + ' UTC' : 'No response pending') + (t.overdue ? '<br><b style="color:var(--color-danger);">OVERDUE</b>' : '') + '</td>' +
                         '<td><button class="btn btn-secondary btn-sm" onclick="openAdminTicket(' + t.id + ')">Open</button></td></tr>';
                 }).join('') || '<tr><td colspan="7"><div class="empty-state"><h3>No tickets</h3></div></td></tr>';
             } catch (e) { toast(e.message, 'error'); }
@@ -1323,6 +1328,7 @@
                     '<div style="font-size:11px;color:var(--color-text-muted);margin-bottom:2px;">' + escapeHtml(m.sender_name || m.sender) + ' · ' + (m.created_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
                     '<div style="font-size:13px;white-space:pre-wrap;">' + escapeHtml(m.body) + '</div></div>'
                 ).join('');
+                if (window.renderTicketOperations) renderTicketOperations(t);
                 $('adminTicketMessages').scrollTop = $('adminTicketMessages').scrollHeight;
             } catch (e) { toast(e.message, 'error'); }
         }
@@ -1331,13 +1337,9 @@
             const body = $('adminTicketReply').value.trim();
             if (!body || !adminTicketId) return;
             try {
+                await api('POST', '/support/tickets/' + adminTicketId + '/reply', { body });
                 $('adminTicketReply').value = '';
-                await fetch(API + '/support/tickets/' + adminTicketId + '/reply', {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ body })
-                });
-                toast('Reply posted & email notification dispatched to subscriber', 'success');
+                toast('Reply saved; email queued. Delivery status is shown below.', 'success');
                 openAdminTicket(adminTicketId);
                 loadSupportInbox();
             } catch (e) { toast(e.message, 'error'); }
@@ -1346,7 +1348,7 @@
         async function adminCloseTicket() {
             if (!adminTicketId || !confirm('Close this ticket?')) return;
             try {
-                await fetch(API + '/support/tickets/' + adminTicketId + '/close', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                await api('POST', '/support/tickets/' + adminTicketId + '/close');
                 toast('Ticket closed');
                 loadSupportInbox();
                 openAdminTicket(adminTicketId);
@@ -1354,14 +1356,20 @@
         }
 
         // ---------- Admin: embed snippet tag generator ----------
-        function updateAdminEmbedSnippet() {
-            const host = window.location.origin;
-            const selVal = $('embedSubSelect') ? $('embedSubSelect').value : '';
-            const accountAttr = selVal ? ' data-account-id="' + escapeHtml(selVal) + '"' : ' data-account-id="ALL"';
-            const code = '<!-- AdGuard Pre-Submit Lead Integrity & Conversion Firewall -->\n' +
-                         '<script async src="' + host + '/api/v1/tag/adguard.js"' + accountAttr + '><\/script>';
-            if ($('adminEmbedCodeBox')) $('adminEmbedCodeBox').textContent = code;
-            if ($('modalEmbedSnippet')) $('modalEmbedSnippet').textContent = code;
+        async function updateAdminEmbedSnippet() {
+            const selected = $('embedSubSelect').value;
+            if (!selected) {
+                $('adminEmbedCodeBox').textContent = 'Select a subscriber workspace to generate its installation tag.';
+                if ($('modalEmbedSnippet')) $('modalEmbedSnippet').textContent = 'Select a workspace first.';
+                return;
+            }
+            try {
+                const installation = await api('GET', '/workspaces/' + selected + '/installation');
+                if ($('embedSubSelect').value !== selected) return;
+                const code = '<script async src="' + window.location.origin + '/api/v1/tag/adguard.js" data-account-id="' + selected + '" data-installation-token="' + installation.installation_token + '"><\/script>';
+                $('adminEmbedCodeBox').textContent = code;
+                if ($('modalEmbedSnippet')) $('modalEmbedSnippet').textContent = code;
+            } catch (e) { $('adminEmbedCodeBox').textContent = 'Unable to generate installation tag: ' + e.message; }
         }
 
         function copyAdminEmbedSnippet() {
@@ -1390,7 +1398,7 @@
         // ---------- Admin: subscribers ----------
         let _lastSubsData = null;
         function _filterSubs(subs) {
-            const mode = ($('subsTypeFilter') || {}).value || 'paid';
+            const mode = ($('subsTypeFilter') || {}).value || 'all';
             if (mode === 'all') return subs;
             if (mode === 'beta') return subs.filter(s => s.is_beta);
             if (mode === 'demo') return subs.filter(s => s.signup_source === 'demo_request');
@@ -1414,6 +1422,7 @@
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
                 const data = await res.json();
                 renderAdminSubscribers(data);
+                if (window.loadOperationsOverview) loadOperationsOverview();
             } catch (e) {
                 showSubscriberState('Unable to load subscribers: ' + e.message, true);
                 toast(e.message, 'error');
@@ -1430,7 +1439,7 @@
             // Populate embed snippet dropdown selector
             if ($('embedSubSelect')) {
                 const currentVal = $('embedSubSelect').value;
-                $('embedSubSelect').innerHTML = '<option value="">All Workspaces (Default)</option>' +
+                $('embedSubSelect').innerHTML = '<option value="">Select a workspace to install</option>' +
                     (data.subscribers || []).map(s => {
                         const label = (s.company_name || s.display_name || s.owner_email) + ' (ID: ' + s.id + ')';
                         return '<option value="' + s.id + '"' + (currentVal == s.id ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
@@ -1442,7 +1451,8 @@
                 _lastSubsData = data;
                 $('adminSubsBody').innerHTML = _filterSubs(data.subscribers || []).map(s => {
                 const monthly = s.leads_this_month !== undefined ? s.leads_this_month : s.lead_count;
-                const quota = s.lead_quota < 0 ? '∞ (Unlimited)' : (monthly + '/' + s.lead_quota.toLocaleString() + ' mo' + (s.quota_pct != null ? ' (' + s.quota_pct + '%)' : ''));
+                const limit = s.audit_limit !== undefined ? s.audit_limit : s.lead_quota;
+                const quota = limit < 0 ? 'Unlimited (' + monthly + ' audited)' : monthly + '/' + limit.toLocaleString() + ' this period' + (s.bonus_audits ? ' (+' + s.bonus_audits + ' bonus)' : '');
                 const over = s.lead_quota >= 0 && s.quota_pct != null && s.quota_pct >= 80;
                 const callsStr = (s.plan === 'pro' || s.plan === 'agency' || (s.call_credits_remaining || 0) > 0) ? (s.call_credits_remaining || 0) + ' call credits' : '—';
                 
@@ -1476,7 +1486,7 @@
                                 plans.map(p => '<option value="' + p + '"' + (s.plan === p ? ' selected' : '') + '>' + p.toUpperCase() + '</option>').join('') +
                             '</select>' +
                         '</div>' +
-                        statusBadge +
+                        statusBadge + '<div style="font-size:10px;">Activation: ' + escapeHtml(s.activation_status || 'unknown') + '</div>' +
                     '</td>' +
                     '<td><b>' + s.lead_count + '</b> <div style="color:var(--color-text-muted);font-size:11px;">(' + s.flagged_count + ' blocked)</div></td>' +
                     '<td' + (over ? ' style="color:var(--color-danger);font-weight:700;"' : '') + '>' +
@@ -1496,6 +1506,8 @@
                         '<button class="btn btn-secondary btn-sm" onclick="adminConnectFor(' + s.id + ', \'meta\')" title="Connect Meta Ads on behalf of this subscriber">' + (s.meta_is_live ? '🔄M' : '🔗M') + '</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openWorkspacePage(' + s.id + ')" title="Open the subscriber workspace exactly as the customer sees it">👁 View</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="openEditSubscriber(' + s.id + ')" title="Edit profile / plan / offline payment">✏️ Edit</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="renewSubscriber(' + s.id + ')">Renew</button> ' +
+                        '<button class="btn btn-secondary btn-sm" onclick="configureInstallation(' + s.id + ')">Installation</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="addBonusQuotaPrompt(' + s.id + ')" title="Add emergency bonus leads">+ Bonus</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="resendInvite(' + s.id + ')" title="Re-send setup email">📧</button> ' +
                         '<button class="btn btn-secondary btn-sm" onclick="deleteSubscriber(' + s.id + ', \'' + escapeHtml(s.owner_email) + '\')" title="Delete permanently" style="color:var(--color-danger);">🗑</button> ' +
@@ -2246,5 +2258,6 @@
 
         window.addEventListener('DOMContentLoaded', () => { renderThemeIcon(); updateAdminEmbedSnippet(); checkAuth(); });
     </script>
+    <script src="/static/adguard-operations.js"></script>
 </body>
 </html>

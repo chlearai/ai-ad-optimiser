@@ -32,12 +32,12 @@ node.decorator_list = []
 node.args.defaults = []
 for arg in node.args.args:
     arg.annotation = None
-namespace = dict(AdGuardAccount=Account, AdGuardLead=Lead, User=User, func=func, os=os, HTTPException=HTTPException, _webhook_hits=[])
+namespace = dict(AdGuardAccount=Account, AdGuardLead=Lead, User=User, func=func, os=os, HTTPException=HTTPException, _webhook_hits=[], allowance=lambda db, ws: {'quota_pct': None if ws.lead_quota <= 0 else round(100 * ws.leads_this_month / ws.lead_quota, 1)})
 exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), 'exec'), namespace)
 
 class SubscriberTests(unittest.TestCase):
     def run_endpoint(self, quota=300, owner=True):
-        fields = ['phone','company_name','industry','plan','plan_expires_at','overage_policy','payment_mode','payment_ref','amount_paid','gst_invoice_no','payment_status','account_status','google_is_live','meta_is_live','is_archived','signup_source','is_beta','created_at','call_credits_remaining','call_credits_granted_total','call_credits_used']
+        fields = ['phone','company_name','industry','plan','plan_expires_at','overage_policy','payment_mode','payment_ref','amount_paid','gst_invoice_no','payment_status','account_status','google_is_live','meta_is_live','is_archived','signup_source','is_beta','created_at','call_credits_remaining','call_credits_granted_total','call_credits_used','crm_preference','google_last_sync_at','meta_last_sync_at']
         ws = SimpleNamespace(**dict.fromkeys(fields), id=1, owner_email='owner@example.test', display_name='Test', lead_quota=quota, leads_this_month=30)
         db = MagicMock()
         def query(entity):
@@ -46,7 +46,7 @@ class SubscriberTests(unittest.TestCase):
             q.order_by.return_value = q
             q.all.return_value = [ws]
             q.scalar.return_value = 90
-            q.first.return_value = (SimpleNamespace(tos_accepted_version='2.0') if owner else None) if entity is User else None
+            q.first.return_value = (SimpleNamespace(tos_accepted_version='2.0',is_active=True,onboarding_completed=True) if owner else None) if entity is User else None
             return q
         db.query.side_effect = query
         return namespace['admin_subscribers'](db, SimpleNamespace(role='admin'))['subscribers'][0]

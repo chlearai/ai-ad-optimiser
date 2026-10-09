@@ -16,7 +16,9 @@
         BASE_URL = window.location.origin;
     }
 
-    var SESSION_KEY = '_adguard_sid';
+    var INSTALLATION_TOKEN = SCRIPT_TAG ? SCRIPT_TAG.getAttribute('data-installation-token') : null;
+    if (!ACCOUNT_ID || !INSTALLATION_TOKEN) { console.warn('AdGuard: copy a workspace installation tag from your dashboard.'); return; }
+    var SESSION_KEY = '_adguard_sid_' + ACCOUNT_ID;
     var sessionUuid = sessionStorage.getItem(SESSION_KEY);
     if (!sessionUuid) {
         sessionUuid = 'ag_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
@@ -109,6 +111,7 @@
         var sessionPayload = {
             session_uuid: sessionUuid,
             adguard_account_id: ACCOUNT_ID,
+            installation_token: INSTALLATION_TOKEN,
             fingerprint_hash: canvasHash + '_' + autoSignals.screen + '_' + autoSignals.timezone,
             gclid: urlParams.gclid || null,
             fbclid: urlParams.fbclid || null,
@@ -200,6 +203,8 @@
             };
             xhr.send(JSON.stringify({
                 session_uuid: sessionUuid,
+            adguard_account_id: ACCOUNT_ID,
+            installation_token: INSTALLATION_TOKEN,
                 otp_code: code
             }));
         };
@@ -238,8 +243,10 @@
 
                 var auto = getAutomationSignals();
                 var verdictPayload = {
+                    audit_uuid: 'audit_' + Date.now() + '_' + Math.random().toString(36).slice(2),
                     session_uuid: sessionUuid,
-                    adguard_account_id: ACCOUNT_ID,
+            adguard_account_id: ACCOUNT_ID,
+                    installation_token: INSTALLATION_TOKEN,
                     full_name: formDataObj.name || formDataObj.full_name || formDataObj.user_name || formDataObj.fname || '',
                     email: formDataObj.email || formDataObj.user_email || formDataObj.email_address || '',
                     phone: formDataObj.phone || formDataObj.mobile || formDataObj.phone_number || formDataObj.contact || '',

@@ -608,8 +608,8 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
         ws_act = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
         if ws_act is not None:
             now_act = datetime.utcnow()
-            ws_act.leads_month_reset = now_act
-            ws_act.leads_this_month = 0
+            from backend.services.adguard_subscription import activate_workspace
+            activate_workspace(ws_act, now_act, db=db)
             _plan_def = _PL.get(ws_act.plan or "trial", {})
             plan_credits = int(_plan_def.get("call_credits", 0) or 0)
             if plan_credits > 0:
@@ -618,10 +618,6 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
                 if shortfall > 0:
                     ws_act.call_credits_remaining = int(ws_act.call_credits_remaining or 0) + shortfall
                     ws_act.call_credits_granted_total = int(ws_act.call_credits_granted_total or 0) + shortfall
-            if (ws_act.plan or "trial") == "trial":
-                ws_act.plan_expires_at = now_act + timedelta(days=14)
-            if not ws_act.plan_expires_at and ws_act.plan in _PL and ws_act.plan not in ("trial", "agency"):
-                ws_act.plan_expires_at = now_act + timedelta(days=30)
     except Exception as e:
         logger.warning(f"plan clock setup failed for {user.email}: {e}")
 

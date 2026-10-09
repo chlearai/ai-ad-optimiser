@@ -10,7 +10,7 @@ Supports pluggable providers:
 import json
 import logging
 import os
-import random
+import secrets
 import string
 import urllib.parse
 import urllib.request
@@ -22,7 +22,7 @@ logger = logging.getLogger("AdOptima")
 
 def generate_otp_code(length: int = 6) -> str:
     """Generate a numeric OTP code."""
-    return "".join(random.choices(string.digits, k=length))
+    return "".join((secrets.choice(string.digits) for _ in range(length)))
 
 
 def send_otp(phone: str, otp_code: str, provider_settings: Optional[Dict[str, Any]] = None) -> Tuple[bool, Optional[str]]:

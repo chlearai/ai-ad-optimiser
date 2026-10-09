@@ -71,6 +71,7 @@ async def webhook(
     x_google_ledform_digest: str = Header(default="", alias="X-Google-Leadform-Digest"),
     x_google_response_key: str = Header(default="", alias="Lead-Response-Webhook-Key"),
     token: Optional[str] = None,
+    workspace_id: Optional[int] = None,
 ):
     """Receive a Google Ads lead form submission.
 
@@ -86,6 +87,11 @@ async def webhook(
     Body: Google sends urlencoded (`form_data=<json>&google_key=<key>`) or
     XML; bridges send JSON. All are normalized downstream.
     """
+    target_workspace = db.get(AdGuardAccount, workspace_id) if workspace_id is not None else None
+    if workspace_id is not None and not target_workspace:
+        raise HTTPException(404, 'Workspace not found')
+    workspace_secret = operations(db, target_workspace).webhook_secret if target_workspace else None
+    db.commit()
     raw = (await request.body()).decode("utf-8") or ""
     logger.info(
         f"[AdGuard] webhook hit: digest_hdr={'yes' if x_google_ledform_digest else 'no'} "
@@ -110,7 +116,7 @@ async def webhook(
         is_google_native = True
 
     if is_google_native:
-        secret = os.getenv("ADGUARD_GOOGLE_WEBHOOK_KEY", "")
+        secret = workspace_secret or os.getenv("ADGUARD_GOOGLE_WEBHOOK_KEY", "")
         if not secret:
             logger.error("[AdGuard] ADGUARD_GOOGLE_WEBHOOK_KEY not configured on server")
             raise HTTPException(status_code=500, detail="ADGUARD_GOOGLE_WEBHOOK_KEY not configured")
@@ -139,13 +145,13 @@ async def webhook(
         # Google body: JSON (current), urlencoded, or XML (legacy)
         payload = _parse_google_native_body(raw)
         if payload is None:
-            logger.error(f"[AdGuard] unparseable Google body (first 400 chars): {raw[:400]}")
+            logger.error("[AdGuard] unparseable Google webhook body")
             raise HTTPException(status_code=400, detail="Unparseable Google lead payload")
         logger.info(f"[AdGuard] Google native payload keys: {list(payload.keys())[:10]}")
     else:
         # --- Scheme 2: shared token ---
         supplied = x_adguard_token or token or ""
-        if not _verify_token(supplied):
+        if not (hmac.compare_digest(supplied, workspace_secret) if workspace_secret else _verify_token(supplied)):
             raise HTTPException(status_code=403, detail="Invalid webhook token")
         try:
             payload = json.loads(raw) if raw else {}
@@ -167,8 +173,8 @@ async def webhook(
             account = None
     if account is None and acct_name:
         account = db.query(Account).filter(Account.name == str(acct_name)).first()
-    if account is None:
-        account = db.query(Account).filter(Account.is_active == True).first()  # noqa: E712
+    if not target_workspace and not account:
+        raise HTTPException(400, 'Specify workspace_id in the webhook URL (or an explicit legacy agency account_id)')
 
     from backend.services.adguard import process_incoming_lead, QuotaExceededError as QuotaExceeded
 
@@ -179,7 +185,7 @@ async def webhook(
 
     def _process_background():
         try:
-            process_incoming_lead(payload, account=account, raw_payload=raw)
+            process_incoming_lead(payload, account=account if not target_workspace else None, raw_payload=json.dumps({k:v for k,v in payload.items() if k not in ("google_key", "token")}), workspace_id=workspace_id)
         except QuotaExceeded:
             logger.warning("[AdGuard] lead dropped: workspace over quota")
         except Exception as e:
@@ -592,7 +598,11 @@ def retry_lsq(lead_id: int, db: Session = Depends(get_db), user: User = Depends(
     record = db.query(AdGuardLead).filter(AdGuardLead.id == lead_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Lead not found")
-    if record.verdict != "verified":
+    if user.role not in ('admin', 'superadmin'):
+        ws_owner = db.get(AdGuardAccount, record.adguard_account_id) if record.adguard_account_id else None
+        if not ws_owner or ws_owner.owner_email != user.email:
+            raise HTTPException(404, 'Lead not found')
+    if record.verdict not in ('verified', 'green'):
         raise HTTPException(status_code=400, detail="Only verified leads can be pushed to LeadSquared")
 
     from backend.services.adguard import push_lead_to_lsq
@@ -608,10 +618,19 @@ def retry_lsq(lead_id: int, db: Session = Depends(get_db), user: User = Depends(
         "campaign_name": record.campaign_name,
         "source": record.lead_type or "Google Ads Lead Form",
     }
-    push = push_lead_to_lsq(lead_payload, account)
+    if record.adguard_account_id:
+        from backend.services.adguard_crm import deliver_lead
+        ws = db.get(AdGuardAccount, record.adguard_account_id)
+        from backend.services.adguard_subscription import access_reason
+        reason = access_reason(db, ws)
+        if reason:
+            raise HTTPException(403, reason)
+        push = deliver_lead(ws, lead_payload)
+    else:
+        push = push_lead_to_lsq(lead_payload, account)
     record.lsq_status = push["status"]
-    record.lsq_prospect_id = push["prospect_id"]
-    record.lsq_error = push["error"]
+    record.lsq_prospect_id = push.get("id") or push.get("prospect_id")
+    record.lsq_error = push.get("error")
     db.commit()
 
     log_activity(
@@ -673,7 +692,7 @@ def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db),
     if not name:
         raise HTTPException(status_code=400, detail="Workspace name required")
 
-    my_ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).all()
+    my_ws = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).order_by(AdGuardAccount.id).all()
     my_count = len(my_ws)
 
     # Plan limit check (from the user's first workspace plan; default trial)
@@ -692,6 +711,8 @@ def create_workspace(req: CreateWorkspaceRequest, db: Session = Depends(get_db),
         display_name=name,
         plan=plan,
         lead_quota=(PLAN_LIMITS.get(plan, {}).get("lead_quota", 300)),
+        plan_expires_at=source_ws.plan_expires_at if source_ws else None,
+        leads_month_reset=source_ws.leads_month_reset if source_ws else None,
         verification_threshold=source_ws.verification_threshold if source_ws else 70,
         shield_enabled=bool(source_ws.shield_enabled) if source_ws else True,
         shield_junk_threshold=source_ws.shield_junk_threshold if source_ws else 40,
@@ -824,6 +845,7 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
                     return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_error=meta_identity_limit&plan={ws.plan}&limit={_lim}")
     except Exception as _pe:
         logger.warning(f"[AdGuard] meta connector limit check failed: {_pe}")
+        return RedirectResponse(url="/adguard-workspace?oauth_error=connector_limit_check_failed")
 
     ws.meta_credentials = build_meta_credentials(token)
     ws.meta_is_live = True
@@ -989,6 +1011,7 @@ def oauth_callback(code: str, state: str, error: Optional[str] = None, db: Sessi
                 return RedirectResponse(url=f"/adguard-workspace?ws={ws.id}&oauth_error=google_identity_limit&plan={ws.plan}&limit={_glim}")
     except Exception as _pg:
         logger.warning(f"[AdGuard] google connector limit check failed: {_pg}")
+        return RedirectResponse(url="/adguard-workspace?oauth_error=connector_limit_check_failed")
 
     ws.google_credentials = fernet_encrypt(json.dumps(creds))
     ws.google_is_live = True
@@ -1578,10 +1601,12 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
         out.append(
             {
                 **ws.to_dict(),
+                **allowance(db, ws),
                 "credentials_set": bool(ws.google_credentials),
                 "lead_count": lead_count,
             }
         )
+    db.commit()
     return out
 
 
@@ -1589,13 +1614,10 @@ def oauth_accounts(db: Session = Depends(get_db), user: User = Depends(get_curre
 # Admin: subscriber management (plan, quota, storage, health)
 # ---------------------------------------------------------------------------
 
-PLAN_LIMITS = {
-    "trial": {"lead_quota": 300, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
-    "starter": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
-    "pro": {"lead_quota": 5000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 300},
-    "agency": {"lead_quota": -1, "workspaces": 10, "connectors": {"google": 2, "meta": 2}, "call_credits": 500},  # Enterprise: 10 brand workspaces
-    "custom": {"lead_quota": 1000, "workspaces": 1, "connectors": {"google": 1, "meta": 1}, "call_credits": 0},
-}
+from backend.services.adguard_subscription import (
+    PLAN_LIMITS, allowance, operations, set_plan, activate_workspace, roll_period, next_period, change_subscriber_plan, change_subscriber_status, parse_expiry,
+)
+
 
 
 class PlanUpdateRequest(BaseModel):
@@ -1635,7 +1657,13 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             .first()
         )
         quota = ws.lead_quota if ws.lead_quota is not None else 300
+        limits = allowance(db, ws)
         subs.append({
+            **limits,
+            "activation_status": "active" if ws_user and ws_user.is_active and ws_user.onboarding_completed else "pending",
+            "crm_preference": ws.crm_preference or "none",
+            "google_last_sync_at": ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None,
+            "meta_last_sync_at": ws.meta_last_sync_at.isoformat() if ws.meta_last_sync_at else None,
             "id": ws.id,
             "owner_email": ws.owner_email,
             "display_name": ws.display_name or ws.company_name or ws.owner_email,
@@ -1659,7 +1687,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "lead_count": lead_count,
             "flagged_count": flagged_count,
             "storage_bytes": int(raw_bytes),
-            "quota_pct": None if quota <= 0 else round(100 * int(ws.leads_this_month or 0) / quota, 1),
+            "quota_pct": limits["quota_pct"],
             "google_is_live": ws.google_is_live,
             "meta_is_live": ws.meta_is_live,
             "is_archived": bool(ws.is_archived),
@@ -1669,6 +1697,7 @@ def admin_subscribers(db: Session = Depends(get_db), user: User = Depends(get_cu
             "last_lead_at": last_lead[0].isoformat() if last_lead and last_lead[0] else None,
             "created_at": ws.created_at.isoformat() if ws.created_at else None,
         })
+    db.commit()
     total_leads = db.query(func.count(AdGuardLead.id)).scalar() or 0
     total_bytes = db.query(func.sum(func.length(AdGuardLead.raw_payload))).scalar() or 0
     return {
@@ -1694,15 +1723,13 @@ def admin_update_subscriber(sub_id: int, req: PlanUpdateRequest, db: Session = D
     if req.plan is not None:
         if req.plan not in PLAN_LIMITS:
             raise HTTPException(status_code=400, detail="Invalid plan")
-        ws.plan = req.plan
-        ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
+        change_subscriber_plan(db, ws, req.plan)
     if req.lead_quota is not None:
+        if req.lead_quota < -1:
+            raise HTTPException(400, "Quota must be -1, zero, or positive")
         ws.lead_quota = req.lead_quota
     if req.plan_expires_at is not None:
-        try:
-            ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
+        ws.plan_expires_at = parse_expiry(req.plan_expires_at)
     if req.is_archived is not None:
         ws.is_archived = req.is_archived
     db.commit()
@@ -1761,7 +1788,9 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
     if req.industry is not None:
         ws.industry = req.industry.strip()
     if req.overage_policy is not None:
-        ws.overage_policy = req.overage_policy.strip()
+        if req.overage_policy != "block":
+            raise HTTPException(400, "Only block overage policy is supported during testing")
+        ws.overage_policy = "block"
     if req.payment_mode is not None:
         ws.payment_mode = req.payment_mode.strip()
     if req.payment_ref is not None:
@@ -1773,16 +1802,18 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
     if req.payment_status is not None:
         ws.payment_status = req.payment_status.strip()
     if req.account_status is not None:
-        ws.account_status = req.account_status.strip()
+        if req.account_status not in ("active", "paused", "suspended", "expired"):
+            raise HTTPException(400, "Invalid account status")
+        change_subscriber_status(db, ws, req.account_status)
 
     if req.plan is not None:
         if req.plan not in PLAN_LIMITS:
             raise HTTPException(status_code=400, detail="Invalid plan")
-        ws.plan = req.plan
-        if req.lead_quota is None:
-            ws.lead_quota = PLAN_LIMITS[req.plan]["lead_quota"]
+        change_subscriber_plan(db, ws, req.plan, req.lead_quota)
 
     if req.lead_quota is not None:
+        if req.lead_quota < -1:
+            raise HTTPException(400, "Quota must be -1, zero, or positive")
         ws.lead_quota = req.lead_quota
 
     # Call credit top-up: add to prepaid bucket (never expires); negative = admin correction
@@ -1792,13 +1823,7 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
             ws.call_credits_granted_total = int(ws.call_credits_granted_total or 0) + int(req.add_call_credits)
 
     if req.plan_expires_at is not None:
-        if req.plan_expires_at.strip():
-            try:
-                ws.plan_expires_at = datetime.fromisoformat(req.plan_expires_at.strip())
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid date (use YYYY-MM-DD)")
-        else:
-            ws.plan_expires_at = None
+        ws.plan_expires_at = parse_expiry(req.plan_expires_at)
 
     if req.is_archived is not None:
         ws.is_archived = req.is_archived
@@ -1843,10 +1868,18 @@ def admin_add_bonus_quota(sub_id: int, req: BonusQuotaRequest, db: Session = Dep
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
     if not ws:
         raise HTTPException(status_code=404, detail="Subscriber not found")
-    if ws.lead_quota >= 0:
-        ws.lead_quota += max(0, req.bonus_leads)
-        db.commit()
-    return {"status": "ok", "new_quota": ws.lead_quota}
+    if req.bonus_leads <= 0:
+        raise HTTPException(400, 'Bonus audits must be positive')
+    db.query(AdGuardAccount).filter_by(id=ws.id).with_for_update().populate_existing().first()
+    roll_period(db, ws)
+    op = operations(db, ws)
+    if op.bonus_period != ws.leads_month_reset:
+        op.bonus_audits = 0
+        op.bonus_period = ws.leads_month_reset
+    op.bonus_audits += req.bonus_leads
+    db.commit()
+    result = allowance(db, ws)
+    return {'status': 'ok', 'new_quota': result['audit_limit'], **result}
 
 
 class StatusToggleRequest(BaseModel):
@@ -1861,7 +1894,9 @@ def admin_toggle_subscriber_status(sub_id: int, req: StatusToggleRequest, db: Se
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == sub_id).first()
     if not ws:
         raise HTTPException(status_code=404, detail="Subscriber not found")
-    ws.account_status = req.status
+    if req.status not in ("active", "paused", "suspended", "expired"):
+        raise HTTPException(400, "Invalid account status")
+    change_subscriber_status(db, ws, req.status)
     if req.status in ("suspended", "paused"):
         ws.is_archived = False
     db.commit()
@@ -1938,6 +1973,12 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         raise HTTPException(status_code=400, detail="Valid email required")
     if req.plan not in PLAN_LIMITS:
         raise HTTPException(status_code=400, detail="Invalid plan")
+    if req.lead_quota is not None and req.lead_quota < -1:
+        raise HTTPException(400, "Quota must be -1, zero, or positive")
+    if req.mode not in ("instant", "invite"):
+        raise HTTPException(400, "Invalid activation mode")
+    if req.overage_policy != "block":
+        raise HTTPException(400, "Only block overage policy is supported during testing")
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
@@ -1977,12 +2018,7 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
 
     # Quota logic: use explicit quota if passed, else fallback to plan default
     assigned_quota = req.lead_quota if req.lead_quota is not None else PLAN_LIMITS[req.plan]["lead_quota"]
-    parsed_expiry = None
-    if req.plan_expires_at and req.plan_expires_at.strip():
-        try:
-            parsed_expiry = datetime.fromisoformat(req.plan_expires_at.strip())
-        except ValueError:
-            parsed_expiry = None
+    parsed_expiry = parse_expiry(req.plan_expires_at)
 
     ws = AdGuardAccount(
         owner_email=email,
@@ -2004,6 +2040,9 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
         account_status="active",
     )
     db.add(ws)
+    if req.mode != "invite":
+        db.flush()
+        activate_workspace(ws, db=db)
     db.commit()
     db.refresh(ws)
 
@@ -2380,7 +2419,7 @@ def meta_pull_leads(db: Session = Depends(get_db), user: User = Depends(get_curr
                     lead_id = str(ld.get("id") or "")
                     if not lead_id:
                         continue
-                    exists = db.query(AdGuardLead).filter(AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
+                    exists = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
                     if exists:
                         skipped += 1
                         continue

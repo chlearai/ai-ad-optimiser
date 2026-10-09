@@ -19,9 +19,12 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from backend.services.adguard_subscription import validate_installation, reserve_audit, WorkspaceUnavailable, operations
+import secrets
+from backend.db.adguard_ops import AdGuardAuditUsage
 
 from backend.db.database import get_db
 from backend.db.models import (
@@ -70,7 +73,8 @@ def serve_adguard_tag():
 
 
 class SessionInitRequest(BaseModel):
-    session_uuid: str
+    session_uuid: str = Field(min_length=1, max_length=120)
+    installation_token: Optional[str] = Field(default=None, max_length=100)
     adguard_account_id: Optional[Any] = None
     fingerprint_hash: Optional[str] = None
     gclid: Optional[str] = None
@@ -94,12 +98,18 @@ def tag_session_init(req: SessionInitRequest, request: Request, db: Session = De
     if forwarded:
         client_ip = forwarded.split(",")[0].strip()
 
+    ws = validate_installation(db, req.adguard_account_id, req.installation_token, request)
+    existing = db.query(AdGuardSession).filter_by(session_uuid=req.session_uuid).first()
+    if existing and existing.adguard_account_id != ws.id:
+        raise HTTPException(409, 'Session belongs to another workspace')
     session = register_session(db, req.session_uuid, req.model_dump(), client_ip)
     return {"status": "ok", "session_uuid": session.session_uuid}
 
 
 class SubmitVerdictRequest(BaseModel):
-    session_uuid: str
+    audit_uuid: Optional[str] = Field(default=None, max_length=120)
+    session_uuid: str = Field(min_length=1, max_length=120)
+    installation_token: Optional[str] = Field(default=None, max_length=100)
     adguard_account_id: Optional[Any] = None
     full_name: Optional[str] = None
     email: Optional[str] = None
@@ -125,8 +135,23 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
     if forwarded:
         client_ip = forwarded.split(",")[0].strip()
 
+    ws = validate_installation(db, req.adguard_account_id, req.installation_token, request)
+    session = db.query(AdGuardSession).filter_by(session_uuid=req.session_uuid).first()
+    if not session or session.adguard_account_id != ws.id:
+        raise HTTPException(409, 'Register a session for this workspace first')
+    try:
+        ws, usage, created = reserve_audit(db, ws.id, 'web:' + (req.audit_uuid or req.session_uuid))
+    except WorkspaceUnavailable as exc:
+        db.rollback()
+        raise HTTPException(429, str(exc)) from exc
+    if not created:
+        lead = db.get(AdGuardLead, usage.lead_id) if usage.lead_id else None
+        if not lead:
+            raise HTTPException(409, 'Audit is already being processed')
+        return {'verdict': lead.verdict, 'integrity_score': lead.integrity_score,
+                'session_uuid': req.session_uuid, 'lead_id': lead.id, 'otp_required': lead.verdict == 'grey'}
     data = req.model_dump()
-    outcome = evaluate_submit_verdict(db, req.session_uuid, data, client_ip)
+    outcome = evaluate_submit_verdict(db, req.session_uuid, data, client_ip, commit=False)
 
     session = db.query(AdGuardSession).filter(AdGuardSession.session_uuid == req.session_uuid).first()
     ws_id = session.adguard_account_id if session else req.adguard_account_id
@@ -154,9 +179,12 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
         stage="submitted" if outcome["verdict"] == "green" else "rejected",
     )
     db.add(lead)
+    db.flush()
+    usage.lead_id = lead.id
     db.commit()
     db.refresh(lead)
 
+    sent = False
     # If Grey band, generate & dispatch OTP
     if outcome["verdict"] == "grey" and req.phone:
         otp_code = generate_otp_code(6)
@@ -169,7 +197,10 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
 
         ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == ws_id).first() if ws_id and str(ws_id).isdigit() else None
         otp_cfg = json.loads(ws.otp_settings) if (ws and ws.otp_settings) else {}
-        send_otp(req.phone, otp_code, otp_cfg)
+        sent, _ = send_otp(req.phone, otp_code, otp_cfg)
+        if verdict_rec and not sent:
+            verdict_rec.otp_status = 'delivery_failed'
+            db.commit()
 
     # If Green, push to CRM + enqueue Bot-Caller
     if outcome["verdict"] == "green":
@@ -200,26 +231,38 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
         "session_uuid": req.session_uuid,
         "lead_id": lead.id,
         "otp_required": outcome["verdict"] == "grey",
+        "otp_delivery_failed": outcome["verdict"] == "grey" and bool(req.phone) and not sent,
     }
 
 
 class OtpVerifyRequest(BaseModel):
-    session_uuid: str
+    adguard_account_id: Optional[int] = None
+    session_uuid: str = Field(min_length=1, max_length=120)
+    installation_token: Optional[str] = Field(default=None, max_length=100)
     otp_code: str
 
 
 @router.post("/tag/otp")
-def tag_verify_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
+def tag_verify_otp(req: OtpVerifyRequest, request: Request, db: Session = Depends(get_db)):
     """Verify OTP step-up for Grey-band lead."""
+    ws = validate_installation(db, req.adguard_account_id, req.installation_token, request)
     verdict_rec = db.query(AdGuardVerdict).filter(AdGuardVerdict.session_uuid == req.session_uuid).order_by(AdGuardVerdict.created_at.desc()).first()
     if not verdict_rec:
         raise HTTPException(status_code=400, detail="No active OTP request found for this session")
 
+    session = db.query(AdGuardSession).filter_by(session_uuid=req.session_uuid).first()
+    if not session or session.adguard_account_id != ws.id:
+        raise HTTPException(403, 'Session does not belong to this installation')
+    lead_for_otp = db.query(AdGuardLead).filter_by(session_id=session.id).order_by(AdGuardLead.received_at.desc(), AdGuardLead.id.desc()).first()
+    usage = db.query(AdGuardAuditUsage).filter_by(lead_id=lead_for_otp.id).first() if lead_for_otp else None
+    if not usage or (usage.otp_attempts or 0) >= 5:
+        raise HTTPException(429, 'OTP attempt limit reached; start a new form submission')
+    usage.otp_attempts = (usage.otp_attempts or 0) + 1
+    if verdict_rec.otp_status not in ('sent', 'failed'):
+        raise HTTPException(400, 'OTP is no longer active; submit a new verification request')
     is_valid = False
-    if req.otp_code.strip() == "123456":
-        is_valid = True
-    elif verdict_rec.otp_code and req.otp_code.strip() == verdict_rec.otp_code.strip():
-        if verdict_rec.otp_expires_at and datetime.utcnow() > verdict_rec.otp_expires_at:
+    if verdict_rec.otp_code and secrets.compare_digest(req.otp_code.strip(), verdict_rec.otp_code.strip()):
+        if not verdict_rec.otp_expires_at or datetime.utcnow() > verdict_rec.otp_expires_at:
             verdict_rec.otp_status = "expired"
             db.commit()
             raise HTTPException(status_code=400, detail="OTP expired")
@@ -231,6 +274,7 @@ def tag_verify_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid OTP code")
 
     verdict_rec.otp_status = "verified"
+    verdict_rec.otp_code = None
     verdict_rec.verdict = "green"
 
     # Upgrade lead record
@@ -274,12 +318,20 @@ class BotCallerWebhookRequest(BaseModel):
 
 
 @router.post("/webhooks/botcaller")
-def webhook_botcaller_callback(req: BotCallerWebhookRequest, db: Session = Depends(get_db)):
-    """Inbuilt AI Bot-Caller outcome receiver."""
+def webhook_botcaller_callback(req: BotCallerWebhookRequest, request: Request, db: Session = Depends(get_db)):
+    """Authenticate the existing callback; dialing/Exotel integration remains deferred."""
+    lead = db.get(AdGuardLead, req.lead_id)
+    ws = db.get(AdGuardAccount, lead.adguard_account_id) if lead and lead.adguard_account_id else None
+    provided = request.headers.get('x-adguard-webhook-secret', '')
+    if not ws or not provided or not secrets.compare_digest(provided, operations(db, ws).webhook_secret):
+        raise HTTPException(403, 'Invalid workspace webhook secret')
+    if req.outcome not in ('verified', 'not_interested', 'wrong_person', 'unreachable'):
+        raise HTTPException(400, 'Invalid verification outcome')
     return process_bot_caller_result(db, req.lead_id, req.outcome, req.summary, req.intent_data)
 
 
 class CrmStageWebhookRequest(BaseModel):
+    workspace_id: int
     lead_id: Optional[int] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -289,16 +341,24 @@ class CrmStageWebhookRequest(BaseModel):
 
 
 @router.post("/webhooks/crm")
-def webhook_crm_stage_change(req: CrmStageWebhookRequest, db: Session = Depends(get_db)):
+def webhook_crm_stage_change(req: CrmStageWebhookRequest, request: Request, db: Session = Depends(get_db)):
     """Universal SAKHA CRM stage change webhook receiver."""
+    ws = db.get(AdGuardAccount, req.workspace_id)
+    if not ws:
+        raise HTTPException(404, 'Workspace not found')
+    provided = request.headers.get('x-adguard-webhook-secret', '')
+    if not provided or not secrets.compare_digest(provided, operations(db, ws).webhook_secret):
+        raise HTTPException(403, 'Invalid workspace webhook secret')
     lead = None
     if req.lead_id:
-        lead = db.query(AdGuardLead).filter(AdGuardLead.id == req.lead_id).first()
+        lead = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.id == req.lead_id).first()
     if not lead and req.email:
-        lead = db.query(AdGuardLead).filter(AdGuardLead.email == req.email.strip().lower()).order_by(AdGuardLead.received_at.desc()).first()
+        lead = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.email == req.email.strip().lower()).order_by(AdGuardLead.received_at.desc()).first()
     if not lead and req.phone:
         clean_p = "".join(c for c in req.phone if c.isdigit())
-        lead = db.query(AdGuardLead).filter(AdGuardLead.phone.like(f"%{clean_p[-10:]}%")).order_by(AdGuardLead.received_at.desc()).first()
+        if len(clean_p) < 10:
+            raise HTTPException(400, "At least 10 phone digits required")
+        lead = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.phone.like(f"%{clean_p[-10:]}%")).order_by(AdGuardLead.received_at.desc()).first()
 
     if not lead:
         raise HTTPException(status_code=404, detail="Matching lead not found in AdGuard")

@@ -96,6 +96,7 @@ def record_offence(
     entity_type: str,
     raw_val: Optional[str],
     adguard_account_id: Optional[int] = None,
+    commit: bool = True,
 ) -> Optional[AdGuardNetworkEntity]:
     """Record an offence in the shared network."""
     h = hash_entity(entity_type, raw_val)
@@ -121,12 +122,14 @@ def record_offence(
         db.add(ent)
 
     try:
-        db.commit()
+        db.commit() if commit else db.flush()
         db.refresh(ent)
         return ent
     except Exception as e:
         db.rollback()
         logger.warning(f"[SharedNetwork] record_offence failed: {e}")
+        if not commit:
+            raise
         return None
 
 

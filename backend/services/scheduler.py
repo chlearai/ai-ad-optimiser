@@ -55,6 +55,8 @@ def start_scheduler():
     _scheduler.add_job(_run_adguard_conversion_dispatcher, 'interval', minutes=1, id='adguard_conversion_dispatcher', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(seconds=15))
     # AdGuard V1: Shared Fraud Network score decay (daily at midnight UTC)
     _scheduler.add_job(_run_adguard_network_score_decay, 'cron', hour=0, minute=0, id='adguard_network_score_decay', replace_existing=True)
+    from backend.services.adguard_support_ops import run_support_operations
+    _scheduler.add_job(run_support_operations, "interval", minutes=1, id="adguard_support_operations", replace_existing=True, max_instances=1, coalesce=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 
@@ -292,15 +294,15 @@ def _run_adguard_meta_poll():
                 token = get_meta_token_from_credentials(ws.meta_credentials or "")
                 if not token:
                     continue
-                # Connection Manager: record successful sync time
-                ws.meta_last_sync_at = datetime.utcnow()
-                db.commit()
                 try:
                     pages = _json.loads(ws.discovered_meta_pages) if ws.discovered_meta_pages else []
                 except Exception:
                     pages = []
                 page_tokens = get_all_page_tokens(token)
                 if "__error__" in page_tokens:
+                    from backend.services.adguard_subscription import operations
+                    operations(db, ws).meta_error = str(page_tokens['__error__'])[:1000]
+                    db.commit()
                     logger.warning(f"[AdGuard poll] ws {ws.id} bulk page tokens failed: {page_tokens['__error__']}")
                     continue
                 for p in pages:
@@ -314,11 +316,15 @@ def _run_adguard_meta_poll():
                             "limit": "25",
                             "token": page_token,
                         })
+                        from backend.services.adguard_subscription import operations
+                        ws.meta_last_sync_at = datetime.utcnow()
+                        operations(db, ws).meta_error = None
+                        db.commit()
                         for ld in (data or {}).get("data", []):
                             lead_id = str(ld.get("id") or "")
                             if not lead_id:
                                 continue
-                            exists = db.query(AdGuardLead).filter(AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
+                            exists = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id, AdGuardLead.raw_payload.like(f"%{lead_id}%")).first()
                             if exists:
                                 continue
                             fields = {}
@@ -353,6 +359,10 @@ def _run_adguard_meta_poll():
                                 logger.warning(f"[AdGuard poll] lead {lead_id} failed: {pe}")
                     except Exception as pe:
                         failed += 1
+                        db.rollback()
+                        from backend.services.adguard_subscription import operations
+                        operations(db, ws).meta_error = str(pe)[:1000]
+                        db.commit()
                         logger.warning(f"[AdGuard poll] page {pid} failed: {pe}")
         finally:
             db.close()

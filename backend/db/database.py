@@ -196,6 +196,7 @@ def get_db():
 
 def init_db():
     import backend.db.models  # noqa: F401
+    import backend.db.adguard_ops  # noqa: F401
     import backend.db.revenueops_models  # noqa: F401
     import backend.services.crashclub_db  # noqa: F401  (registers crashclub_leads table)
     try:

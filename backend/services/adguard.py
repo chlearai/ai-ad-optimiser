@@ -12,6 +12,7 @@ Verdict:
   - otherwise                             -> flagged  -> stored in adguard_leads only
 """
 import json
+import hashlib
 import logging
 import os
 import re
@@ -346,40 +347,19 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
     from backend.db.models import AdGuardLead, AdGuardAccount
 
     lead = normalize_google_ads_lead(payload)
+    lead["lead_type"] = payload.get("lead_type") or lead["lead_type"]
     db = SessionLocal()
     try:
         # Quota: block ingest when the workspace is over its lead limit
         if workspace_id:
             ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
             if ws is not None:
-                from datetime import timedelta
-                now = datetime.utcnow()
-                # Roll the monthly counter on its billing anniversary (leads_month_reset set at activation)
-                if ws.leads_month_reset is None or now - ws.leads_month_reset >= timedelta(days=30):
-                    ws.leads_this_month = 0
-                    ws.leads_month_reset = now
-                    db.commit()
-                # Monthly plan quota = hard stop (trial 300 / starter 1000 / pro 5000 / agency unlimited)
-                monthly_limit = ws.lead_quota if (ws.lead_quota or 0) >= 0 else (0 if ws.plan != "agency" else -1)
-                effective_plan = ws.plan or "trial"
-                if monthly_limit >= 0 and (ws.leads_this_month or 0) >= monthly_limit and effective_plan != "agency":
-                    logger.warning(
-                        f"[AdGuard] monthly quota block: ws {ws.id} plan {effective_plan} at {ws.leads_this_month}/{monthly_limit} leads this month"
-                    )
-                    raise QuotaExceededError(
-                        f"Monthly plan limit reached ({monthly_limit} leads). Upgrade your plan to continue."
-                    )
-                # Trial expiry: plan_expires_at enforced at ingest (14 days from activation)
-                if ws.plan_expires_at and effective_plan in ("trial",) and now > ws.plan_expires_at:
-                    logger.warning(f"[AdGuard] trial expired block: ws {ws.id} (expired {ws.plan_expires_at})")
-                    raise QuotaExceededError("Free trial (14 days) has expired. Upgrade your plan to continue.")
-                if (ws.lead_quota or 0) >= 0:
-                    count = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id == ws.id).count()
-                    if count >= ws.lead_quota:
-                        logger.warning(
-                            f"[AdGuard] quota block: ws {ws.id} at {count}/{ws.lead_quota} leads"
-                        )
-                        raise QuotaExceededError(f"Lead quota reached ({ws.lead_quota}). Upgrade plan to continue.")
+                from backend.services.adguard_subscription import access_reason
+                reason = access_reason(db, ws)
+                if reason:
+                    raise QuotaExceededError(reason)
+            else:
+                raise QuotaExceededError('Workspace not found')
 
             # Selective screening: only screen leads from campaigns explicitly activated by the customer
             if ws is not None and ws.cached_campaigns:
@@ -444,11 +424,36 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
                 except Exception as ex:
                     logger.warning(f"[AdGuard] Selective screening check error: {ex}")
 
-        # Dedup: same email or same phone in the last 7 days.
+        usage = None
+        if workspace_id:
+            from backend.services.adguard_subscription import reserve_audit, WorkspaceUnavailable
+            from uuid import uuid4
+            try:
+                provider_id = payload.get('lead_id')
+                if not provider_id and raw_payload:
+                    try:
+                        raw_data = json.loads(raw_payload)
+                        provider_id = raw_data.get('lead_id') or raw_data.get('id')
+                    except (ValueError, AttributeError):
+                        pass
+                event_key = 'ingest:' + str(lead.get('lead_type') or 'lead') + ':' + (hashlib.sha256(str(provider_id).encode()).hexdigest() if provider_id else str(uuid4()))
+                ws, usage, created = reserve_audit(db, workspace_id, event_key)
+                if not created:
+                    existing = db.get(AdGuardLead, usage.lead_id) if usage.lead_id else None
+                    if existing:
+                        return existing.to_dict()
+                    raise QuotaExceededError('This lead is already being processed')
+            except WorkspaceUnavailable as exc:
+                raise QuotaExceededError(str(exc)) from exc
+
+        # Dedup: same email or same phone within this subscriber in the last 7 days.
         dup = None
         now = datetime.utcnow()
         cutoff = now.timestamp() - 7 * 86400
         q = db.query(AdGuardLead).filter(AdGuardLead.received_at >= datetime.utcfromtimestamp(cutoff))
+        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
+        if workspace_id is None:
+            q = q.filter(AdGuardLead.account_id == getattr(account, "id", None))
         if lead.get("email"):
             dup = q.filter(AdGuardLead.email == lead["email"]).first()
         if dup is None and lead.get("phone"):
@@ -497,9 +502,6 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
                     lead_for_crm = dict(lead)
                     lead_for_crm["source"] = lead.get("lead_type") or "AdGuard"
                     push = deliver_lead(ws_row, lead_for_crm)
-                    if push.get("status") == "skipped" and push.get("provider") == "none":
-                        # No CRM connected: fall back to legacy global LSQ push
-                        push = push_lead_to_lsq(lead, account)
                     crm_status = push.get("status")
                     crm_provider = push.get("provider")
                     crm_id = push.get("id")
@@ -521,22 +523,17 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
             # Flagged/low-score: stored in AdGuard's own table, NOT pushed to CRM.
             record.lsq_status = "skipped_flagged"
 
+        record.processed_at = datetime.utcnow()
         db.add(record)
+        db.flush()
+        if usage is not None:
+            usage.lead_id = record.id
+            platform = 'meta' if payload.get('platform') == 'meta' or lead.get('lead_type') == 'meta_leadgen' else 'google'
+            setattr(ws, platform + '_last_sync_at', datetime.utcnow())
+            from backend.services.adguard_subscription import operations
+            setattr(operations(db, ws), platform + '_error', None)
         db.commit()
         db.refresh(record)
-        record.processed_at = datetime.utcnow()
-        # Count every audited lead against the monthly plan quota
-        if workspace_id:
-            try:
-                ws_row = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
-                if ws_row is not None:
-                    ws_row.leads_this_month = (ws_row.leads_this_month or 0) + 1
-                    if ws_row.leads_month_reset is None:
-                        ws_row.leads_month_reset = datetime.utcnow()
-                    db.commit()
-            except Exception as _cex:
-                logger.warning(f"[AdGuard] monthly counter increment failed ws {workspace_id}: {_cex}")
-        db.commit()
         logger.info(
             f"[AdGuard] lead id={record.id} verdict={record.verdict} "
             f"score={record.integrity_score} lsq={record.lsq_status}"

@@ -40,6 +40,8 @@ from backend.routes.auth import get_current_user_required
 from backend.services.activity_log import log_activity
 from backend.services.onboarding_email import send_adguard_support_notification
 
+from backend.services.adguard_support_ops import (ticket_dict, begin_response_clock, finish_response_clock, queue_ticket_email, ticket_operations, response_hours)
+
 logger = logging.getLogger("AdOptima")
 
 router = APIRouter(prefix="/api/adguard", tags=["adguard-support"])
@@ -95,12 +97,9 @@ def get_support_config(db: Session = Depends(get_db)):
     email_addr = _get_support_email(db)
     return {
         "support_email": email_addr,
-        "sla_by_plan": {
-            "trial": "Standard Support (Docs & FAQs)",
-            "starter": "Standard Email & Ticket Support (24h response)",
-            "pro": "Priority Email Support (< 4h SLA response)",
-            "agency": "Dedicated VIP SLA & Account Manager",
-        }
+        "sla_by_plan": {plan: f'{hours}h response target' for plan, hours in
+                        ((p, response_hours(db, p))
+                         for p in ('trial','starter','pro','agency','custom'))},
     }
 
 
@@ -162,28 +161,14 @@ def create_ticket(req: TicketCreateRequest, db: Session = Depends(get_db), user:
     ))
     db.commit()
     db.refresh(ticket)
+    begin_response_clock(db, ticket)
+    queue_ticket_email(db, ticket, req.body.strip())
+    db.commit()
     log_activity(module="AdGuard", action="Ticket Created",
                  description=f"Ticket #{ticket.id}: {ticket.subject}",
                  user_id=user.id, user_name=user.email, entity_type="adguard_ticket", entity_id=str(ticket.id), db=db)
 
-    # Dispatch notification email to admin/support desk
-    try:
-        support_email = _get_support_email(db)
-        app_url = os.getenv("APP_BASE_URL", "https://adguard.ai").rstrip("/")
-        send_adguard_support_notification(
-            recipient_email=support_email,
-            subject=f"[AdGuard Support] New Ticket #{ticket.id}: {ticket.subject}",
-            title=f"New Ticket #{ticket.id} from {ticket.requester_name} ({ticket.requester_email})",
-            message_body=req.body.strip(),
-            ticket_id=ticket.id,
-            cta_link=f"{app_url}/adguard",
-            cta_text="Open Support Inbox",
-            reply_to=user.email,
-        )
-    except Exception as e:
-        logger.warning(f"Failed to dispatch new ticket notification: {e}")
-
-    return ticket.to_dict(include_messages=True)
+    return ticket_dict(db, ticket, user, include_messages=True)
 
 
 @router.get("/support/tickets")
@@ -191,7 +176,9 @@ def list_my_tickets(db: Session = Depends(get_db), user: User = Depends(get_curr
     _require_adguard_access(user)
     q = db.query(AdGuardSupportTicket).filter(AdGuardSupportTicket.requester_email == user.email)
     tickets = q.order_by(AdGuardSupportTicket.updated_at.desc()).all()
-    return [t.to_dict() for t in tickets]
+    result = [ticket_dict(db, t, user) for t in tickets]
+    db.commit()
+    return result
 
 
 def _ticket_visible(ticket: AdGuardSupportTicket, user: User) -> bool:
@@ -203,7 +190,9 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db), user: User = Depen
     t = db.query(AdGuardSupportTicket).filter(AdGuardSupportTicket.id == ticket_id).first()
     if not t or not _ws_scope_ok_ticket(t, user):
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return t.to_dict(include_messages=True)
+    result = ticket_dict(db, t, user, include_messages=True)
+    db.commit()
+    return result
 
 
 def _ws_scope_ok_ticket(t: AdGuardSupportTicket, user: User) -> bool:
@@ -233,43 +222,17 @@ def reply_ticket(ticket_id: int, req: TicketReplyRequest, db: Session = Depends(
     ))
     if is_owner:
         t.status = "answered"
+        finish_response_clock(db, t)
     else:
+        was_open = t.status == 'open'
         t.status = "open"
+        if not was_open:
+            begin_response_clock(db, t)
+    queue_ticket_email(db, t, req.body.strip(), to_customer=is_owner)
     db.commit()
     db.refresh(t)
 
-    # Dispatch email notifications
-    try:
-        support_email = _get_support_email(db)
-        app_url = os.getenv("APP_BASE_URL", "https://adguard.ai").rstrip("/")
-        if is_owner:
-            # Admin replied -> notify customer
-            send_adguard_support_notification(
-                recipient_email=t.requester_email,
-                subject=f"[AdGuard Support] Reply to Ticket #{t.id}: {t.subject}",
-                title=f"AdGuard Support replied to Ticket #{t.id}",
-                message_body=req.body.strip(),
-                ticket_id=t.id,
-                cta_link=f"{app_url}/adguard-workspace",
-                cta_text="Open AdGuard Workspace",
-                reply_to=support_email,
-            )
-        else:
-            # Customer replied -> notify support desk
-            send_adguard_support_notification(
-                recipient_email=support_email,
-                subject=f"[AdGuard Support] Customer reply on Ticket #{t.id}: {t.subject}",
-                title=f"New reply on Ticket #{t.id} from {user.full_name or user.email}",
-                message_body=req.body.strip(),
-                ticket_id=t.id,
-                cta_link=f"{app_url}/adguard",
-                cta_text="Open Support Inbox",
-                reply_to=user.email,
-            )
-    except Exception as e:
-        logger.warning(f"Failed to dispatch ticket reply notification: {e}")
-
-    return t.to_dict(include_messages=True)
+    return ticket_dict(db, t, user, include_messages=True)
 
 
 @router.post("/support/tickets/{ticket_id}/close")
@@ -279,8 +242,9 @@ def close_ticket(ticket_id: int, db: Session = Depends(get_db), user: User = Dep
     if not t or not _ws_scope_ok_ticket(t, user):
         raise HTTPException(status_code=404, detail="Ticket not found")
     t.status = "closed"
+    finish_response_clock(db, t)
     db.commit()
-    return t.to_dict(include_messages=True)
+    return ticket_dict(db, t, user, include_messages=True)
 
 
 # ---------------------------------------------------------------------------
@@ -294,9 +258,19 @@ def admin_inbox(status: Optional[str] = None, db: Session = Depends(get_db), use
     q = db.query(AdGuardSupportTicket)
     if status in ("open", "answered", "closed"):
         q = q.filter(AdGuardSupportTicket.status == status)
-    tickets = q.order_by(AdGuardSupportTicket.updated_at.desc()).limit(200).all()
+    if status in ('overdue', 'unassigned'):
+        tickets = q.filter(AdGuardSupportTicket.status == 'open').order_by(AdGuardSupportTicket.created_at).all()
+    else:
+        tickets = q.order_by(AdGuardSupportTicket.updated_at.desc()).limit(200).all()
     open_count = db.query(func.count(AdGuardSupportTicket.id)).filter(AdGuardSupportTicket.status == "open").scalar() or 0
-    return {"open_count": open_count, "tickets": [t.to_dict() for t in tickets]}
+    result = [ticket_dict(db, t, user) for t in tickets]
+    overdue_count = sum(t['overdue'] for t in result)
+    if status == 'overdue':
+        result = [t for t in result if t['overdue']]
+    elif status == 'unassigned':
+        result = [t for t in result if t['status'] == 'open' and not t['assigned_to']]
+    db.commit()
+    return {'open_count': open_count, 'overdue_count': overdue_count, 'tickets': result}
 
 
 # ---------------------------------------------------------------------------
@@ -816,3 +790,6 @@ def update_settings(req: SettingsUpdateRequest, workspace_id: Optional[int] = No
 
 
 from fastapi.responses import Response  # noqa: E402
+
+from backend.routes.adguard_operations import router as operations_router
+router.include_router(operations_router)
