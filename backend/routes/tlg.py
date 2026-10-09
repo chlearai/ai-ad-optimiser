@@ -1,11 +1,14 @@
-from datetime import date
+from datetime import date, datetime, timedelta
+import hashlib
+import secrets
+from pathlib import Path
 import json
 import requests
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Account, TlgCentre, UserAccountAssignment
+from backend.db.models import Account, TlgCentre, TlgSheetReport, UserAccountAssignment
 from backend.routes.auth import get_current_user_required
 from backend.services.tlg import CENTRES, ACTIVE_CENTRES, META_AD_ACCOUNT_ID, sheet_ref
 
@@ -22,6 +25,57 @@ def access(account_id, db, user, edit=False):
 
 def serial(row):
     return {k: (getattr(row, k).isoformat() + "Z" if k == "last_sync" and row.last_sync else getattr(row, k)) for k in ("id", "name", "source_url", "destination_url", "enabled", "last_sync", "copied", "error")}
+
+class SheetCounts(BaseModel):
+    daily_counts: dict[str, int]
+
+@router.post("/{account_id}/centres/{centre_id}/reporting-script")
+def reporting_script(account_id: int, centre_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user, edit=True)
+    centre = db.query(TlgCentre).filter_by(id=centre_id, account_id=account_id).first()
+    if not centre or not centre.source_url:
+        raise HTTPException(400, "Save the master sheet link first")
+    sid, gid = sheet_ref(centre.source_url)
+    token = secrets.token_urlsafe(32)
+    row = db.query(TlgSheetReport).filter_by(centre_id=centre_id).first()
+    if not row:
+        row = TlgSheetReport(centre_id=centre_id)
+        db.add(row)
+    row.token_hash = hashlib.sha256(token.encode()).hexdigest()
+    row.source_url = centre.source_url
+    row.daily_counts = "{}"
+    row.updated_at = None
+    db.commit()
+    template = (Path(__file__).parents[1] / "integrations/google_apps_script/tlg_report_counts.gs").read_text()
+    config = {"sheetId":sid, "gid":gid, "token":token, "url":f"https://ai-ad-optimiser-production-dd12.up.railway.app/api/tlg/{account_id}/centres/{centre_id}/sheet-counts"}
+    return {"script": template.replace("__TLG_REPORT_CONFIG__", json.dumps(config))}
+
+@router.post("/{account_id}/centres/{centre_id}/sheet-counts")
+def receive_sheet_counts(account_id: int, centre_id: int, body: SheetCounts, authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    row = db.query(TlgSheetReport).filter_by(centre_id=centre_id).first()
+    centre = db.query(TlgCentre).filter_by(id=centre_id, account_id=account_id).first()
+    token = authorization.removeprefix("Bearer ")
+    if not row or not centre or not authorization.startswith("Bearer ") or not secrets.compare_digest(row.token_hash, hashlib.sha256(token.encode()).hexdigest()):
+        raise HTTPException(401, "Invalid reporting connection")
+    if row.source_url != centre.source_url:
+        raise HTTPException(409, "Master sheet changed; reconnect lead counts")
+    if len(body.daily_counts) > 10000:
+        raise HTTPException(400, "Too many dates")
+    for day, count in body.daily_counts.items():
+        try:
+            if date.fromisoformat(day).isoformat() != day or count < 0:
+                raise ValueError()
+        except ValueError:
+            raise HTTPException(400, "Invalid daily lead counts")
+    row.daily_counts = json.dumps(body.daily_counts)
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return {"saved":True}
+
+def report_lead_count(report, source_url, start, end):
+    if not report or report.source_url != source_url or not report.updated_at or report.updated_at < datetime.utcnow() - timedelta(minutes=15):
+        return None
+    return sum(count for day, count in json.loads(report.daily_counts).items() if str(start) <= day <= str(end))
 
 @router.get("/{account_id}/centres")
 def centres(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
@@ -119,7 +173,9 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
     if start > end or (end-start).days > 366:
         raise HTTPException(400, "Choose an ordered range up to one year")
     rows, errors = [], {}
-    saved_names = [r.name for r in db.query(TlgCentre).filter_by(account_id=account_id).all()]
+    saved_centres = db.query(TlgCentre).filter_by(account_id=account_id).all()
+    saved_names = [r.name for r in saved_centres]
+    counts = {r.name: report_lead_count(db.query(TlgSheetReport).filter_by(centre_id=r.id).first(), r.source_url, start, end) for r in saved_centres}
     names = saved_names or CENTRES
     statuses = {c: {"meta": "Not connected", "google": "Not connected"} for c in names}
     from backend.services.connectors import GoogleAdsConnector, get_meta_access_token
@@ -148,17 +204,19 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
                     for c in payload.get("data", []):
                         insights = c.get("insights", {}).get("data", [])
                         spend = sum(float(i.get("spend", 0)) for i in insights)
-                        leads = sum(float(a["value"]) for i in insights for a in i.get("actions", []) if a["action_type"] == "lead")
-                        campaigns.append({"name": c["name"], "status": c["effective_status"], "spend": spend, "results": leads, "result_type": "Leads (Meta)"})
+                        campaigns.append({"name": c["name"], "status": c["effective_status"], "spend": spend, "results": None, "result_type": "Leads (Website)"})
                     url = payload.get("paging", {}).get("next")
                     params = None
             for centre in names:
                 linked = [c for c in campaigns if centre_name(c["name"], names) == centre]
                 statuses[centre][platform] = "Live" if any(c["status"] in ("ACTIVE", "ENABLED") for c in linked) else "Paused" if linked else "Not started"
             for c in campaigns:
-                if centre_name(c["name"], names) == "Unmapped":
+                centre = centre_name(c["name"], names)
+                if centre == "Unmapped" or c["status"] not in ("ACTIVE", "ENABLED"):
                     continue
-                rows.append({**c, "platform": platform, "centre": centre_name(c["name"], names), "cost_per_result": c["spend"] / c["results"] if c["results"] else None})
+                live_matches = [x for x in campaigns if x["status"] in ("ACTIVE", "ENABLED") and centre_name(x["name"], names) == centre]
+                results = counts.get(centre) if platform == "meta" and len(live_matches) == 1 else None
+                rows.append({**c, "platform": platform, "centre": centre, "results":results, "result_type":"Leads (Website)", "cost_per_result":c["spend"] / results if results else None, "lead_error":("Multiple live campaigns need a campaign column in the master sheet" if len(live_matches)>1 else "Connect master sheet lead counts") if results is None else None})
         except Exception:
             errors[platform] = "Connection or API access failed. Check the account integration and permissions."
             for centre in names:

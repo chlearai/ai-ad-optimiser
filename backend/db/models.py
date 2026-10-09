@@ -1502,3 +1502,11 @@ class TlgCentre(Base):
     copied = Column(Integer, default=0)
     error = Column(Text, nullable=True)
     __table_args__ = (UniqueConstraint("account_id", "name"),)
+
+class TlgSheetReport(Base):
+    __tablename__ = "tlg_sheet_reports"
+    centre_id = Column(Integer, ForeignKey("tlg_centres.id"), primary_key=True)
+    token_hash = Column(String, nullable=False)
+    source_url = Column(Text, nullable=False)
+    daily_counts = Column(Text, default="{}")
+    updated_at = Column(DateTime, nullable=True)
