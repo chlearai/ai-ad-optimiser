@@ -25,3 +25,7 @@ Deployment and real OAuth/Sheets/advertising API verification remain pending. No
 ## Initial launch scope
 
 Only Yelahanka and Whitefield are enabled by default; the MIS includes those two centres. Other centres remain listed for later configuration. Meta reads verified TLG ad account 929681660424354 using the connected account credentials. OAuth consent is still required.
+
+## Shared Sheets credential support
+
+TLG uses TLG_GOOGLE_SA_JSON or the existing CRASH_CLUB_GOOGLE_SA_JSON; file configuration uses TLG_GOOGLE_SA_FILE or CRASH_CLUB_GOOGLE_SA_FILE (default google_service_account.json). InsightDesk displays the service-account email for sharing. No private credentials are returned to the browser. Missing or invalid credentials require server configuration; configured credentials still require access to each sheet.

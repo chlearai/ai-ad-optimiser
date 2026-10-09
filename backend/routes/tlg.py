@@ -33,6 +33,18 @@ def centres(account_id: int, db: Session = Depends(get_db), user=Depends(get_cur
         existing = db.query(TlgCentre).filter_by(account_id=account_id).all()
     return [serial(row) for row in sorted(existing, key=lambda r: r.id)]
 
+@router.get("/{account_id}/sheets-connection")
+def sheets_connection(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user)
+    from backend.services.tlg import sheets_identity
+    try:
+        info = sheets_identity()
+        from google.oauth2.service_account import Credentials
+        Credentials.from_service_account_info(info, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        return {"configured": True, "email": info["client_email"], "message": "Share each master sheet as Viewer and each branch sheet as Editor with this email. Sync will retry automatically."}
+    except Exception:
+        return {"configured": False, "email": None, "message": "Google Sheets credentials are missing or invalid on the server. An administrator needs to configure the service account once."}
+
 class Settings(BaseModel):
     source_url: str = Field(default="", max_length=2048)
     destination_url: str = Field(default="", max_length=2048)

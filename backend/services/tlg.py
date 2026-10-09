@@ -20,13 +20,21 @@ def sheet_ref(url):
     params = parse_qs(parsed.query + "&" + parsed.fragment)
     return match[1], int(params.get("gid", [0])[0])
 
+def sheets_identity():
+    """Resolve existing Sheets credentials without exposing their private key."""
+    raw = os.getenv("TLG_GOOGLE_SA_JSON", "").strip() or os.getenv("CRASH_CLUB_GOOGLE_SA_JSON", "").strip()
+    if raw:
+        return json.loads(raw)
+    path = os.getenv("TLG_GOOGLE_SA_FILE", "").strip() or os.getenv("CRASH_CLUB_GOOGLE_SA_FILE", "google_service_account.json").strip()
+    if path and os.path.isfile(path):
+        with open(path, encoding="utf-8") as source:
+            return json.load(source)
+    raise ValueError("Google Sheets is not connected. Configure a Google Sheets service account on the server, then share the master and branch sheets with its email.")
+
 def sheets_client():
     from google.oauth2.service_account import Credentials
     from googleapiclient.discovery import build
-    raw = os.getenv("TLG_GOOGLE_SA_JSON", "")
-    if not raw:
-        raise ValueError("Google Sheets access pending: configure TLG_GOOGLE_SA_JSON and share both sheets with its service account")
-    creds = Credentials.from_service_account_info(json.loads(raw), scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    creds = Credentials.from_service_account_info(sheets_identity(), scopes=["https://www.googleapis.com/auth/spreadsheets"])
     return build("sheets", "v4", credentials=creds, cache_discovery=False).spreadsheets()
 
 def tab_title(client, sid, gid):

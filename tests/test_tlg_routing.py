@@ -1,16 +1,31 @@
 """Pure routing checks: no database or external service access."""
 import ast
 import unittest
+from unittest.mock import patch, mock_open
 from pathlib import Path
 
 source = Path("backend/services/tlg.py").read_text()
 tree = ast.parse(source)
-nodes = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)) and not (isinstance(n, ast.ImportFrom) and n.module.startswith("backend")) or isinstance(n, ast.FunctionDef) and n.name in ("sheet_ref", "column", "plan_rows") or isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "MARKER" for t in n.targets)]
+nodes = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom)) and not (isinstance(n, ast.ImportFrom) and n.module.startswith("backend")) or isinstance(n, ast.FunctionDef) and n.name in ("sheet_ref", "column", "plan_rows", "sheets_identity") or isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "MARKER" for t in n.targets)]
 ns = {}
 exec(compile(ast.Module(body=nodes, type_ignores=[]), "routing", "exec"), ns)
 plan = ns["plan_rows"]
 
 class RoutingTests(unittest.TestCase):
+    def test_shared_sheets_credential_reused(self):
+        with patch.dict(ns["os"].environ, {"CRASH_CLUB_GOOGLE_SA_JSON": '{"client_email":"shared@example.test"}'}, clear=True):
+            self.assertEqual(ns["sheets_identity"]()["client_email"], "shared@example.test")
+
+    def test_existing_sheets_file_reused(self):
+        with patch.dict(ns["os"].environ, {"CRASH_CLUB_GOOGLE_SA_FILE": "/configured/account.json"}, clear=True), patch.object(ns["os"].path, "isfile", return_value=True), patch("builtins.open", mock_open(read_data='{"client_email":"file@example.test"}')) as opened:
+            self.assertEqual(ns["sheets_identity"]()["client_email"], "file@example.test")
+            opened.assert_called_once_with("/configured/account.json", encoding="utf-8")
+
+    def test_missing_sheets_credential_explains_setup(self):
+        with patch.dict(ns["os"].environ, {}, clear=True), patch.object(ns["os"].path, "isfile", return_value=False):
+            with self.assertRaisesRegex(ValueError, "Google Sheets is not connected"):
+                ns["sheets_identity"]()
+
     def test_duplicate_submissions_and_backfill(self):
         headers, rows = plan([["Name"], ["Test"], ["Test"]], [], "master:0")
         self.assertEqual(len(rows), 2)
