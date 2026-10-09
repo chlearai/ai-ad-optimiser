@@ -266,6 +266,10 @@ def flush_pending_conversions(db: Session, limit: int = 50) -> Dict[str, int]:
             failed_count += 1
             continue
 
+        from backend.services.adguard_subscription import access_reason
+        if access_reason(db, ws):
+            continue  # Hold events until the subscriber is active again.
+
         # Check gate: Red or rejected leads are never dispatched
         if lead.verdict == "red" or lead.stage == "rejected":
             evt.status = "retracted"

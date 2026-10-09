@@ -67,7 +67,7 @@ def access_reason(db, ws, now=None):
     if ws.plan_expires_at and ws.plan_expires_at <= now:
         return 'Plan has expired; ask the owner to renew it'
     owner = db.query(User).filter(User.email == ws.owner_email).first()
-    if not owner or not owner.is_active or not owner.onboarding_completed:
+    if not owner or not owner.is_active or (owner.role not in ('admin', 'superadmin') and not owner.onboarding_completed):
         return 'Subscriber activation is incomplete'
     # Payment status is intentionally not an access gate while beta testing is enabled.
     return None

@@ -276,4 +276,18 @@ class OperationsTests(unittest.TestCase):
         self.assertEqual(r.status_code,403,r.text)
         self.assertNotEqual(lead.stage,'verified')
 
+    def test_suspended_subscriber_stops_background_mutations(self):
+        from backend.db.models import AdGuardConversionEvent
+        from backend.services.adguard_firewall import flush_pending_conversions
+        from backend.services.adguard_shield import run_shield_scan_all
+        self.ws.account_status='suspended';self.ws.shield_enabled=True
+        lead=AdGuardLead(adguard_account_id=self.ws.id,verdict='green',stage='verified')
+        self.db.add(lead);self.db.flush()
+        evt=AdGuardConversionEvent(adguard_account_id=self.ws.id,lead_id=lead.id,platform='meta',event_name='Lead',status='held')
+        self.db.add(evt);self.db.commit()
+        with patch('backend.services.adguard_firewall.dispatch_meta_capi_event') as send, patch('backend.services.adguard_shield.scan_workspace_shield') as scan:
+            flush_pending_conversions(self.db);run_shield_scan_all(self.db)
+            send.assert_not_called();scan.assert_not_called()
+        self.assertEqual(evt.status,'held')
+
 if __name__=='__main__': unittest.main()

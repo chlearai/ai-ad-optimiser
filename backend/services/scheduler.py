@@ -102,6 +102,9 @@ def _run_adguard_exclusion_sync():
         synced = 0
         try:
             for ws in db.query(AdGuardAccount).filter(AdGuardAccount.shield_enabled == True).all():  # noqa: E712
+                from backend.services.adguard_subscription import access_reason
+                if access_reason(db, ws):
+                    continue
                 try:
                     cutoff = datetime.utcnow() - timedelta(days=180)
                     leads = (
@@ -291,6 +294,9 @@ def _run_adguard_meta_poll():
         processed, failed = 0, 0
         try:
             for ws in db.query(AdGuardAccount).filter(AdGuardAccount.meta_is_live == True).all():  # noqa: E712
+                from backend.services.adguard_subscription import access_reason
+                if access_reason(db, ws):
+                    continue
                 token = get_meta_token_from_credentials(ws.meta_credentials or "")
                 if not token:
                     continue

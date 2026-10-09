@@ -129,6 +129,9 @@ def run_shield_scan_all(db) -> Dict[str, Any]:
     summary = {"workspaces_scanned": 0, "campaigns_paused": 0, "details": []}
     all_ws = db.query(AdGuardAccount).filter(AdGuardAccount.is_archived == False).all()  # noqa: E712
     for ws in all_ws:
+        from backend.services.adguard_subscription import access_reason
+        if access_reason(db, ws):
+            continue
         has_live = False
         if ws.cached_campaigns:
             try:
