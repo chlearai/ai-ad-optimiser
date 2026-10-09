@@ -55,6 +55,14 @@ def _smtp_from_env() -> Dict[str, Any]:
 
 
 def _build_email_payloads(recipient_email: str, full_name: str, setup_link: str, sender_name: str) -> Dict[str, str]:
+    if "?reset=1&" in setup_link:
+        from html import escape
+        name, link = escape(full_name or "there"), escape(setup_link, quote=True)
+        return {
+            "subject": "Reset your ChlearSakhaaOps AI password",
+            "html": f'<p>Hi {name},</p><p>Your administrator requested a password reset.</p><p><a href="{link}">Reset my password</a></p><p>This link expires in 1 hour and can be used once. Your current password works until you choose a new one.</p>',
+            "text": f"Hi {full_name or 'there'},\nYour administrator requested a password reset.\n{setup_link}\nThis link expires in 1 hour and can be used once. Your current password works until you choose a new one.",
+        }
     subject = "Welcome to ChlearSakhaaOps AI - Set up your account"
     html_body = f"""
     <html>

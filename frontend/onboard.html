@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="referrer" content="no-referrer">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AdGuard - Set Password</title>
@@ -57,7 +58,7 @@
 
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="password" placeholder="Minimum 6 characters">
+                <input type="password" id="password" placeholder="8+ characters, upper/lowercase, number and symbol">
             </div>
             <div class="form-group">
                 <label>Confirm Password</label>
@@ -72,6 +73,7 @@
     const API = '/api';
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    let passwordReset = params.get('reset') === '1';
 
     function $(id) { return document.getElementById(id); }
 
@@ -108,6 +110,12 @@
         }
         try {
             const data = await api('GET', '/auth/onboard/' + encodeURIComponent(token));
+            passwordReset = !!data.password_reset;
+            if (passwordReset) {
+                document.querySelector('h2').textContent = 'Reset Your Password';
+                document.querySelector('.subtitle').textContent = 'Choose a new password for your account.';
+                $('saveBtn').textContent = 'Reset password';
+            }
             $('emailDisplay').textContent = data.email || '-';
             $('nameDisplay').textContent = data.full_name || '-';
             $('loading').classList.add('hidden');
@@ -125,8 +133,8 @@
             const confirm = $('confirmPassword').value;
             const msg = $('message');
             msg.classList.add('hidden');
-            if (!password || password.length < 6) {
-                msg.textContent = 'Password must be at least 6 characters.';
+            if (!password || password.length < 8) {
+                msg.textContent = 'Password must be at least 8 characters, with uppercase, lowercase, a number and a symbol.';
                 msg.className = 'error';
                 msg.classList.remove('hidden');
                 return;
@@ -138,6 +146,13 @@
                 return;
             }
             const data = await api('POST', '/auth/onboard/' + encodeURIComponent(token), { password });
+            if (data.password_reset) {
+                $('saveBtn').classList.add('hidden');
+                msg.textContent = 'Password reset. Taking you to login...';
+                msg.className = 'success';
+                setTimeout(() => { window.location.href = '/'; }, 1200);
+                return;
+            }
             msg.textContent = 'Account activated! Taking you to AdGuard...';
             msg.className = 'success';
             msg.classList.remove('hidden');

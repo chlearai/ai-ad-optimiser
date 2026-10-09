@@ -554,12 +554,41 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
     }
 
 
+@router.post("/users/{user_id}/reset-password")
+def reset_user_password(user_id: int, request: Request, db: Session = Depends(get_db), current_user: User = Depends(require_admin_or_superadmin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role == "superadmin" and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Only Super Admin can manage superadmin users")
+    if not user.is_active or not user.onboarding_completed:
+        raise HTTPException(status_code=400, detail="Password reset requires an active account with setup completed")
+    token = secrets.token_urlsafe(32)
+    user.onboarding_token = token
+    user.onboarding_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+    base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
+    reset_link = f"{base_url}/onboard.html?reset=1&token={token}"
+    log_activity(module="System", action="Password Reset Requested",
+                 description=f"Password reset requested for {user.email}",
+                 user_id=current_user.id, user_name=current_user.full_name or current_user.email,
+                 entity_type="user", entity_id=str(user.id), db=db)
+    setting = db.query(AppSetting).filter(AppSetting.key == "gmail_refresh_token").first()
+    try:
+        result = send_onboarding_email(user.email, user.full_name, reset_link,
+                                       refresh_token=setting.value if setting else None, timeout=15)
+    except Exception:
+        logger.exception("Password reset email failed for user %s", user.id)
+        result = {"sent": False}
+    return {"reset_link": reset_link, "email_sent": bool(result.get("sent")), "expires_in_minutes": 60}
+
+
 @router.get("/onboard/{token}")
 def get_onboarding_user(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.onboarding_token == token).first()
     if not user or not user.onboarding_token_expires_at or user.onboarding_token_expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired setup link")
-    return {"email": user.email, "full_name": user.full_name, "role": user.role}
+    return {"email": user.email, "full_name": user.full_name, "role": user.role, "password_reset": bool(user.onboarding_completed)}
 
 
 PASSWORD_MIN_LENGTH = 8
@@ -590,6 +619,14 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     pw_error = _validate_strong_password(req.password)
     if pw_error:
         raise HTTPException(status_code=400, detail=pw_error)
+    if user.onboarding_completed:
+        if not user.is_active:
+            raise HTTPException(status_code=400, detail="Account is inactive")
+        user.hashed_password = get_password_hash(req.password)
+        user.onboarding_token = None
+        user.onboarding_token_expires_at = None
+        db.commit()
+        return {"password_reset": True}
     user.hashed_password = get_password_hash(req.password)
     user.onboarding_completed = True
     user.is_active = True

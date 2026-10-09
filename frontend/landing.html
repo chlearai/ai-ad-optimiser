@@ -1283,7 +1283,7 @@
                 <td>${roleBadge(u.role)}</td>
                 <td>${access.join(', ') || '-'}</td>
                 <td>${status}</td>
-                <td><button class="btn btn-secondary btn-sm" onclick="editUser(${u.id})">Edit</button> <button class="btn btn-secondary btn-sm" onclick="deleteUser(${u.id})">Delete</button></td>
+                <td><button class="btn btn-secondary btn-sm" onclick="editUser(${u.id})">Edit</button> <button class="btn btn-secondary btn-sm" onclick="resetUserPassword(${u.id}, this)">Reset password</button> <button class="btn btn-secondary btn-sm" onclick="deleteUser(${u.id})">Delete</button></td>
             </tr>`;
         }).join('');
     }
@@ -1384,6 +1384,19 @@
         const link = $('umSetupLink').textContent;
         if (!link) return;
         navigator.clipboard.writeText(link).then(() => alert('Setup link copied'));
+    }
+
+    async function resetUserPassword(id, btn) {
+        const user = umUsers.find(u => u.id === id);
+        if (!user || !confirm('Send a password reset link to ' + user.email + '?')) return;
+        _setSaving(btn, 'Sending...');
+        try {
+            const res = await api('POST', '/auth/users/' + id + '/reset-password');
+            $('umLinkBox').classList.remove('hidden');
+            $('umSetupLink').textContent = res.reset_link;
+            alert(res.email_sent ? 'Reset email accepted for sending. The link expires in 1 hour.' : 'Email could not be sent. Copy the reset link below and share it privately. It expires in 1 hour.');
+        } catch (e) { alert(e.message); }
+        finally { _resetSaving(btn); }
     }
 
     async function deleteUser(id) {
