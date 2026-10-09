@@ -55,6 +55,8 @@ def start_scheduler():
     _scheduler.add_job(_run_adguard_conversion_dispatcher, 'interval', minutes=1, id='adguard_conversion_dispatcher', replace_existing=True, next_run_time=datetime.utcnow() + timedelta(seconds=15))
     # AdGuard V1: Shared Fraud Network score decay (daily at midnight UTC)
     _scheduler.add_job(_run_adguard_network_score_decay, 'cron', hour=0, minute=0, id='adguard_network_score_decay', replace_existing=True)
+    from backend.services.tlg import sync_all
+    _scheduler.add_job(sync_all, "interval", minutes=1, id="tlg_lead_routing", replace_existing=True, max_instances=1, coalesce=True)
     from backend.services.adguard_support_ops import run_support_operations
     _scheduler.add_job(run_support_operations, "interval", minutes=1, id="adguard_support_operations", replace_existing=True, max_instances=1, coalesce=True)
     _scheduler.start()

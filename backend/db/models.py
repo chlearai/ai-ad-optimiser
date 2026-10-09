@@ -1488,3 +1488,17 @@ class AdGuardTicketMessage(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
+
+
+class TlgCentre(Base):
+    __tablename__ = "tlg_centres"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    name = Column(String, nullable=False)
+    source_url = Column(Text, default="")
+    destination_url = Column(Text, default="")
+    enabled = Column(Boolean, default=True)
+    last_sync = Column(DateTime, nullable=True)
+    copied = Column(Integer, default=0)
+    error = Column(Text, nullable=True)
+    __table_args__ = (UniqueConstraint("account_id", "name"),)

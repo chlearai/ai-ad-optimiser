@@ -2520,66 +2520,74 @@
         if (chev) chev.textContent = hidden ? '▾' : '▸';
     }
 
+    let tlgTimer;
+    let tlgRows = [];
     function renderLittleGymReport(account) {
-        $('reportContent').innerHTML = `
-            <div class="card" style="padding: 20px 24px;">
-                <div class="card-header" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <svg width="22" height="22" viewBox="0 0 87.3 78" fill="none" style="flex-shrink:0;">
-                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                            <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
-                            <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l6.1 10.55z" fill="#ea4335"/>
-                            <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.4-4.5 1.2z" fill="#00832d"/>
-                            <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.4 4.5-1.2z" fill="#2684fc"/>
-                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-                        </svg>
-                        <h2 style="font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0;">Google drive report</h2>
-                    </div>
-                    <button id="runTlgReportBtn" class="btn btn-primary" onclick="runLittleGymReport()" style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                        <svg width="14" height="14" viewBox="0 0 87.3 78" fill="none" style="flex-shrink:0;">
-                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#ffffff"/>
-                            <path d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#ffffff"/>
-                            <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l6.1 10.55z" fill="#ffffff"/>
-                            <path d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.4-4.5 1.2z" fill="#ffffff"/>
-                            <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.4 4.5-1.2z" fill="#ffffff"/>
-                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.5c0-1.55-.4-3.1-1.2-4.5z" fill="#ffffff"/>
-                        </svg>
-                        <span>Google Drive</span>
-                    </button>
-                </div>
-                <div id="tlgReportStatus" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted);"></div>
-            </div>
-        `;
+        clearInterval(tlgTimer);
+        tlgRows = []; tlgStatuses = {};
+        const today = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
+        $('reportContent').innerHTML = `<div class="card" style="padding:24px">
+            <h2>Google Drive lead routing</h2><p id="tlgReportStatus">Loading sync status…</p>
+            <h3>Centre Lead Routing</h3><p>Automatic sync every minute · Starting with Yelahanka and Whitefield · Existing leads and repeat submissions included</p>
+            <div style="display:flex;gap:12px;margin-bottom:16px"><button class="btn" onclick="tlgConnect('meta')">Connect Meta Ads</button><button class="btn" onclick="tlgConnect('google')">Connect Google Ads</button></div>
+            <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1100px"><thead><tr><th>Centre Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th><th>Lead Sync</th><th>Sync Status</th></tr></thead><tbody id="tlgCentres"></tbody></table></div>
+            <h3 style="margin-top:30px">Advertising Performance</h3>
+            <div style="display:flex;gap:12px;flex-wrap:wrap"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label></div>
+            <p id="tlgMisStatus"></p><div id="tlgMis"></div></div>`;
+        tlgLoadCentres(); tlgPerformance();
+        tlgTimer = setInterval(() => {
+            if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
+            if (!$('tlgCentres').contains(document.activeElement)) tlgLoadCentres();
+            tlgPerformance();
+        }, 60000);
     }
-
-    async function runLittleGymReport() {
-        const btn = $('runTlgReportBtn');
-        const statusEl = $('tlgReportStatus');
-        if (!btn) return;
-        const origHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span> Running...';
-        if (statusEl) {
-            statusEl.style.display = 'block';
-            statusEl.innerHTML = '<span style="color:var(--color-accent);">Executing Google drive report...</span>';
-        }
-        toast('Starting Google drive report...');
+    async function tlgConnect(platform) {
+        try { const data = await api('GET', `/oauth/${platform}/${selectedAccountId}/connect`); window.location.href = data.authorization_url; }
+        catch(e) { toast(e.message, true); }
+    }
+    async function tlgLoadCentres() {
+        const id = selectedAccountId;
         try {
-            await new Promise(r => setTimeout(r, 1200));
-            toast('Google drive report completed successfully');
-            if (statusEl) {
-                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                statusEl.innerHTML = '<span style="color:var(--color-success); font-weight: 500;">✓ Last run at ' + now + '</span>';
-            }
-        } catch (e) {
-            toast('Failed to run Google drive report: ' + (e.message || e), true);
-            if (statusEl) {
-                statusEl.innerHTML = '<span style="color:var(--color-danger);">Failed to run report</span>';
-            }
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = origHtml;
-        }
+            const rows = await api('GET', `/tlg/${id}/centres`);
+            if (id !== selectedAccountId || !$('tlgCentres')) return;
+            tlgRows = rows;
+            $('tlgCentres').innerHTML = rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td id="tlgMeta${r.id}">Checking…</td><td id="tlgGoogle${r.id}">Checking…</td>
+                <td><input aria-label="${escapeHtml(r.name)} master sheet" id="tlgSource${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.source_url || '')}" onchange="tlgSave(${r.id})"></td>
+                <td><input aria-label="${escapeHtml(r.name)} branch sheet" id="tlgDest${r.id}" type="url" placeholder="Paste Google Sheet tab link" value="${escapeHtml(r.destination_url || '')}" onchange="tlgSave(${r.id})"></td>
+                <td><input aria-label="Enable lead sync" type="checkbox" id="tlgEnabled${r.id}" ${r.enabled?'checked':''} onchange="tlgSave(${r.id})"></td>
+                <td>${escapeHtml(r.error || (r.last_sync ? new Date(r.last_sync).toLocaleString() + ' · ' + r.copied + ' copied' : 'Awaiting sheet setup'))}</td></tr>`).join('');
+            const dates = rows.filter(r=>r.last_sync).map(r=>r.last_sync).sort();
+            $('tlgReportStatus').textContent = dates.length ? 'Last successful centre sync: ' + new Date(dates[dates.length-1]).toLocaleString() : 'No successful sync yet. Add sheet links and grant sheet access.';
+            tlgApplyStatuses();
+        } catch(e) { if ($('tlgReportStatus')) $('tlgReportStatus').textContent=e.message; }
+    }
+    async function tlgSave(id) {
+        try {
+            await api('PUT', `/tlg/${selectedAccountId}/centres/${id}`, {source_url:$('tlgSource'+id).value.trim(),destination_url:$('tlgDest'+id).value.trim(),enabled:$('tlgEnabled'+id).checked});
+            toast('Saved. Automatic syncing will use these settings.');
+        } catch(e) { toast(e.message,true); }
+    }
+    let tlgStatuses = {};
+    function tlgApplyStatuses() {
+        tlgRows.forEach(r => { for (const [key,platform] of [['Meta','meta'],['Google','google']]) {
+            const el=$('tlg'+key+r.id); if (el) { const status=tlgStatuses[r.name]?.[platform] || 'Checking…'; el.textContent=status; el.style.color=status==='Live'?'var(--color-success)':'var(--color-text-muted)'; }
+        }});
+    }
+    async function tlgPerformance() {
+        const id=selectedAccountId;
+        if (!$('tlgStart')) return;
+        try {
+            const data=await api('GET', `/tlg/${id}/performance?start=${$('tlgStart').value}&end=${$('tlgEnd').value}`);
+            if (id!==selectedAccountId || !$('tlgMis')) return;
+            tlgStatuses=data.statuses; tlgApplyStatuses();
+            $('tlgMisStatus').textContent=Object.entries(data.errors).map(([p,e])=>p+': '+e).join(' · ') || 'Live ad-platform data · Checked '+new Date(data.checked_at).toLocaleTimeString();
+            const money=v=>v==null?'—':new Intl.NumberFormat('en-IN',{style:'currency',currency:data.currency||'INR'}).format(v);
+            $('tlgMis').innerHTML=['meta','google'].map(platform=>{
+                const rows=data.rows.filter(r=>r.platform===platform), spend=rows.reduce((s,r)=>s+r.spend,0), results=rows.reduce((s,r)=>s+r.results,0);
+                if(data.errors[platform]) return `<h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3><p>Report unavailable until connected.</p>`;
+                return `<h3>TLG · ${platform==='meta'?'Meta':'Google Ads'}</h3><div style="overflow:auto"><table class="data-table" style="width:100%"><thead><tr><th>Centre</th><th>Campaign Name</th><th>Result Type</th><th>Results</th><th>Cost per Result</th><th>Amount Spent</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.centre)}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.result_type)}</td><td>${r.results}</td><td>${money(r.cost_per_result)}</td><td>${money(r.spend)}</td></tr>`).join('') || '<tr><td colspan="6">No campaigns returned for this period.</td></tr>'}</tbody><tfoot><tr><th colspan="3">Total</th><th>${results}</th><th>${money(results?spend/results:null)}</th><th>${money(spend)}</th></tr></tfoot></table></div>`;
+            }).join('');
+        } catch(e) { if($('tlgMisStatus')) $('tlgMisStatus').textContent=e.message; }
     }
 
     async function renderReport(account) {
