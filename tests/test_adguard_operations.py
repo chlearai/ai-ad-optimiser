@@ -23,6 +23,18 @@ from backend.routes.adguard_support import router as support_router
 from backend.routes.adguard_v1 import router as tag_router
 
 class OperationsTests(unittest.TestCase):
+    def test_connections_tolerate_legacy_json_and_use_selected_brand(self):
+        self.current=self.owner
+        self.ws.google_identities='null';self.ws.meta_identities='[null, "invalid"]'
+        self.ws.discovered_accounts='{}';self.ws.discovered_meta_accounts='null';self.ws.discovered_meta_pages='broken'
+        self.db.commit()
+        r=self.client.get(f'/api/adguard/connections?workspace_id={self.ws.id}')
+        self.assertEqual(r.status_code,200,r.text)
+        self.assertEqual(r.json()['connections'][0]['google']['accounts'],[])
+        self.assertEqual(r.json()['connections'][0]['meta']['identities'],[])
+        r=self.client.get(f'/api/adguard/connections?workspace_id={self.ws2.id}')
+        self.assertEqual(r.json()['connections'],[])
+
     def test_customer_overview_complete_totals_and_brand_isolation(self):
         self.current=self.owner
         brand=AdGuardAccount(owner_email=self.owner.email,plan='agency',account_status='active',display_name='Second brand')

@@ -278,14 +278,15 @@ def admin_inbox(status: Optional[str] = None, db: Session = Depends(get_db), use
 # ---------------------------------------------------------------------------
 
 @router.get("/connections")
-def list_connections(db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+def list_connections(workspace_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
     """Connected ad accounts with health status + last sync (customer sees own)."""
     _require_adguard_access(user)
     out = []
-    for ws in _ws_scope(db, user):
+    for ws in _ws_scope(db, user, workspace_id):
         def _load(raw):
             try:
-                return json.loads(raw) if raw else []
+                value = json.loads(raw) if isinstance(raw, str) else raw
+                return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
             except Exception:
                 return []
         identities = _load(ws.google_identities)
@@ -304,7 +305,7 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
             "workspace_id": ws.id,
             "name": ws.display_name or ws.owner_email,
             "google": {
-                "connected": bool(ws.google_is_live),
+                "connected": bool(ws.google_credentials),
                 "last_sync_at": ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None,
                 "accounts": _load(ws.discovered_accounts)[:50],
                 "identities": [
@@ -314,7 +315,7 @@ def list_connections(db: Session = Depends(get_db), user: User = Depends(get_cur
                 "identity_accounts": identity_accounts,
             },
             "meta": {
-                "connected": bool(ws.meta_is_live),
+                "connected": bool(ws.meta_credentials),
                 "last_sync_at": ws.meta_last_sync_at.isoformat() if ws.meta_last_sync_at else None,
                 "accounts": _load(ws.discovered_meta_accounts)[:50],
                 "pages": _load(ws.discovered_meta_pages)[:50],

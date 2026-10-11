@@ -3676,8 +3676,8 @@
         // ---------- Connections ----------
         async function loadConnections() {
             try {
-                const data = await api('GET', '/connections');
-                const c = (data.connections || [])[0];
+                const data = await api('GET', '/connections' + (selectedWorkspaceObj ? '?workspace_id=' + selectedWorkspaceObj.id : ''));
+                const c = (data.connections || []).find(c => String(c.workspace_id) === String(selectedWorkspaceObj?.id)) || (data.connections || [])[0];
                 if (!c) { $('connectionsBody').innerHTML = '<div class="empty-state"><h3>No workspace</h3></div>'; return; }
                 const connRow = (label, platform, info) => {
                     const connected = info.connected;
