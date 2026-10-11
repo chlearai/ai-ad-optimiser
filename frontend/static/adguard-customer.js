@@ -161,6 +161,10 @@
         el('customerAddBrand').disabled=owned>=data.entitlements.workspace_limit;
         el('customerPlanDetail').innerHTML=`${trial?'Trial ends':'Plan expires'}: ${esc(date(data.expires_at))}<br>Audit reset: ${esc(date(quota.period_end))}${agency?`<br>${owned} / ${data.entitlements.workspace_limit} brand workspaces`:''}`;
         el('sidebarUpgradeBtn').textContent='Manage plan';
+        if(el('customerConversionReport')){
+            el('customerConversionReport').disabled=!data.entitlements.conversion_delivery;
+            el('customerConversionReport').textContent=data.entitlements.conversion_delivery?'View signal dispatch counts':'Included with Pro & Agency';
+        }
         const mode=el('setMode');if(mode){[...mode.options].forEach(option=>{if(option.value==='protect')option.disabled=trial;});if(trial)mode.value='monitor';}
         document.querySelectorAll('[onclick="syncExclusions()"],[onclick="runShieldScan()"],#shieldThreshold,#shieldMinLeads').forEach(control=>{control.disabled=trial || (!data.entitlements.audience_exclusions && control.getAttribute('onclick')==='syncExclusions()');});
     }

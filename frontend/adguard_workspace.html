@@ -997,7 +997,7 @@
                     <div class="table-wrap">
                         <table>
                             <thead><tr>
-                                <th>Campaign</th><th>Leads</th><th>Verified</th><th>Blocked</th><th>Junk %</th><th>Recovered Spend</th>
+                                <th>Campaign</th><th>Leads</th><th>Verified</th><th>Flagged</th><th>Junk %</th><th>Recovered Spend</th>
                             </tr></thead>
                             <tbody id="reportCampaignBody"></tbody>
                         </table>
@@ -1006,7 +1006,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">🚩 Waste Analysis — why leads were blocked</span>
+                        <span class="card-title">🚩 Quality analysis — why leads were flagged</span>
                     </div>
                     <div id="flagsBreakdown"></div>
                 </div>
@@ -1014,12 +1014,12 @@
                 <!-- FORENSIC EVIDENCE & CONVERSION DISPATCH PANEL -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
                     <!-- Card 1: Invalid Click Evidence -->
-                    <div class="card" style="margin-bottom:0;border:1px solid rgba(14, 165, 233, 0.3);background:linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
+                    <div class="card" style="margin-bottom:0;border:1px solid rgba(14, 165, 233, 0.3);background:linear-gradient(135deg, rgba(14, 165, 233, 0.04) 0%, var(--color-bg-card) 100%);">
                         <div class="card-header" style="margin-bottom:8px;">
                             <span class="card-title" style="color:var(--color-info);font-size:14px;">📑 Invalid-Click Refund Evidence</span>
                         </div>
                         <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
-                            Court-admissible, timestamped forensic click-to-submission reconciliation logs. Use this packet to submit formal Google Ads Invalid Click Credit claims.
+                            Export available click-to-submission records for review or a platform support request. These records do not guarantee a refund.
                         </p>
                         <div style="display:flex;gap:8px;">
                             <button type="button" class="btn btn-secondary btn-sm" onclick="downloadInvalidClickEvidence('json')">⬇ Evidence (JSON)</button>
@@ -1028,15 +1028,15 @@
                     </div>
 
                     <!-- Card 2: Conversion Signal Dispatch -->
-                    <div class="card" style="margin-bottom:0;border:1px solid rgba(16, 185, 129, 0.3);background:linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, rgba(15, 23, 42, 0.6) 100%);">
+                    <div class="card" style="margin-bottom:0;border:1px solid rgba(16, 185, 129, 0.3);background:linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, var(--color-bg-card) 100%);">
                         <div class="card-header" style="margin-bottom:8px;">
                             <span class="card-title" style="color:var(--color-accent);font-size:14px;">🎯 Conversion Signal Firewall Status</span>
                         </div>
                         <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:12px;">
-                            Gated Meta CAPI &amp; Google Offline signals. Junk leads blocked from ad training; high-value signals (₹500 / ₹2,000 / ₹10,000) dispatched.
+                            Pro and Agency include conversion delivery. View recorded dispatch counts; delivery depends on configured platform access and eligible lead stages.
                         </p>
                         <div style="display:flex;gap:8px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="loadRealizedSavingsModal()">📊 View Signal Dispatch Log</button>
+                            <button type="button" id="customerConversionReport" class="btn btn-secondary btn-sm" onclick="loadRealizedSavingsModal()">📊 View Signal Dispatch Log</button>
                         </div>
                     </div>
                 </div>
@@ -1061,7 +1061,7 @@
                             <button class="btn btn-primary btn-sm" onclick="exportReportCsv()">Export CSV</button>
                         </div>
                     </div>
-                    <p style="font-size:12px;color:var(--color-text-secondary);">Weekly summary email: automatically sent every Monday to your alert emails (Settings). Data range and filters applied.</p>
+                    <p style="font-size:12px;color:var(--color-text-secondary);">Weekly summaries use the configured email service and your alert addresses (Account). Data range and filters apply.</p>
                 </div>
             </div>
 
@@ -1181,7 +1181,7 @@
                     <div class="form-group" style="margin-bottom:14px;">
                         <label style="font-size:12px;font-weight:500;">Alert &amp; Report Emails (max 5, comma-separated)</label>
                         <input class="filter-input" id="setAlerts" placeholder="boss@company.com, team@company.com" style="width:100%;max-width:420px;">
-                        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Weekly report emails every Monday + shield alerts go to these addresses.</div>
+                        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;">Report and quality alert delivery uses these addresses when the email service is configured.</div>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Settings</button>
                     <div id="settingsResult" style="margin-top:10px;font-size:13px;"></div>
@@ -1600,9 +1600,9 @@
                 $('wsSavingsContent').innerHTML = `
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                         <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
-                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Realized ₹ Budget Saved</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Estimated junk exposure</div>
                             <div style="font-size:24px;font-weight:800;color:var(--color-success);margin-top:2px;">₹${(data.realized_savings_inr || 0).toLocaleString('en-IN')}</div>
-                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Blocked junk × ₹${data.avg_cpl_inr || 350} estimated CPL</div>
+                            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px;">Flagged leads × ₹${data.avg_cpl_inr || 350} benchmark. Not confirmed savings.</div>
                         </div>
                         <div style="background:var(--color-bg-card);border:1px solid var(--color-border);padding:14px;border-radius:10px;">
                             <div style="font-size:11px;color:var(--color-text-muted);text-transform:uppercase;font-weight:700;">Gated Conversion Signals</div>
@@ -1611,7 +1611,7 @@
                         </div>
                     </div>
                     <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px 14px;font-size:12px;margin-bottom:12px;">
-                        <strong>🚦 Conversion Value Tier Strategy Active:</strong>
+                        <strong>🚦 Configured conversion value tiers:</strong>
                         <ul style="margin:6px 0 0 18px;line-height:1.6;">
                             <li><b>₹500 Weight:</b> Clean Lead Submitted (Green Band Verdict)</li>
                             <li><b>₹2,000 Weight:</b> CRM Stage Advanced (Appointment / Qualified)</li>
