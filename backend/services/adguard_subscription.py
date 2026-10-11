@@ -20,6 +20,18 @@ class WorkspaceUnavailable(Exception):
     pass
 
 
+def plan_entitlements(ws):
+    """Customer capabilities come from the same definitions as quota enforcement."""
+    plan = ws.plan if ws.plan in PLAN_LIMITS else 'trial'
+    limits = PLAN_LIMITS[plan]
+    advanced = plan in ('pro', 'agency')
+    return {'plan': plan, 'label': 'Free Trial' if plan == 'trial' else plan.title(),
+            'workspace_limit': limits['workspaces'], 'connector_logins': limits['connectors'],
+            'observation_only': plan == 'trial', 'conversion_delivery': advanced, 'ai_scoring': advanced,
+            'audience_exclusions': advanced, 'calls_available': False,
+            'trial_days': 14 if plan == 'trial' else None}
+
+
 def operations(db, ws):
     row = db.get(AdGuardWorkspaceOps, ws.id)
     if row is None:

@@ -72,6 +72,9 @@ def queue_conversion_event(
 ) -> List[AdGuardConversionEvent]:
     """Queue a server-side conversion event for a lead once verified/qualified."""
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == lead.adguard_account_id).first() if lead.adguard_account_id else None
+    from backend.services.adguard_subscription import plan_entitlements
+    if not ws or not plan_entitlements(ws)['conversion_delivery']:
+        return []
     values = get_account_conversion_values(ws)
 
     event_key = stage_or_event.lower()
@@ -269,6 +272,9 @@ def flush_pending_conversions(db: Session, limit: int = 50) -> Dict[str, int]:
         from backend.services.adguard_subscription import access_reason
         if access_reason(db, ws):
             continue  # Hold events until the subscriber is active again.
+        from backend.services.adguard_subscription import plan_entitlements
+        if not plan_entitlements(ws)['conversion_delivery']:
+            continue
 
         # Check gate: Red or rejected leads are never dispatched
         if lead.verdict == "red" or lead.stage == "rejected":

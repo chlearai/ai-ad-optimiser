@@ -122,6 +122,7 @@ def evaluate_submit_verdict(
     form_data: Dict[str, Any],
     client_ip: Optional[str] = None,
     commit: bool = True,
+    observation_only: bool = False,
 ) -> Dict[str, Any]:
     """Calculate submit-time risk score and verdict (Green/Grey/Red).
 
@@ -222,7 +223,9 @@ def evaluate_submit_verdict(
 
     # 6. Gemini Intent Evaluation for Grey/Borderline Band (40–69)
     gemini_score = None
-    if 40 <= risk_score <= 69:
+    from backend.services.adguard_subscription import plan_entitlements
+    workspace = db.get(AdGuardAccount, int(ws_id)) if ws_id and str(ws_id).isdigit() else None
+    if 40 <= risk_score <= 69 and workspace and plan_entitlements(workspace)['ai_scoring']:
         try:
             lead_for_ai = {
                 "full_name": form_data.get("full_name") or form_data.get("name"),
@@ -264,12 +267,12 @@ def evaluate_submit_verdict(
         verdict=verdict,
         reasons=json.dumps(reasons),
         gemini_score=gemini_score,
-        otp_status="required" if verdict == "grey" else "none",
+        otp_status="required" if verdict == "grey" and not observation_only else "none",
     )
     db.add(verdict_record)
 
     # If Red, record to Shared Fraud Network & create exclusion member
-    if verdict == "red":
+    if verdict == "red" and not observation_only:
         if email:
             record_offence(db, "email", email, ws_id, commit=commit)
         if phone:

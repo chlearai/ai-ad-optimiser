@@ -385,7 +385,7 @@ def list_leads(
                 q = q.filter(or_(*conds))
 
     if verdict in ("verified", "flagged"):
-        q = q.filter(AdGuardLead.verdict == verdict)
+        q = q.filter(AdGuardLead.verdict.in_([verdict, 'green' if verdict == 'verified' else 'red']))
     if search:
         like = f"%{search.strip()}%"
         q = q.filter(
@@ -678,7 +678,8 @@ class CreateWorkspaceRequest(BaseModel):
     platform: Optional[str] = "google"  # which connector to launch after creation ("none" = skip)
 
 
-PLAN_WORKSPACE_LIMITS = {"trial": 1, "starter": 1, "pro": 1, "agency": 10, "custom": 1}
+from backend.services.adguard_subscription import PLAN_LIMITS
+PLAN_WORKSPACE_LIMITS = {name: limits['workspaces'] for name, limits in PLAN_LIMITS.items()}
 
 
 @router.post("/workspaces/create")
@@ -1125,7 +1126,7 @@ class WorkspaceSettingsRequest(BaseModel):
     shield_min_leads: Optional[int] = None
 
 
-VALID_CRMS = {"leadsquared", "zoho", "salesforce", "hubspot", "webhook", "none"}
+VALID_CRMS = {"leadsquared", "zoho", "hubspot", "webhook", "none"}
 
 
 @router.post("/workspace/settings")
@@ -1316,6 +1317,13 @@ def shield_exclusions_sync(req: ShieldSyncRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Workspace not found")
     if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Not your workspace")
+
+    from backend.services.adguard_subscription import plan_entitlements, access_reason
+    if not plan_entitlements(ws)['audience_exclusions']:
+        raise HTTPException(403, 'Audience exclusions require Pro or Agency')
+    issue = access_reason(db, ws)
+    if issue:
+        raise HTTPException(403, issue)
 
     from backend.services.adguard_exclusion_sync import (
         push_google_exclusions, push_meta_exclusions_v2, log_shield_action,

@@ -48,6 +48,8 @@ def scan_workspace_shield(db, ws) -> Dict[str, Any]:
         "campaigns_scanned": 0,
         "breached": [],
         "paused": [],
+        "recommendations": [],
+        "platform_actions_executed": False,
     }
 
     # Autonomous Shield is active if shield_enabled is True OR if workspace has live campaigns
@@ -97,7 +99,7 @@ def scan_workspace_shield(db, ws) -> Dict[str, Any]:
         existing_actions = json.loads(ws.shield_actions or "[]")
     except Exception:
         existing_actions = []
-    already_paused = {a.get("campaign") for a in existing_actions if a.get("action") == "auto_pause"}
+    already_paused = {a.get("campaign") for a in existing_actions if a.get("action") in ("auto_pause", "pause_recommended")}
 
     for name, bucket in per_campaign.items():
         total = bucket["total"]
@@ -107,18 +109,18 @@ def scan_workspace_shield(db, ws) -> Dict[str, Any]:
             breach = {"campaign": name, "leads_24h": total, "flagged": flagged, "junk_pct": junk_pct}
             result["breached"].append(breach)
             _shield_log(ws, {
-                "action": "auto_pause",
+                "action": "pause_recommended",
                 "campaign": name,
                 "detail": f"{junk_pct}% junk ({flagged}/{total} leads in 24h) >= threshold {threshold}%",
                 "leads_24h": total,
                 "flagged": flagged,
                 "junk_pct": junk_pct,
             })
-            result["paused"].append(name)
+            result["recommendations"].append(name)
 
-    if result["paused"]:
+    if result["recommendations"]:
         db.commit()
-        logger.warning(f"[Shield] ws {ws.id}: auto-paused {len(result['paused'])} campaign(s): {result['paused']}")
+        logger.warning(f"[Shield] ws {ws.id}: pause recommended for {len(result['recommendations'])} campaign(s)")
     return result
 
 

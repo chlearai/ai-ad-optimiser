@@ -136,6 +136,8 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
         client_ip = forwarded.split(",")[0].strip()
 
     ws = validate_installation(db, req.adguard_account_id, req.installation_token, request)
+    from backend.services.adguard_subscription import plan_entitlements
+    observation_only = plan_entitlements(ws)['observation_only']
     session = db.query(AdGuardSession).filter_by(session_uuid=req.session_uuid).first()
     if not session or session.adguard_account_id != ws.id:
         raise HTTPException(409, 'Register a session for this workspace first')
@@ -148,10 +150,13 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
         lead = db.get(AdGuardLead, usage.lead_id) if usage.lead_id else None
         if not lead:
             raise HTTPException(409, 'Audit is already being processed')
-        return {'verdict': lead.verdict, 'integrity_score': lead.integrity_score,
-                'session_uuid': req.session_uuid, 'lead_id': lead.id, 'otp_required': lead.verdict == 'grey'}
+        return {'verdict': 'green' if observation_only else lead.verdict,
+                'observed_verdict': lead.verdict, 'observation_only': observation_only,
+                'integrity_score': lead.integrity_score, 'session_uuid': req.session_uuid,
+                'lead_id': lead.id, 'otp_required': not observation_only and lead.verdict == 'grey'}
     data = req.model_dump()
-    outcome = evaluate_submit_verdict(db, req.session_uuid, data, client_ip, commit=False)
+    outcome = evaluate_submit_verdict(db, req.session_uuid, data, client_ip, commit=False,
+                                      observation_only=observation_only)
 
     session = db.query(AdGuardSession).filter(AdGuardSession.session_uuid == req.session_uuid).first()
     ws_id = session.adguard_account_id if session else req.adguard_account_id
@@ -176,7 +181,7 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
         verdict=outcome["verdict"],
         flags=json.dumps(outcome["reasons"]),
         ai_legitimacy_score=outcome.get("gemini_score"),
-        stage="submitted" if outcome["verdict"] == "green" else "rejected",
+        stage="observed" if observation_only else ("submitted" if outcome["verdict"] == "green" else "rejected"),
     )
     db.add(lead)
     db.flush()
@@ -186,7 +191,7 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
 
     sent = False
     # If Grey band, generate & dispatch OTP
-    if outcome["verdict"] == "grey" and req.phone:
+    if not observation_only and outcome["verdict"] == "grey" and req.phone:
         otp_code = generate_otp_code(6)
         verdict_rec = db.query(AdGuardVerdict).filter(AdGuardVerdict.session_uuid == req.session_uuid).order_by(AdGuardVerdict.created_at.desc()).first()
         if verdict_rec:
@@ -203,7 +208,7 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
             db.commit()
 
     # If Green, push to CRM + enqueue Bot-Caller
-    if outcome["verdict"] == "green":
+    if not observation_only and outcome["verdict"] == "green":
         # Deliver to subscriber's CRM choice
         if ws_id and str(ws_id).isdigit():
             ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == int(ws_id)).first()
@@ -222,16 +227,18 @@ def tag_submit_verdict(req: SubmitVerdictRequest, request: Request, db: Session 
                 db.commit()
 
         # Enqueue for voice verification
-        enqueue_bot_call(db, lead)
+        # Calling is deferred until the Exotel integration is enabled.
 
     return {
-        "verdict": outcome["verdict"],
+        "verdict": "green" if observation_only else outcome["verdict"],
+        "observed_verdict": outcome["verdict"],
+        "observation_only": observation_only,
         "risk_score": outcome["risk_score"],
         "integrity_score": outcome["integrity_score"],
         "session_uuid": req.session_uuid,
         "lead_id": lead.id,
-        "otp_required": outcome["verdict"] == "grey",
-        "otp_delivery_failed": outcome["verdict"] == "grey" and bool(req.phone) and not sent,
+        "otp_required": not observation_only and outcome["verdict"] == "grey",
+        "otp_delivery_failed": not observation_only and outcome["verdict"] == "grey" and bool(req.phone) and not sent,
     }
 
 
@@ -300,7 +307,7 @@ def tag_verify_otp(req: OtpVerifyRequest, request: Request, db: Session = Depend
                         "campaign_name": lead.campaign_name,
                         "source": "AdGuard Pre-Bid Firewall (OTP Verified)",
                     })
-            enqueue_bot_call(db, lead)
+            # Calls remain deferred until Exotel is enabled.
 
     db.commit()
     return {"status": "ok", "verified": True, "verdict": "green"}

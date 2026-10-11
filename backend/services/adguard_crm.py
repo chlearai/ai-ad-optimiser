@@ -47,6 +47,9 @@ def deliver_lead(ws, lead_payload: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns {"status": "pushed"|"failed"|"skipped", "provider": crm, "id": ..., "error": ...}
     """
+    from backend.services.adguard_subscription import plan_entitlements
+    if plan_entitlements(ws)['observation_only']:
+        return {"status": "skipped", "provider": "none", "error": "Free Trial is observation only"}
     crm = (ws.crm_preference or "").strip().lower()
     if not crm or crm == "none":
         return {"status": "skipped", "provider": "none", "error": "no CRM connected"}

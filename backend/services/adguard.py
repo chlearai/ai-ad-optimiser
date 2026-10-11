@@ -164,7 +164,7 @@ def ai_legitimacy_score(lead: Dict[str, Any]) -> Tuple[Optional[int], Optional[s
 # ---------------------------------------------------------------------------
 
 
-def score_lead(lead: Dict[str, Any], account: Any = None) -> Dict[str, Any]:
+def score_lead(lead: Dict[str, Any], account: Any = None, use_ai: bool = True) -> Dict[str, Any]:
     """Score one lead and return the gatekeeper result dict.
 
     Scoring:
@@ -184,7 +184,7 @@ def score_lead(lead: Dict[str, Any], account: Any = None) -> Dict[str, Any]:
     geo_match, geo_flags = check_geo(lead, account)
     flags.extend(geo_flags)
 
-    ai_score, ai_reason = ai_legitimacy_score(lead)
+    ai_score, ai_reason = ai_legitimacy_score(lead) if use_ai else (None, None)
 
     score = 0
     if email_valid and not disposable:
@@ -459,7 +459,8 @@ def process_incoming_lead(payload: Dict[str, Any], account: Any = None, raw_payl
         if dup is None and lead.get("phone"):
             dup = q.filter(AdGuardLead.phone == lead["phone"]).first()
 
-        result = score_lead(lead, account)
+        from backend.services.adguard_subscription import plan_entitlements
+        result = score_lead(lead, account, use_ai=not workspace_id or plan_entitlements(ws)['ai_scoring'])
         if dup is not None:
             result["verdict"] = "flagged"
             result["flags"] = list(set(result["flags"]) | {"duplicate_recent_lead"})

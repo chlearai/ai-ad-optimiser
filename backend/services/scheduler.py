@@ -104,8 +104,8 @@ def _run_adguard_exclusion_sync():
         synced = 0
         try:
             for ws in db.query(AdGuardAccount).filter(AdGuardAccount.shield_enabled == True).all():  # noqa: E712
-                from backend.services.adguard_subscription import access_reason
-                if access_reason(db, ws):
+                from backend.services.adguard_subscription import access_reason, plan_entitlements
+                if access_reason(db, ws) or not plan_entitlements(ws)['audience_exclusions']:
                     continue
                 try:
                     cutoff = datetime.utcnow() - timedelta(days=180)

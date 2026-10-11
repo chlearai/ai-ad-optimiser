@@ -30,7 +30,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, case
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
@@ -567,6 +567,87 @@ def disconnect_connection(req: ConnectionActionRequest, db: Session = Depends(ge
 # REPORTS
 # ---------------------------------------------------------------------------
 
+def _report_workspace_ids(db, user, workspace_id=None):
+    """Apply explicit brand selection before aggregating or exporting."""
+    q = db.query(AdGuardAccount).filter(AdGuardAccount.is_archived == False)
+    if user.role not in ('admin', 'superadmin'):
+        q = q.filter(AdGuardAccount.owner_email == user.email)
+    if workspace_id is not None:
+        q = q.filter(AdGuardAccount.id == workspace_id)
+    workspaces = q.all()
+    if workspace_id is not None and not workspaces:
+        raise HTTPException(404, 'Workspace not found')
+    return [w.id for w in workspaces]
+
+
+@router.get('/workspace/overview')
+def customer_overview(workspace_id: int, days: int = Query(30, ge=1, le=90),
+                      portfolio: bool = False, db: Session = Depends(get_db),
+                      user: User = Depends(get_current_user_required)):
+    """Complete totals and trends; never infer totals from the paged lead feed."""
+    _require_adguard_access(user)
+    ids = _report_workspace_ids(db, user, workspace_id)
+    ws = db.get(AdGuardAccount, workspace_id)
+    from backend.services.adguard_subscription import plan_entitlements, allowance, access_reason, operations
+    entitlements = plan_entitlements(ws)
+    if portfolio:
+        if ws.plan != 'agency':
+            raise HTTPException(403, 'Portfolio view requires Agency')
+        ids = [w.id for w in db.query(AdGuardAccount).filter_by(owner_email=ws.owner_email, is_archived=False).all()]
+    end = datetime.utcnow()
+    start = (end - timedelta(days=days-1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    q = db.query(AdGuardLead).filter(AdGuardLead.adguard_account_id.in_(ids or [0]), AdGuardLead.verdict != 'standby',
+                                    AdGuardLead.received_at >= start, AdGuardLead.received_at <= end)
+    verified = func.sum(case((AdGuardLead.verdict.in_(['verified', 'green']), 1), else_=0))
+    flagged = func.sum(case((AdGuardLead.verdict.in_(['flagged', 'red']), 1), else_=0))
+    delivered = func.sum(case((AdGuardLead.lsq_status.in_(['pushed', 'success']), 1), else_=0))
+    failed = func.sum(case((AdGuardLead.lsq_status == 'failed', 1), else_=0))
+    def metrics(row):
+        total, clean, junk, pushed, errors = [int(v or 0) for v in row]
+        return {'audited': total, 'verified': clean, 'flagged': junk, 'delivered': pushed,
+                'delivery_failed': errors, 'quality_rate': round(clean*100/total, 1) if total else None}
+    measures = (func.count(AdGuardLead.id), verified, flagged, delivered, failed)
+    totals = metrics(q.with_entities(*measures).one())
+    average = q.with_entities(func.avg(AdGuardLead.integrity_score)).scalar()
+    totals['avg_integrity_score'] = round(float(average), 1) if average is not None else None
+    date = func.date(AdGuardLead.received_at)
+    daily = {str(r[0]): metrics(r[1:]) for r in q.with_entities(date, *measures).group_by(date).all()}
+    trends = [dict(date=(start+timedelta(days=i)).date().isoformat(),
+                   **daily.get((start+timedelta(days=i)).date().isoformat(), metrics([0]*5))) for i in range(days)]
+    brand_metrics = {r[0]: metrics(r[1:]) for r in q.with_entities(AdGuardLead.adguard_account_id, *measures).group_by(AdGuardLead.adguard_account_id).all()}
+    sources = [{'source': r[0] or 'Website', **metrics(r[1:])} for r in q.with_entities(AdGuardLead.lead_type, *measures).group_by(AdGuardLead.lead_type).all()]
+    brands = []
+    for brand in db.query(AdGuardAccount).filter(AdGuardAccount.id.in_(ids)).all():
+        brands.append({'id': brand.id, 'name': brand.display_name or 'Workspace '+str(brand.id),
+                       'google_connected': bool(brand.google_credentials), 'meta_connected': bool(brand.meta_credentials),
+                       **brand_metrics.get(brand.id, metrics([0]*5))})
+    op = operations(db, ws)
+    limits = allowance(db, ws)
+    brand_daily = {}
+    if portfolio:
+        for brand_id, day, count in q.with_entities(AdGuardLead.adguard_account_id, date, func.count(AdGuardLead.id)).group_by(AdGuardLead.adguard_account_id, date).all():
+            brand_daily.setdefault(brand_id, {})[str(day)] = count
+    brand_trends = [{'id': b['id'], 'name': b['name'],
+                     'points': [brand_daily.get(b['id'], {}).get(d['date'], 0) for d in trends]} for b in brands] if portfolio else []
+    from backend.services.config import load_config
+    ai_key = load_config().get('gemini_api_key', '')
+    db.commit()
+    return {'workspace_id': ws.id, 'name': ws.display_name or 'My workspace', 'entitlements': entitlements,
+            'allowance': limits, 'expires_at': ws.plan_expires_at.isoformat() if ws.plan_expires_at else None,
+            'access_issue': access_reason(db, ws), 'support_hours': response_hours(db, ws.plan),
+            'totals': totals, 'trends': trends, 'sources': sources, 'brands': brands, 'brand_trends': brand_trends,
+            'ai_configured': bool(ai_key and len(ai_key) > 10 and not ai_key.startswith('●●●●')),
+            'recent': [l.to_dict() for l in q.order_by(AdGuardLead.received_at.desc(), AdGuardLead.id.desc()).limit(5).all()],
+            'estimated_exposure_inr': totals['flagged']*350, 'exposure_benchmark_inr': 350,
+            'connections': [
+                {'name': 'Google Ads', 'connected': bool(ws.google_credentials), 'error': op.google_error,
+                 'last_sync': ws.google_last_sync_at.isoformat() if ws.google_last_sync_at else None},
+                {'name': 'Meta Ads', 'connected': bool(ws.meta_credentials), 'error': op.meta_error,
+                 'last_sync': ws.meta_last_sync_at.isoformat() if ws.meta_last_sync_at else None},
+                {'name': 'CRM', 'connected': bool(ws.crm_credentials) and ws.crm_preference not in (None, 'none', 'salesforce'),
+                 'error': 'Salesforce delivery is unavailable' if ws.crm_preference == 'salesforce' else None,
+                 'provider': ws.crm_preference or 'none'}]}
+
 def _parse_range(days: Optional[int] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
     end = datetime.utcnow()
     if end_date:
@@ -605,35 +686,32 @@ def campaign_report(
     """Per-campaign junk report: totals, verified, flagged, junk %, estimated recovered spend."""
     _require_adguard_access(user)
     start, end = _parse_range(days=days, start_date=start_date, end_date=end_date)
-    q = db.query(AdGuardLead.campaign_name, AdGuardLead.verdict).filter(
+    q = db.query(AdGuardLead.adguard_account_id, AdGuardLead.campaign_name, AdGuardLead.verdict).filter(AdGuardLead.verdict != 'standby',
         AdGuardLead.received_at >= start,
         AdGuardLead.received_at <= end,
     )
-    if workspace_id and user.role in ("admin", "superadmin"):
-        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
-    elif user.role not in ("admin", "superadmin"):
-        ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    q = q.filter(AdGuardLead.adguard_account_id.in_(_report_workspace_ids(db, user, workspace_id) or [0]))
     rows = q.all()
     per: dict = {}
-    for name, verdict in rows:
-        key = (name or "(unknown)").strip() or "(unknown)"
+    for brand_id, name, verdict in rows:
+        key = (brand_id, (name or "(unknown)").strip() or "(unknown)")
         b = per.setdefault(key, {"leads": 0, "verified": 0, "flagged": 0})
         b["leads"] += 1
-        if verdict == "flagged":
+        if verdict in ("flagged", "red"):
             b["flagged"] += 1
-        elif verdict == "verified":
+        elif verdict in ("verified", "green"):
             b["verified"] += 1
     out = []
-    for name, b in per.items():
+    for (brand_id, name), b in per.items():
         junk_pct = round(100 * b["flagged"] / b["leads"], 1) if b["leads"] else 0.0
         out.append({
-            "campaign": name,
+            "campaign": name, "workspace_id": brand_id,
             "leads": b["leads"],
             "verified": b["verified"],
             "flagged": b["flagged"],
             "junk_pct": junk_pct,
-            "recovered_spend_inr": b["flagged"] * 350,
+            "recovered_spend_inr": b["flagged"] * 350,  # Legacy API alias; estimate, not realized savings.
+            "estimated_exposure_inr": b["flagged"] * 350,
         })
     out.sort(key=lambda r: r["leads"], reverse=True)
     return {
@@ -657,15 +735,11 @@ def flag_breakdown(
     _require_adguard_access(user)
     start, end = _parse_range(days=days, start_date=start_date, end_date=end_date)
     q = db.query(AdGuardLead).filter(
-        AdGuardLead.verdict == "flagged",
+        AdGuardLead.verdict.in_(["flagged", "red"]),
         AdGuardLead.received_at >= start,
         AdGuardLead.received_at <= end,
     )
-    if workspace_id and user.role in ("admin", "superadmin"):
-        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
-    elif user.role not in ("admin", "superadmin"):
-        ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    q = q.filter(AdGuardLead.adguard_account_id.in_(_report_workspace_ids(db, user, workspace_id) or [0]))
     counts: dict = {}
     total_flagged = 0
     for row in q.all():
@@ -716,11 +790,7 @@ def report_export(
         AdGuardLead.received_at >= start,
         AdGuardLead.received_at <= end,
     )
-    if workspace_id and user.role in ("admin", "superadmin"):
-        q = q.filter(AdGuardLead.adguard_account_id == workspace_id)
-    elif user.role not in ("admin", "superadmin"):
-        ws_ids = [w.id for w in db.query(AdGuardAccount.id).filter(AdGuardAccount.owner_email == user.email).all()]
-        q = q.filter(AdGuardLead.adguard_account_id.in_(ws_ids or [0]))
+    q = q.filter(AdGuardLead.adguard_account_id.in_(_report_workspace_ids(db, user, workspace_id) or [0]))
     cols = [c.strip() for c in columns.split(",")] if columns else REPORT_COLUMNS
     cols = [c for c in cols if c in REPORT_COLUMNS] or REPORT_COLUMNS
     rows = q.order_by(AdGuardLead.received_at.desc()).limit(10000).all()
@@ -782,6 +852,9 @@ def update_settings(req: SettingsUpdateRequest, workspace_id: Optional[int] = No
     if req.protection_mode:
         if req.protection_mode not in ("monitor", "protect"):
             raise HTTPException(status_code=400, detail="protection_mode must be monitor or protect")
+        from backend.services.adguard_subscription import plan_entitlements
+        if req.protection_mode == 'protect' and plan_entitlements(ws)['observation_only']:
+            raise HTTPException(403, 'Free Trial is observation only')
         ws.protection_mode = req.protection_mode
         # Mirror into shield_enabled for the governor
         ws.shield_enabled = (req.protection_mode == "protect")

@@ -23,6 +23,73 @@ from backend.routes.adguard_support import router as support_router
 from backend.routes.adguard_v1 import router as tag_router
 
 class OperationsTests(unittest.TestCase):
+    def test_customer_overview_complete_totals_and_brand_isolation(self):
+        self.current=self.owner
+        brand=AdGuardAccount(owner_email=self.owner.email,plan='agency',account_status='active',display_name='Second brand')
+        self.ws.plan='agency';self.db.add(brand);self.db.flush()
+        self.db.add_all([AdGuardLead(adguard_account_id=self.ws.id,full_name='Lead',campaign_name='Same campaign',verdict='verified',received_at=datetime.utcnow()) for _ in range(501)])
+        self.db.add_all([AdGuardLead(adguard_account_id=brand.id,campaign_name='Same campaign',verdict='flagged',received_at=datetime.utcnow()),AdGuardLead(adguard_account_id=self.ws2.id,verdict='flagged',received_at=datetime.utcnow()),AdGuardLead(adguard_account_id=self.ws.id,verdict='standby',received_at=datetime.utcnow())]);self.db.commit()
+        r=self.client.get(f'/api/adguard/workspace/overview?workspace_id={self.ws.id}&days=30')
+        self.assertEqual(r.status_code,200,r.text)
+        data=r.json();self.assertEqual(data['totals']['audited'],501);self.assertEqual(len(data['recent']),5)
+        self.assertEqual(sum(d['audited'] for d in data['trends']),501)
+        r=self.client.get(f'/api/adguard/workspace/overview?workspace_id={self.ws.id}&portfolio=true')
+        self.assertEqual(r.json()['totals']['audited'],502);self.assertEqual(len(r.json()['brands']),2)
+        self.assertEqual(self.client.get(f'/api/adguard/workspace/overview?workspace_id={self.ws2.id}').status_code,404)
+        for path in ['campaigns','flags','export']:
+            self.assertEqual(self.client.get(f'/api/adguard/reports/{path}?workspace_id={self.ws2.id}').status_code,404)
+        report=self.client.get(f'/api/adguard/reports/campaigns?workspace_id={brand.id}').json()
+        self.assertEqual(report['campaigns'][0]['leads'],1)
+        report=self.client.get('/api/adguard/reports/campaigns').json()
+        self.assertEqual(len(report['campaigns']),2)
+
+    def test_trial_form_is_observation_only_on_first_request_and_retry(self):
+        self.ws.plan='trial';self.db.commit()
+        token=operations(self.db,self.ws).tag_token
+        data={'session_uuid':'trial-shadow','adguard_account_id':self.ws.id,'installation_token':token,'webdriver':True,'headless':True,'email':'bot@mailinator.com','phone':'9999999999'}
+        self.assertEqual(self.client.post('/api/v1/tag/session',json=data).status_code,200)
+        with patch('backend.services.adguard_interceptor.record_offence') as offence, patch('backend.routes.adguard_v1.deliver_lead') as crm, patch('backend.routes.adguard_v1.send_otp') as otp, patch('backend.routes.adguard_v1.enqueue_bot_call') as call:
+            for _ in range(2):
+                r=self.client.post('/api/v1/tag/verdict',json=data)
+                self.assertEqual(r.status_code,200,r.text);self.assertEqual(r.json()['verdict'],'green')
+                self.assertEqual(r.json()['observed_verdict'],'red');self.assertFalse(r.json()['otp_required'])
+            offence.assert_not_called();crm.assert_not_called();otp.assert_not_called();call.assert_not_called()
+        self.assertEqual(self.db.query(AdGuardLead).one().stage,'observed')
+        self.assertEqual(self.ws.leads_this_month,1)
+        self.current=self.owner
+        self.assertEqual(self.client.put('/api/adguard/settings',json={'workspace_id':self.ws.id,'protection_mode':'protect'}).status_code,403)
+
+    def test_plan_gates_crm_conversions_and_audience_sync(self):
+        from backend.services.adguard_crm import deliver_lead
+        from backend.services.adguard_firewall import queue_conversion_event
+        from backend.services.adguard_subscription import plan_entitlements
+        self.current=self.owner
+        for plan in ['trial','starter','pro','agency']:
+            self.ws.plan=plan;self.db.commit()
+            self.assertEqual(plan_entitlements(self.ws)['workspace_limit'],10 if plan=='agency' else 1)
+            self.assertFalse(plan_entitlements(self.ws)['calls_available'])
+        self.ws.plan='trial';self.db.commit()
+        with patch('backend.services.adguard_crm.get_crm_credentials') as decrypt:
+            self.assertEqual(deliver_lead(self.ws,{})['status'],'skipped');decrypt.assert_not_called()
+        lead=AdGuardLead(adguard_account_id=self.ws.id,verdict='green');self.db.add(lead);self.db.flush()
+        self.assertEqual(queue_conversion_event(self.db,lead,'verified'),[])
+        self.assertEqual(self.client.post('/api/adguard/shield/exclusions/sync',json={'workspace_id':self.ws.id}).status_code,403)
+        self.ws.plan='starter';self.db.commit()
+        self.assertEqual(queue_conversion_event(self.db,lead,'verified'),[])
+
+    def test_trial_green_and_grey_do_not_send_crm_otp_or_calls(self):
+        self.ws.plan='trial';self.db.commit()
+        token=operations(self.db,self.ws).tag_token
+        with patch('backend.routes.adguard_v1.evaluate_submit_verdict') as evaluate, patch('backend.routes.adguard_v1.deliver_lead') as crm, patch('backend.routes.adguard_v1.send_otp') as otp, patch('backend.routes.adguard_v1.enqueue_bot_call') as calls:
+            for i,verdict in enumerate(['green','grey']):
+                evaluate.return_value={'verdict':verdict,'integrity_score':50,'risk_score':50,'reasons':[]}
+                data={'session_uuid':'trial-band-'+str(i),'adguard_account_id':self.ws.id,'installation_token':token,'phone':'9800000000'}
+                self.assertEqual(self.client.post('/api/v1/tag/session',json=data).status_code,200)
+                r=self.client.post('/api/v1/tag/verdict',json=data)
+                self.assertEqual(r.status_code,200,r.text);self.assertEqual(r.json()['verdict'],'green')
+                self.assertFalse(r.json()['otp_required'])
+            crm.assert_not_called();otp.assert_not_called();calls.assert_not_called()
+
     def setUp(self):
         self.engine = create_engine('sqlite://', poolclass=StaticPool, connect_args={'check_same_thread':False})
         @event.listens_for(self.engine, 'connect')
