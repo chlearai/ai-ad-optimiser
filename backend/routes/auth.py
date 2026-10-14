@@ -414,6 +414,8 @@ def _send_adguard_welcome_email_bg(user):
             ws = db_tmp.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
         except Exception:
             ws = None
+        if ws is None:
+            return
         from backend.services.onboarding_email import send_adguard_welcome_aboard
         threading.Thread(
             target=_welcome_email_worker,
@@ -638,9 +640,11 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     # Trial: 14-day expiry. Paid plans: monthly billing anniversary anchors the lead counter reset.
     # Call credits: PREPAID bucket granted once at plan activation — never expire, never reset on renewal.
     from backend.routes.adguard import PLAN_LIMITS as _PL
+    is_adguard_subscriber = False
     try:
         ws_act = db.query(AdGuardAccount).filter(AdGuardAccount.owner_email == user.email).first()
         if ws_act is not None:
+            is_adguard_subscriber = user.role == "user" and bool(user.access_adguard)
             now_act = datetime.utcnow()
             from backend.services.adguard_subscription import activate_workspace
             activate_workspace(ws_act, now_act, db=db)
@@ -659,10 +663,9 @@ def set_onboarding_password(token: str, req: SetPasswordRequest, db: Session = D
     db.refresh(user)
 
     # Email #2: password-set confirmation (security notice)
-    from backend.services.onboarding_email import send_adguard_password_set_confirmation
     threading.Thread(
         target=_password_confirmation_worker,
-        args=(user.email, user.full_name or user.email,),
+        args=(user.email, user.full_name or user.email, is_adguard_subscriber),
         daemon=True,
     ).start()
 
@@ -683,11 +686,14 @@ def _demo_lead_alert_worker(req_data: dict, verify_link: str):
         logger.warning(f"Demo lead alert failed: {e}")
 
 
-def _password_confirmation_worker(email, name):
+def _password_confirmation_worker(email, name, is_adguard_subscriber=False):
     try:
-        from backend.services.onboarding_email import send_adguard_password_set_confirmation
-        result = send_adguard_password_set_confirmation(recipient_email=email, full_name=name, timeout=30)
-        logger.info(f"AdGuard password confirmation email to {email}: sent={result.get('sent')} err={result.get('error')}")
+        from backend.services.onboarding_email import (
+            send_adguard_password_set_confirmation, send_platform_password_set_confirmation,
+        )
+        sender = send_adguard_password_set_confirmation if is_adguard_subscriber else send_platform_password_set_confirmation
+        result = sender(recipient_email=email, full_name=name, timeout=30)
+        logger.info(f"Password confirmation email to {email}: sent={result.get('sent')} err={result.get('error')}")
     except Exception as e:
         logger.warning(f"Password confirmation worker failed for {email}: {e}")
 

@@ -408,6 +408,28 @@ Team AdGuard
     return _send_raw_email(recipient_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
 
 
+def send_platform_password_set_confirmation(
+    recipient_email: str, full_name: str, timeout: int = 45,
+) -> Dict[str, Any]:
+    """Security confirmation for users invited through main platform management."""
+    from html import escape
+    sender_email = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "noreply@chlear.in")).strip() or "noreply@chlear.in"
+    sender_name = "ChlearSakhaaOps AI"
+    base_url = (os.getenv("ADOPTIMA_PUBLIC_BASE_URL") or
+                "https://ai-ad-optimiser-production-dd12.up.railway.app").rstrip("/")
+    subject = "ChlearSakhaaOps AI - Password Set Successful"
+    plain_body = (f"Hi {full_name or 'there'},\n\n"
+                  "Your ChlearSakhaaOps AI account password was set successfully.\n"
+                  f"Sign in: {base_url}/\n\n"
+                  "If you did not set this password, contact your administrator immediately.")
+    html_body = (f"<html><body><p>Hi {escape(full_name or 'there')},</p>"
+                 "<p>Your <strong>ChlearSakhaaOps AI</strong> account password was set successfully.</p>"
+                 f'<p><a href="{escape(base_url, quote=True)}/">Sign in to ChlearSakhaaOps AI</a></p>'
+                 "<p>If you did not set this password, contact your administrator immediately.</p>"
+                 "</body></html>")
+    return _send_raw_email(recipient_email, subject, plain_body, html_body, sender_email, sender_name, timeout)
+
+
 def send_adguard_password_set_confirmation(
     recipient_email: str,
     full_name: str,
