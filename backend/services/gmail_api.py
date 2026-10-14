@@ -29,20 +29,28 @@ _TOKEN_URL = "https://oauth2.googleapis.com/token"
 _AUTH_URL = "https://accounts.google.com/o/oauth2/auth"
 
 
-def _get_oauth_config() -> Dict[str, Any]:
-    """Return Gmail OAuth client config from environment."""
+def _get_client_config() -> Dict[str, Any]:
+    """Keep explicit Gmail clients; otherwise reuse the application's saved Google client."""
     client_id = os.getenv("GMAIL_CLIENT_ID", "").strip()
     client_secret = os.getenv("GMAIL_CLIENT_SECRET", "").strip()
-    redirect_uri = os.getenv("GMAIL_REDIRECT_URI", "").strip()
-    if not client_id or not client_secret:
-        return {"error": "GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set"}
+    if client_id or client_secret:
+        return {"client_id": client_id, "client_secret": client_secret}
+    from backend.services.config import load_config
+    config = load_config()
+    return {
+        "client_id": (os.getenv("google_client_id") or config.get("google_client_id") or "").strip(),
+        "client_secret": (os.getenv("google_client_secret") or config.get("google_client_secret") or "").strip(),
+    }
+
+
+def _get_oauth_config(redirect_uri: Optional[str] = None) -> Dict[str, Any]:
+    cfg = _get_client_config()
+    if not cfg["client_id"] or not cfg["client_secret"]:
+        return {"error": "Google OAuth client ID and secret are not configured"}
+    redirect_uri = redirect_uri or os.getenv("GMAIL_REDIRECT_URI", "").strip()
     if not redirect_uri:
         return {"error": "GMAIL_REDIRECT_URI must be set"}
-    return {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-    }
+    return {**cfg, "redirect_uri": redirect_uri}
 
 
 def _scopes() -> list:
@@ -54,7 +62,7 @@ def build_authorization_url(redirect_uri: Optional[str] = None) -> Dict[str, Any
 
     No PKCE so we don't need to track a code_verifier across requests.
     """
-    cfg = _get_oauth_config()
+    cfg = _get_oauth_config(redirect_uri=redirect_uri)
     if cfg.get("error"):
         return cfg
     if redirect_uri:
@@ -79,7 +87,7 @@ def exchange_code_for_token(code: str, redirect_uri: Optional[str] = None) -> Di
 
     No PKCE code_verifier required.
     """
-    cfg = _get_oauth_config()
+    cfg = _get_oauth_config(redirect_uri=redirect_uri)
     if cfg.get("error"):
         return cfg
     if redirect_uri:
@@ -116,8 +124,8 @@ def exchange_code_for_token(code: str, redirect_uri: Optional[str] = None) -> Di
 
 
 def _get_credentials_from_refresh_token(refresh_token: str, timeout: int = 15) -> Optional[Credentials]:
-    client_id = os.getenv("GMAIL_CLIENT_ID", "").strip()
-    client_secret = os.getenv("GMAIL_CLIENT_SECRET", "").strip()
+    cfg = _get_client_config()
+    client_id, client_secret = cfg["client_id"], cfg["client_secret"]
     if not client_id or not client_secret or not refresh_token:
         return None
     try:

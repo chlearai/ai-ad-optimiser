@@ -197,7 +197,7 @@ def send_onboarding_email(
     if refresh_token:
         from backend.services.gmail_api import send_email_via_gmail_api
         payloads = _build_email_payloads(recipient_email, full_name, setup_link, sender_name)
-        return send_email_via_gmail_api(
+        result = send_email_via_gmail_api(
             recipient_email=recipient_email,
             subject=payloads["subject"],
             plain_body=payloads["text"],
@@ -207,6 +207,15 @@ def send_onboarding_email(
             refresh_token=refresh_token,
             timeout=timeout,
         )
+        if result.get("sent"):
+            return result
+        logger.warning("Gmail delivery failed; trying configured SMTP fallback")
+        fallback = _send_via_smtp(recipient_email, full_name, setup_link, timeout=timeout)
+        if fallback.get("sent"):
+            return fallback
+        return {"sent": False, "provider": "gmail_api,smtp",
+                "error": "Gmail: " + str(result.get("error") or "delivery failed") +
+                         "; SMTP: " + str(fallback.get("error") or "delivery failed")}
 
     logger.warning("No Gmail refresh token; falling back to SMTP (may fail on Railway)")
     return _send_via_smtp(recipient_email, full_name, setup_link, timeout=timeout)
