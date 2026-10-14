@@ -205,6 +205,7 @@ def send_onboarding_email(
             sender_email=sender_email,
             sender_name=sender_name,
             refresh_token=refresh_token,
+            timeout=timeout,
         )
 
     logger.warning("No Gmail refresh token; falling back to SMTP (may fail on Railway)")

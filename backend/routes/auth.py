@@ -509,6 +509,7 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
     if req.role == "newuser" and req.assigned_account_ids:
         _sync_account_assignments(user, req.assigned_account_ids, db)
 
+    db.commit()  # Persist the account independently of best-effort activity logging.
     db.refresh(user)
     base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
     setup_link = f"{base_url}/onboard.html?token={token}"
@@ -529,28 +530,19 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
     refresh_token_setting = db.query(AppSetting).filter(AppSetting.key == "gmail_refresh_token").first()
     refresh_token = refresh_token_setting.value if refresh_token_setting else None
 
-    def _send_email_background(email, name, link, rt):
-        try:
-            result = send_onboarding_email(email, name, link, refresh_token=rt, timeout=30)
-            if result.get("sent"):
-                logger.info(f"Onboarding email sent for {email}: provider={result.get('provider')}, msgid={result.get('message_id')}")
-            else:
-                logger.error(f"Onboarding email failed for {email}: {result.get('error')}")
-        except Exception as e:
-            logger.exception(f"Onboarding email background crashed for {email}: {e}")
-
-    # Fire-and-forget: do not block the HTTP response waiting for email.
-    threading.Thread(
-        target=_send_email_background,
-        args=(req.email, req.full_name, setup_link, refresh_token),
-        daemon=True,
-    ).start()
-
+    # Report the actual provider outcome, not merely that a thread was started.
+    try:
+        result = send_onboarding_email(req.email, req.full_name, setup_link,
+                                       refresh_token=refresh_token, timeout=15)
+    except Exception:
+        logger.exception("Onboarding email failed for user %s", user.id)
+        result = {"sent": False, "error": "Email delivery failed; check the server logs."}
     return {
         "user": user.to_dict(),
         "setup_link": setup_link,
-        "email_sent": True,
-        "email_status": "Email is being sent in background via " + ("Gmail API" if refresh_token else "SMTP fallback"),
+        "email_sent": bool(result.get("sent")),
+        "email_status": "sent" if result.get("sent") else "failed",
+        "email_error": result.get("error"),
     }
 
 
@@ -561,14 +553,17 @@ def reset_user_password(user_id: int, request: Request, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="User not found")
     if user.role == "superadmin" and current_user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Only Super Admin can manage superadmin users")
-    if not user.is_active or not user.onboarding_completed:
-        raise HTTPException(status_code=400, detail="Password reset requires an active account with setup completed")
+    pending_setup = not user.onboarding_completed
+    if not pending_setup and not user.is_active:
+        raise HTTPException(status_code=400, detail="Password reset requires an active account")
     token = secrets.token_urlsafe(32)
     user.onboarding_token = token
-    user.onboarding_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    expiry_hours = ONBOARDING_TOKEN_EXPIRE_HOURS if pending_setup else 1
+    user.onboarding_token_expires_at = datetime.utcnow() + timedelta(hours=expiry_hours)
     db.commit()
     base_url = os.getenv("ADOPTIMA_PUBLIC_BASE_URL", "") or str(request.base_url).rstrip("/")
-    reset_link = f"{base_url}/onboard.html?reset=1&token={token}"
+    query = f"token={token}" if pending_setup else f"reset=1&token={token}"
+    reset_link = f"{base_url}/onboard.html?{query}"
     log_activity(module="System", action="Password Reset Requested",
                  description=f"Password reset requested for {user.email}",
                  user_id=current_user.id, user_name=current_user.full_name or current_user.email,
@@ -579,8 +574,10 @@ def reset_user_password(user_id: int, request: Request, db: Session = Depends(ge
                                        refresh_token=setting.value if setting else None, timeout=15)
     except Exception:
         logger.exception("Password reset email failed for user %s", user.id)
-        result = {"sent": False}
-    return {"reset_link": reset_link, "email_sent": bool(result.get("sent")), "expires_in_minutes": 60}
+        result = {"sent": False, "error": "Email delivery failed; check the server logs."}
+    return {"reset_link": reset_link, "email_sent": bool(result.get("sent")),
+            "email_error": result.get("error"), "pending_setup": pending_setup,
+            "expires_in_minutes": expiry_hours * 60}
 
 
 @router.get("/onboard/{token}")

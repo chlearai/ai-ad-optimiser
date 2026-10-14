@@ -9,6 +9,9 @@ import base64
 import logging
 import secrets
 import json
+from functools import partial
+import httplib2
+from google_auth_httplib2 import AuthorizedHttp
 import urllib.parse
 import urllib.request
 from email.mime.text import MIMEText
@@ -112,7 +115,7 @@ def exchange_code_for_token(code: str, redirect_uri: Optional[str] = None) -> Di
         return {"error": str(e)}
 
 
-def _get_credentials_from_refresh_token(refresh_token: str) -> Optional[Credentials]:
+def _get_credentials_from_refresh_token(refresh_token: str, timeout: int = 15) -> Optional[Credentials]:
     client_id = os.getenv("GMAIL_CLIENT_ID", "").strip()
     client_secret = os.getenv("GMAIL_CLIENT_SECRET", "").strip()
     if not client_id or not client_secret or not refresh_token:
@@ -126,7 +129,7 @@ def _get_credentials_from_refresh_token(refresh_token: str) -> Optional[Credenti
             client_secret=client_secret,
             scopes=_scopes(),
         )
-        creds.refresh(Request())
+        creds.refresh(partial(Request(), timeout=timeout))
         return creds
     except Exception as e:
         logger.error(f"Failed to refresh Gmail credentials: {e}")
@@ -141,9 +144,10 @@ def send_email_via_gmail_api(
     sender_email: str,
     sender_name: str,
     refresh_token: str,
+    timeout: int = 15,
 ) -> Dict[str, Any]:
     """Send an email using the Gmail API."""
-    creds = _get_credentials_from_refresh_token(refresh_token)
+    creds = _get_credentials_from_refresh_token(refresh_token, timeout=timeout)
     if not creds:
         return {"sent": False, "error": "Gmail credentials not available or refresh failed"}
 
@@ -157,7 +161,8 @@ def send_email_via_gmail_api(
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
 
     try:
-        service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+        transport = AuthorizedHttp(creds, http=httplib2.Http(timeout=timeout))
+        service = build("gmail", "v1", http=transport, cache_discovery=False)
         result = service.users().messages().send(userId="me", body={"raw": raw}).execute()
         message_id = result.get("id")
         logger.info(f"Gmail API sent email to {recipient_email}, message_id={message_id}")

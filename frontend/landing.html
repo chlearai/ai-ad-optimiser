@@ -1283,7 +1283,7 @@
                 <td>${roleBadge(u.role)}</td>
                 <td>${access.join(', ') || '-'}</td>
                 <td>${status}</td>
-                <td><button class="btn btn-secondary btn-sm" onclick="editUser(${u.id})">Edit</button> <button class="btn btn-secondary btn-sm" onclick="resetUserPassword(${u.id}, this)">Reset password</button> <button class="btn btn-secondary btn-sm" onclick="deleteUser(${u.id})">Delete</button></td>
+                <td><button class="btn btn-secondary btn-sm" onclick="editUser(${u.id})">Edit</button> <button class="btn btn-secondary btn-sm" onclick="resetUserPassword(${u.id}, this)">${u.onboarding_completed === false ? 'Resend invite' : 'Reset password'}</button> <button class="btn btn-secondary btn-sm" onclick="deleteUser(${u.id})">Delete</button></td>
             </tr>`;
         }).join('');
     }
@@ -1370,12 +1370,13 @@
                 alert('User updated');
             } else {
                 const res = await api('POST', '/auth/users', body);
+                resetUserForm();
                 $('umLinkBox').classList.remove('hidden');
                 $('umSetupLink').textContent = res.setup_link;
-                alert('User created. Invite email is being sent in the background. If it fails, copy the setup link below.');
+                alert(res.email_sent ? 'User created. Invitation accepted by the email provider.' : 'User created, but the invitation could not be sent. ' + (res.email_error || '') + ' Copy the setup link below and share it privately.');
             }
             loadUsers();
-            resetUserForm();
+            if (id) resetUserForm();
         } catch (e) { alert(e.message); }
         finally { _resetSaving(btn); }
     }
@@ -1388,13 +1389,14 @@
 
     async function resetUserPassword(id, btn) {
         const user = umUsers.find(u => u.id === id);
-        if (!user || !confirm('Send a password reset link to ' + user.email + '?')) return;
+        if (!user || !confirm('Send ' + (user.onboarding_completed === false ? 'an account setup' : 'a password reset') + ' link to ' + user.email + '?')) return;
         _setSaving(btn, 'Sending...');
         try {
             const res = await api('POST', '/auth/users/' + id + '/reset-password');
             $('umLinkBox').classList.remove('hidden');
             $('umSetupLink').textContent = res.reset_link;
-            alert(res.email_sent ? 'Reset email accepted for sending. The link expires in 1 hour.' : 'Email could not be sent. Copy the reset link below and share it privately. It expires in 1 hour.');
+            const expiry = res.pending_setup ? '72 hours' : '1 hour';
+            alert(res.email_sent ? 'Email accepted by the provider. The link expires in ' + expiry + '.' : 'Email could not be sent. ' + (res.email_error || '') + ' Copy the link below and share it privately. It expires in ' + expiry + '.');
         } catch (e) { alert(e.message); }
         finally { _resetSaving(btn); }
     }
