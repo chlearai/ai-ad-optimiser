@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import hashlib
 import secrets
 from pathlib import Path
@@ -174,11 +174,15 @@ def centre_name(name, names=None):
     matches = [c for c in (CENTRES if names is None else names) if normalized(c) in normalized(name)]
     return matches[0] if len(matches) == 1 else "Unmapped"
 
+def mis_report_period(now=None):
+    india = timezone(timedelta(hours=5, minutes=30))
+    today = (now or datetime.now(timezone.utc)).astimezone(india).date()
+    return date(2026, 8, 1), today - timedelta(days=1)
+
 @router.get("/{account_id}/performance")
-def performance(account_id: int, start: date, end: date, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+def performance(account_id: int, start: date | None = None, end: date | None = None, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     account = access(account_id, db, user)
-    if start > end or (end-start).days > 366:
-        raise HTTPException(400, "Choose an ordered range up to one year")
+    start, end = mis_report_period()
     rows, errors = [], {}
     saved_centres = db.query(TlgCentre).filter_by(account_id=account_id).all()
     saved_names = [r.name for r in saved_centres]
@@ -230,4 +234,4 @@ def performance(account_id: int, start: date, end: date, db: Session = Depends(g
             errors[platform] = "Connection or API access failed. Check the account integration and permissions."
             for centre in names:
                 statuses[centre][platform] = "Unavailable"
-    return {"rows": rows, "statuses": statuses, "errors": errors, "currency": account.currency, "checked_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}
+    return {"rows": rows, "statuses": statuses, "errors": errors, "currency": account.currency, "start":str(start), "end":str(end), "checked_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}

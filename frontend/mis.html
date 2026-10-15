@@ -2557,14 +2557,13 @@
     function renderLittleGymReport(account) {
         clearInterval(tlgTimer);
         tlgRows = []; tlgStatuses = {};
-        const today = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
         $('reportContent').innerHTML = `<div class="tlg-workspace">
             <section class="tlg-panel"><h2>Branch Directory</h2><p class="tlg-subtitle">Manage your centres, advertising status and lead sheet links.</p>
             <div class="tlg-toolbar"><form class="tlg-add" onsubmit="event.preventDefault();tlgAddBranch()"><input id="tlgNewBranch" aria-label="New branch name" placeholder="Enter new branch name" maxlength="120" required><button class="btn btn-primary" id="tlgAddButton" type="submit">+ Add branch</button></form><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="tlgConnect('meta')">Connect Meta Ads</button><button class="btn" onclick="tlgConnect('google')">Connect Google Ads</button></div></div>
             <p id="tlgReportStatus" class="tlg-subtitle" role="status">Loading branches…</p>
             <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
             <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Live campaigns · Results from master lead sheets · Spend from Meta</p></div>
-            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" value="${today.slice(0,8)}01" onchange="tlgPerformance()"></label><label>To <input type="date" id="tlgEnd" value="${today}" onchange="tlgPerformance()"></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div></div>
+            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" readonly></label><label>To <input type="date" id="tlgEnd" readonly></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div></div>
             <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><div id="tlgMis"></div></section></div>`;
         tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
@@ -2657,8 +2656,9 @@
         const id=selectedAccountId;
         if (!$('tlgStart')) return;
         try {
-            const data=await api('GET', `/tlg/${id}/performance?start=${$('tlgStart').value}&end=${$('tlgEnd').value}`);
+            const data=await api('GET', `/tlg/${id}/performance`);
             if (id!==selectedAccountId || !$('tlgMis')) return;
+            $('tlgStart').value=data.start; $('tlgEnd').value=data.end;
             tlgStatuses=data.statuses; tlgApplyStatuses();
             $('tlgMisStatus').textContent=Object.entries(data.errors).map(([p,e])=>p+': '+e).join(' · ') || 'Live ad-platform data · Checked '+new Date(data.checked_at).toLocaleTimeString();
             const money=v=>v==null?'—':new Intl.NumberFormat('en-IN',{style:'currency',currency:data.currency||'INR'}).format(v);

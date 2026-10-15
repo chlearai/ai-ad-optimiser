@@ -1,7 +1,7 @@
 """Report count rules: sheet totals, date range and unavailable data."""
 import ast
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -10,8 +10,20 @@ tree = ast.parse(Path('backend/routes/tlg.py').read_text())
 node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'report_lead_count')
 ns = dict(json=json, datetime=datetime, timedelta=timedelta)
 exec(compile(ast.Module(body=[node], type_ignores=[]), 'sheet_counts', 'exec'), ns)
+period_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'mis_report_period')
+ns.update(date=date, timezone=timezone)
+exec(compile(ast.Module(body=[period_node], type_ignores=[]), 'report_period', 'exec'), ns)
 
 class CountTests(unittest.TestCase):
+    def test_period_advances_at_india_midnight(self):
+        before = datetime(2026, 10, 14, 18, 29, 59, tzinfo=timezone.utc)
+        after = before + timedelta(seconds=1)
+        self.assertEqual(ns['mis_report_period'](before), (date(2026,8,1), date(2026,10,13)))
+        self.assertEqual(ns['mis_report_period'](after), (date(2026,8,1), date(2026,10,14)))
+
+    def test_period_keeps_august_start_across_year_boundary(self):
+        self.assertEqual(ns['mis_report_period'](datetime(2027,1,1,tzinfo=timezone.utc)), (date(2026,8,1), date(2026,12,31)))
+
     def report(self, **kw):
         values = dict(source_url='master', updated_at=datetime.utcnow(), daily_counts=json.dumps({'version':1,'leads':{'2026-10-01':3,'2026-10-02':2,'2026-10-09':4},'tests':{'2026-10-01':2}}))
         values.update(kw)
