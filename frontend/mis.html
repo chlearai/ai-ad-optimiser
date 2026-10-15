@@ -988,6 +988,10 @@
         } else {
             syncBtn.style.display = 'none';
         }
+        if (isBhagoMobility(a)) {
+            renderBhagoEmptyState();
+            return;
+        }
         if (a && a.name === 'DSU') {
             await renderDSUReport();
             return;
@@ -2676,11 +2680,25 @@
         } catch(e) { if($('tlgMisStatus')) $('tlgMisStatus').textContent=e.message; }
     }
 
+    function isBhagoMobility(account) {
+        return account && (account.name || '').trim().toLowerCase() === 'bhago mobility';
+    }
+
+    function renderBhagoEmptyState() {
+        $('reportContent').innerHTML = '<div class="empty-state">No reports configured for Bhago Mobility.</div>';
+    }
+
     async function renderReport(account) {
+        if (isBhagoMobility(account)) {
+            renderBhagoEmptyState();
+            return;
+        }
         try {
             const data = await api('GET', '/accounts/' + account.id + '/crm-summary' + getReportParams());
+            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
             buildReport(data, account);
         } catch (e) {
+            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
             toast(e.message, true);
             $('reportContent').innerHTML = '<div class="empty-state">Failed to load report: ' + escapeHtml(e.message) + '</div>';
         }
