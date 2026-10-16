@@ -2685,7 +2685,7 @@
     }
 
     function renderBhagoEmptyState() {
-        $('reportContent').innerHTML = '<div class="empty-state">No reports configured for Bhago Mobility.</div>';
+        $('reportContent').innerHTML = '<div class="empty-state"><button type="button" class="btn btn-primary" id="bhagoRunBtn" onclick="toast(\'The calling workflow is not configured yet.\')">RUN</button></div>';
     }
 
     async function renderReport(account) {
