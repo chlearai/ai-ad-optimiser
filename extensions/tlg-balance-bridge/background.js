@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 async function readFreshFunds() {
-  const tab = await chrome.tabs.create({url:BILLING_URL, active:false});
+  const tab = await chrome.tabs.create({url:BILLING_URL, active:true});
   try {
     for (let attempt=0; attempt<45; attempt++) {
       await new Promise(resolve => setTimeout(resolve,1000));
