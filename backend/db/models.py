@@ -1510,3 +1510,11 @@ class TlgSheetReport(Base):
     source_url = Column(Text, nullable=False)
     daily_counts = Column(Text, default="{}")
     updated_at = Column(DateTime, nullable=True)
+
+
+class TlgFundsSnapshot(Base):
+    __tablename__ = "tlg_funds_snapshots"
+    account_id = Column(Integer, ForeignKey("accounts.id"), primary_key=True)
+    funds_paise = Column(Integer, nullable=False)
+    available_paise = Column(Integer, nullable=False)
+    checked_at = Column(DateTime, nullable=False)

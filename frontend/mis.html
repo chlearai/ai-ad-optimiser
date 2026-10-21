@@ -751,6 +751,13 @@
         #tlgMis .tlg-client-report .tlg-client-title { background:#d9e8fc; color:#172033; font-size:23px; padding:9px; }
         #tlgMis .tlg-client-report .tlg-client-period { background:#5289dc; color:#fff; font-size:21px; padding:6px; }
         #tlgMis .tlg-client-report tfoot th { background:#d6e8fc; color:#183b68; font-size:18px; padding:6px; }
+        .tlg-funds { max-width:1050px; margin:8px 0 12px; padding:14px 18px; border:1px solid #b9dfd4; border-radius:10px; background:#edf9f4; color:#173f36; }
+        .tlg-funds strong { display:block; font-size:28px; line-height:1.3; margin:3px 0; }
+        .tlg-funds small { display:block; line-height:1.5; }
+        .tlg-funds.stale { background:#fff8e8; border-color:#e7ca82; color:#6e501a; }
+        .tlg-funds summary { cursor:pointer; font-size:12px; margin-top:8px; }
+        .tlg-funds form { display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:8px; }
+        .tlg-funds label { display:flex; flex-direction:column; gap:3px; font-size:12px; }
     </style>
     <script src="/india_states.js"></script>
 </head>
@@ -2568,7 +2575,7 @@
             <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
             <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Live campaigns · Results from master lead sheets · Spend from Meta</p></div>
             <div class="tlg-dates"><label>From <input type="date" id="tlgStart" readonly></label><label>To <input type="date" id="tlgEnd" readonly></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div></div>
-            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><div id="tlgMis"></div></section></div>`;
+            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><aside id="tlgFunds" class="tlg-funds" aria-label="TLG available funds">Loading verified available funds…</aside><div id="tlgMis"></div></section></div>`;
         tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
             if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
@@ -2656,9 +2663,30 @@
         try { await tlgPerformance(); }
         finally { button.disabled=false; button.textContent='Refresh MIS'; }
     }
+    async function tlgLoadFunds() {
+        const id=selectedAccountId;
+        try {
+            const data=await api('GET', `/tlg/${id}/funds`);
+            if(id!==selectedAccountId || !$('tlgFunds')) return;
+            const money=v=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(v);
+            const checked=new Date(data.checked_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'});
+            $('tlgFunds').classList.toggle('stale',data.stale);
+            $('tlgFunds').innerHTML=`<span>Available funds after next payment · Meta account</span><strong>${money(data.available)}</strong><small>Funds ${money(data.funds)} · Pending charges and estimated tax ${money(data.pending)}</small><small>${data.stale?'Older reading — verification needed · ':''}Last verified ${escapeHtml(checked)} IST · Meta Billing &amp; payments</small>${data.can_update?`<details><summary>Update verified balance</summary><form onsubmit="event.preventDefault();tlgSaveFunds(this)"><label>Funds (₹)<input name="funds" aria-label="Verified total funds" type="number" min="0" step="0.01" required value="${data.funds}"></label><label>Available after next payment (₹)<input name="available" aria-label="Verified available funds" type="number" min="0" step="0.01" required value="${data.available}"></label><button class="btn" type="submit">Save verified balance</button><small>Use a fresh reading from Meta Billing &amp; payments.</small></form></details>`:''}`;
+        } catch(e) {
+            if(id===selectedAccountId && $('tlgFunds')) $('tlgFunds').textContent='Verified funds unavailable. '+e.message;
+        }
+    }
+    async function tlgSaveFunds(form) {
+        const button=form.querySelector('button'); button.disabled=true;
+        try {
+            await api('PUT', `/tlg/${selectedAccountId}/funds`, {funds:form.elements.funds.value,available:form.elements.available.value,checked_at:new Date().toISOString()});
+            await tlgLoadFunds();
+        } catch(e) { toast(e.message,true); button.disabled=false; }
+    }
     async function tlgPerformance() {
         const id=selectedAccountId;
         if (!$('tlgStart')) return;
+        if (!$('tlgFunds')?.contains(document.activeElement)) tlgLoadFunds();
         try {
             const data=await api('GET', `/tlg/${id}/performance`);
             if (id!==selectedAccountId || !$('tlgMis')) return;

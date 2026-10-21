@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 import hashlib
 import secrets
 from pathlib import Path
@@ -8,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Account, TlgCentre, TlgSheetReport, UserAccountAssignment
+from backend.db.models import Account, TlgCentre, TlgSheetReport, TlgFundsSnapshot, UserAccountAssignment
 from backend.routes.auth import get_current_user_required
 from backend.services.tlg import CENTRES, ACTIVE_CENTRES, META_AD_ACCOUNT_ID, sheet_ref
 
@@ -30,6 +31,53 @@ class SheetCounts(BaseModel):
     daily_counts: dict[str, int]
     daily_test_counts: dict[str, int] = Field(default_factory=dict)
     filter_version: int = 0
+
+
+class VerifiedFunds(BaseModel):
+    funds: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
+    available: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
+    checked_at: datetime
+
+
+def funds_snapshot_payload(funds_paise, available_paise, checked_at):
+    checked_at = checked_at.replace(tzinfo=timezone.utc) if checked_at.tzinfo is None else checked_at.astimezone(timezone.utc)
+    return {"funds":funds_paise / 100, "available":available_paise / 100,
+            "pending":(funds_paise - available_paise) / 100, "currency":"INR",
+            "checked_at":checked_at.isoformat(), "stale":datetime.now(timezone.utc) - checked_at > timedelta(hours=24),
+            "source":"Meta Billing & payments", "ad_account_id":META_AD_ACCOUNT_ID}
+
+
+@router.get("/{account_id}/funds")
+def verified_funds(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user)
+    row = db.query(TlgFundsSnapshot).filter_by(account_id=account_id).first()
+    if row:
+        payload = funds_snapshot_payload(row.funds_paise, row.available_paise, row.checked_at)
+    else:
+        # Initial reading verified directly in this account's Meta billing page.
+        payload = funds_snapshot_payload(981098, 838096, datetime(2026,10,21,4,45,39,tzinfo=timezone.utc))
+    return {**payload, "can_update":user.role in ("admin", "superadmin")}
+
+
+@router.put("/{account_id}/funds")
+def update_verified_funds(account_id: int, body: VerifiedFunds, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user, edit=True)
+    if body.available > body.funds or body.checked_at.tzinfo is None:
+        raise HTTPException(400, "Enter verified funds with an explicit verification time zone")
+    checked = body.checked_at.astimezone(timezone.utc)
+    if checked > datetime.now(timezone.utc) + timedelta(minutes=5):
+        raise HTTPException(400, "Verification time cannot be in the future")
+    row = db.query(TlgFundsSnapshot).filter_by(account_id=account_id).with_for_update().first()
+    if row and checked.replace(tzinfo=None) < row.checked_at:
+        raise HTTPException(409, "A newer verified balance is already saved")
+    if not row:
+        row = TlgFundsSnapshot(account_id=account_id)
+        db.add(row)
+    row.funds_paise = int(body.funds * 100)
+    row.available_paise = int(body.available * 100)
+    row.checked_at = checked.replace(tzinfo=None)
+    db.commit()
+    return {"saved":True}
 
 @router.post("/{account_id}/centres/{centre_id}/reporting-script")
 def reporting_script(account_id: int, centre_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
