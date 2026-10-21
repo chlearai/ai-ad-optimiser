@@ -7,7 +7,7 @@ per MIS project, plus refresh, export (PDF/Excel), and aggregate views.
 import io
 import logging
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -309,7 +309,7 @@ def overall_summary(
 @router.get("/daily")
 def daily_report(
     project_id: int = Query(...),
-    platform: str = Query(..., enum=["meta", "google", "combined"]),
+    platform: Literal["meta", "google", "combined"] = Query(...),
     start: str = Query(...),
     end: str = Query(...),
     start_from: Optional[str] = Query(None, description="Ignored; platform starts are hardcoded"),
@@ -570,8 +570,8 @@ def refresh_data(
 
 @router.get("/export")
 def export_report(
-    type: str = Query(..., enum=["pdf", "xlsx"]),
-    report: str = Query(..., enum=["overall", "meta", "google", "combined"]),
+    type: Literal["pdf", "xlsx"] = Query(...),
+    report: Literal["overall", "meta", "google", "combined"] = Query(...),
     project_id: int = Query(...),
     start: str = Query(...),
     end: str = Query(...),

@@ -17,7 +17,7 @@ from backend.services.dsu_data import (
     fetch_dsu_monthly_summary,
 )
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -170,7 +170,7 @@ def dsu_performance(
 
 @router.get("/dsu-performance/pdf")
 def dsu_performance_pdf(
-    table: str = Query("daily", enum=["daily", "cumulative"]),
+    table: Literal["daily", "cumulative"] = Query("daily"),
     t1_start: str = Query(None),
     t1_end: str = Query(None),
     t2_start: str = Query(None),
