@@ -2663,6 +2663,35 @@
         try { await tlgPerformance(); }
         finally { button.disabled=false; button.textContent='Refresh MIS'; }
     }
+    let tlgFundsUpdating = false;
+    function tlgBalanceBridge(action, timeoutMs) {
+        return new Promise((resolve,reject) => {
+            const requestId=crypto.randomUUID();
+            const cleanup=()=>{clearTimeout(timer);window.removeEventListener('message',receive);};
+            const receive=event=>{
+                if(event.source!==window || event.origin!==location.origin || event.data?.type!=='INSIGHTDESK_TLG_BALANCE_RESPONSE' || event.data.requestId!==requestId) return;
+                cleanup();
+                if(event.data.error) reject(new Error(event.data.error)); else resolve(event.data);
+            };
+            const timer=setTimeout(()=>{cleanup();reject(new Error(action==='ping'?'Install the InsightDesk TLG Balance connection in this Chrome profile, then reload InsightDesk.':'Meta balance update timed out. The previous verified balance was retained.'));},timeoutMs);
+            window.addEventListener('message',receive);
+            window.postMessage({type:'INSIGHTDESK_TLG_BALANCE_REQUEST',requestId,action},location.origin);
+        });
+    }
+    async function tlgUpdateFunds(button) {
+        if(tlgFundsUpdating) return;
+        const id=selectedAccountId;
+        tlgFundsUpdating=true; button.disabled=true; button.textContent='Updating...';
+        try {
+            await tlgBalanceBridge('ping',2000);
+            const reading=await tlgBalanceBridge('read',55000);
+            if(reading.ad_account_id!=='929681660424354' || !Number.isFinite(reading.funds) || !Number.isFinite(reading.available) || !reading.checked_at) throw new Error('Invalid Meta reading. The previous verified balance was retained.');
+            await api('PUT',`/tlg/${id}/funds`,{funds:reading.funds,available:reading.available,checked_at:reading.checked_at});
+            if(id===selectedAccountId) await tlgLoadFunds();
+            toast('Available Meta balance updated.');
+        } catch(error) { toast(error.message,true); }
+        finally { tlgFundsUpdating=false; if(button.isConnected){button.disabled=false;button.textContent='UPDATE';} }
+    }
     async function tlgLoadFunds() {
         const id=selectedAccountId;
         try {
@@ -2671,7 +2700,7 @@
             const money=v=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(v);
             const checked=new Date(data.checked_at).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'});
             $('tlgFunds').classList.toggle('stale',data.stale);
-            $('tlgFunds').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span>Available funds after next payment · Meta account</span><button class="btn" onclick="this.disabled=true;this.textContent='Updating...';tlgLoadFunds()" title="Reload the latest saved verified Meta balance">UPDATE</button></div><strong>${money(data.available)}</strong><small>Funds ${money(data.funds)} · Pending charges and estimated tax ${money(data.pending)}</small><small>${data.stale?'Older reading — verification needed · ':''}Last updated ${escapeHtml(checked)} IST · Meta Billing &amp; payments</small>${data.can_update?`<details><summary>Update verified balance</summary><form onsubmit="event.preventDefault();tlgSaveFunds(this)"><label>Funds (₹)<input name="funds" aria-label="Verified total funds" type="number" min="0" step="0.01" required value="${data.funds}"></label><label>Available after next payment (₹)<input name="available" aria-label="Verified available funds" type="number" min="0" step="0.01" required value="${data.available}"></label><button class="btn" type="submit">Save verified balance</button><small>Use a fresh reading from Meta Billing &amp; payments.</small></form></details>`:''}`;
+            $('tlgFunds').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span>Available funds after next payment · Meta account</span><button class="btn" onclick="tlgUpdateFunds(this)" title="Fetch current available funds from Meta Billing">UPDATE</button></div><strong>${money(data.available)}</strong><small>Funds ${money(data.funds)} · Pending charges and estimated tax ${money(data.pending)}</small><small>${data.stale?'Older reading — verification needed · ':''}Last updated ${escapeHtml(checked)} IST · Meta Billing &amp; payments</small>${data.can_update?`<details><summary>Update verified balance</summary><form onsubmit="event.preventDefault();tlgSaveFunds(this)"><label>Funds (₹)<input name="funds" aria-label="Verified total funds" type="number" min="0" step="0.01" required value="${data.funds}"></label><label>Available after next payment (₹)<input name="available" aria-label="Verified available funds" type="number" min="0" step="0.01" required value="${data.available}"></label><button class="btn" type="submit">Save verified balance</button><small>Use a fresh reading from Meta Billing &amp; payments.</small></form></details>`:''}`;
         } catch(e) {
             if(id===selectedAccountId && $('tlgFunds')) $('tlgFunds').textContent='Verified funds unavailable. '+e.message;
         }
@@ -2686,7 +2715,7 @@
     async function tlgPerformance() {
         const id=selectedAccountId;
         if (!$('tlgStart')) return;
-        if (!$('tlgFunds')?.contains(document.activeElement)) tlgLoadFunds();
+        if (!tlgFundsUpdating && !$('tlgFunds')?.contains(document.activeElement)) tlgLoadFunds();
         try {
             const data=await api('GET', `/tlg/${id}/performance`);
             if (id!==selectedAccountId || !$('tlgMis')) return;

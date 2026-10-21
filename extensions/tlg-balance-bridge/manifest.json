@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "InsightDesk TLG Balance",
+  "version": "1.0.0",
+  "description": "Read the TLG available funds from signed-in Meta Billing when UPDATE is clicked in InsightDesk.",
+  "permissions": ["scripting"],
+  "host_permissions": ["https://adsmanager.facebook.com/*"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": ["https://ai-ad-optimiser-production-dd12.up.railway.app/insightdesk*"],
+    "js": ["bridge.js"],
+    "run_at": "document_start"
+  }]
+}

@@ -1,0 +1,10 @@
+const assert = require('node:assert/strict');
+const {parseTlgBillingText} = require('./parser.js');
+const text='TLG Ad Account\nCurrent balance\n₹ 1,369.07\n+ ₹ 246.43 estimated tax\nFunds\n₹ 9,810.98\n₹ 8,195.48 available after your next balance payment.';
+assert.deepEqual(parseTlgBillingText(text),{funds:9810.98,available:8195.48});
+assert.deepEqual(parseTlgBillingText(text.replace('8,195.48','0.00')),{funds:9810.98,available:0});
+assert.throws(()=>parseTlgBillingText(text.replace('TLG Ad Account','Another Account')));
+assert.throws(()=>parseTlgBillingText(text.replace('8,195.48','10,000.00')));
+assert.throws(()=>parseTlgBillingText('TLG Ad Account\nCurrent balance\n₹ 1,369.07'));
+assert.throws(()=>parseTlgBillingText(text+'\nFunds\n₹ 9,810.98\n₹ 8,195.48 available after your next balance payment.'));
+console.log('6 billing parser checks passed');
