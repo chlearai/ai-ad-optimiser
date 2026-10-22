@@ -227,10 +227,19 @@ def mis_report_period(now=None):
     today = (now or datetime.now(timezone.utc)).astimezone(india).date()
     return date(2026, 8, 1), today - timedelta(days=1)
 
+def selected_mis_period(start=None, end=None, now=None):
+    if start is None and end is None:
+        return mis_report_period(now)
+    if start is None or end is None:
+        raise HTTPException(400, "Select both From and To dates")
+    if start > end:
+        raise HTTPException(400, "From date must be on or before To date")
+    return start, end
+
 @router.get("/{account_id}/performance")
 def performance(account_id: int, start: date | None = None, end: date | None = None, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     account = access(account_id, db, user)
-    start, end = mis_report_period()
+    start, end = selected_mis_period(start, end)
     rows, errors = [], {}
     saved_centres = db.query(TlgCentre).filter_by(account_id=account_id).all()
     saved_names = [r.name for r in saved_centres]

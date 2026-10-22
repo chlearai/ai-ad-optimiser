@@ -739,7 +739,7 @@
         .tlg-platform-report { margin-top:24px; border:1px solid var(--border-color, #e2e8f0); border-radius:12px; overflow:hidden; }
         .tlg-platform-heading { padding:20px; background:rgba(59,130,246,.07); }
         .tlg-platform-report tfoot { background:rgba(59,130,246,.07); font-weight:700; }
-        .tlg-dates { display:flex; gap:16px; flex-wrap:wrap; }
+        .tlg-dates { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:12px 0; max-width:1050px; }
         .tlg-dates label { display:flex; align-items:center; gap:8px; font-size:13px; }
         #reportTitle { font-size:30px; font-weight:750; letter-spacing:-.5px; }
         @media(max-width:640px) { .tlg-panel { padding:18px; } .tlg-panel h2, #reportTitle { font-size:25px; } .tlg-add { width:100%; } .tlg-add input { min-width:0; flex:1; } }
@@ -2567,15 +2567,15 @@
     let tlgRows = [];
     function renderLittleGymReport(account) {
         clearInterval(tlgTimer);
-        tlgRows = []; tlgStatuses = {};
+        tlgRows = []; tlgStatuses = {}; tlgSelectedPeriod=null; tlgPerformanceSequence++;
         $('reportContent').innerHTML = `<div class="tlg-workspace">
             <section class="tlg-panel"><h2>Branch Directory</h2><p class="tlg-subtitle">Manage your centres, advertising status and lead sheet links.</p>
             <div class="tlg-toolbar"><form class="tlg-add" onsubmit="event.preventDefault();tlgAddBranch()"><input id="tlgNewBranch" aria-label="New branch name" placeholder="Enter new branch name" maxlength="120" required><button class="btn btn-primary" id="tlgAddButton" type="submit">+ Add branch</button></form><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" onclick="tlgConnect('meta')">Connect Meta Ads</button><button class="btn" onclick="tlgConnect('google')">Connect Google Ads</button></div></div>
             <p id="tlgReportStatus" class="tlg-subtitle" role="status">Loading branches…</p>
             <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
             <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Live campaigns · Results from master lead sheets · Spend from Meta</p></div>
-            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" readonly></label><label>To <input type="date" id="tlgEnd" readonly></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div></div>
-            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><aside id="tlgFunds" class="tlg-funds" aria-label="TLG available funds">Loading verified available funds…</aside><div id="tlgMis"></div></section></div>`;
+</div>
+            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><aside id="tlgFunds" class="tlg-funds" aria-label="TLG available funds">Loading verified available funds…</aside>            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" onchange="tlgApplyPeriod()"></label><label>To <input type="date" id="tlgEnd" onchange="tlgApplyPeriod()"></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div><div id="tlgMis"></div></section></div>`;
         tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
             if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
@@ -2657,6 +2657,17 @@
             const el=$('tlg'+key+r.id); if (el) { const status=tlgStatuses[r.name]?.[platform] || 'Not started'; el.textContent=status; el.classList.toggle('live',status==='Live'); }
         }});
     }
+    let tlgSelectedPeriod=null;
+    let tlgPerformanceSequence=0;
+    function tlgApplyPeriod() {
+        const start=$('tlgStart').value, end=$('tlgEnd').value;
+        if(!start || !end || start>end) {
+            $('tlgMisStatus').textContent='Select both dates, with From on or before To.';
+            return;
+        }
+        tlgSelectedPeriod={start,end};
+        tlgPerformance();
+    }
     async function tlgRefreshMis() {
         const button=$('tlgRefreshMis'); if(!button||button.disabled) return;
         button.disabled=true; button.textContent='Refreshing…';
@@ -2715,10 +2726,12 @@
     async function tlgPerformance() {
         const id=selectedAccountId;
         if (!$('tlgStart')) return;
+        const sequence=++tlgPerformanceSequence;
         if (!tlgFundsUpdating && !$('tlgFunds')?.contains(document.activeElement)) tlgLoadFunds();
         try {
-            const data=await api('GET', `/tlg/${id}/performance`);
-            if (id!==selectedAccountId || !$('tlgMis')) return;
+            const query=tlgSelectedPeriod?'?'+new URLSearchParams(tlgSelectedPeriod).toString():'';
+            const data=await api('GET', `/tlg/${id}/performance${query}`);
+            if (id!==selectedAccountId || sequence!==tlgPerformanceSequence || !$('tlgMis')) return;
             $('tlgStart').value=data.start; $('tlgEnd').value=data.end;
             tlgStatuses=data.statuses; tlgApplyStatuses();
             $('tlgMisStatus').textContent=Object.entries(data.errors).map(([p,e])=>p+': '+e).join(' · ') || 'Live ad-platform data · Checked '+new Date(data.checked_at).toLocaleTimeString();

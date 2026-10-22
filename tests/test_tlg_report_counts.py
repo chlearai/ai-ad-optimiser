@@ -14,6 +14,25 @@ period_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.
 ns.update(date=date, timezone=timezone)
 exec(compile(ast.Module(body=[period_node], type_ignores=[]), 'report_period', 'exec'), ns)
 
+from fastapi import HTTPException
+selected_node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'selected_mis_period')
+ns['HTTPException'] = HTTPException
+exec(compile(ast.Module(body=[selected_node], type_ignores=[]), 'selected_period', 'exec'), ns)
+
+class SelectedPeriodTests(unittest.TestCase):
+    def test_default_is_august_through_yesterday_india(self):
+        self.assertEqual(ns['selected_mis_period'](now=datetime(2026,10,22,3,tzinfo=timezone.utc)), (date(2026,8,1),date(2026,10,21)))
+
+    def test_custom_range_is_used_including_single_day(self):
+        for start,end in [(date(2026,10,1),date(2026,10,9)),(date(2026,10,5),date(2026,10,5))]:
+            self.assertEqual(ns['selected_mis_period'](start,end),(start,end))
+
+    def test_incomplete_or_reversed_range_is_rejected(self):
+        for start,end in [(date(2026,10,1),None),(None,date(2026,10,9)),(date(2026,10,9),date(2026,10,1))]:
+            with self.assertRaises(HTTPException) as caught:
+                ns['selected_mis_period'](start,end)
+            self.assertEqual(caught.exception.status_code,400)
+
 class CountTests(unittest.TestCase):
     def test_period_advances_at_india_midnight(self):
         before = datetime(2026, 10, 14, 18, 29, 59, tzinfo=timezone.utc)
