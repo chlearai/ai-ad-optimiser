@@ -2754,8 +2754,101 @@
         return account && (account.name || '').trim().toLowerCase() === 'bhago mobility';
     }
 
-    function renderBhagoEmptyState() {
-        $('reportContent').innerHTML = '<div class="empty-state"><button type="button" class="btn btn-primary" id="bhagoRunBtn" onclick="toast(\'The calling workflow is not configured yet.\')">RUN</button></div>';
+    const bhagoSources = [
+        ['swiggy', 'SWIGGY Data'], ['zomato', 'ZOMATO Data'], ['qwqer', 'QWQER Data'],
+        ['payment_reminder', 'PAYMENT REMINDER Data'], ['dialed', 'DIALED Data']
+    ];
+    let bhagoRenderVersion = 0;
+
+    async function renderBhagoEmptyState() {
+        const accountId = selectedAccountId, version = ++bhagoRenderVersion;
+        $('reportContent').innerHTML = `<div class="card" id="bhagoSheetsWorkspace">
+            <style>#bhagoSheetsWorkspace [hidden] { display: none !important; }</style>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem">
+                <h2 style="margin:0">Bhago Sakha</h2>
+                <button type="button" class="btn btn-primary" id="bhagoRunBtn" onclick="toast('The calling workflow is not configured yet.')">RUN</button>
+            </div>
+            <div role="tablist" aria-label="Bhago data sources" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem">
+                ${bhagoSources.map(([key, label], i) => `<button type="button" role="tab" id="bhagoTab_${key}" aria-controls="bhagoPanel_${key}" aria-selected="${i === 0}" class="btn ${i === 0 ? 'btn-primary' : 'btn-secondary'}" onclick="selectBhagoSheetTab('${key}')">${label}</button>`).join('')}
+            </div>
+            ${bhagoSources.map(([key, label], i) => `<section role="tabpanel" id="bhagoPanel_${key}" aria-labelledby="bhagoTab_${key}" ${i ? 'hidden' : ''}>
+                <h3 style="margin-top:0">${label}</h3>
+                <label for="bhagoUrl_${key}" style="display:block;margin-bottom:.5rem">Google Sheet link</label>
+                <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center">
+                    <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled style="flex:1;min-width:220px;width:auto;max-width:100%;box-sizing:border-box;padding:.7rem .85rem;border:1px solid var(--color-border-input);border-radius:8px;background:var(--color-bg-input);color:var(--color-text-primary);font:inherit" oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
+                    <button type="button" id="bhagoSave_${key}" class="btn btn-primary" disabled onclick="saveBhagoSheet('${key}')">Save</button>
+                    <a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet</a>
+                </div>
+                <p role="status" id="bhagoStatus_${key}" style="font-size:.85rem;color:var(--color-text-secondary);margin-bottom:0">Loading saved link…</p>
+            </section>`).join('')}
+            <button type="button" id="bhagoRetryLoad" class="btn btn-secondary" hidden onclick="renderBhagoEmptyState()">Retry loading links</button>
+        </div>`;
+        try {
+            const data = await api('GET', `/bhago/${accountId}/sheets`);
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
+            bhagoSources.forEach(([key]) => {
+                const url = data.sheets[key] || '';
+                $('bhagoUrl_' + key).value = url;
+                $('bhagoUrl_' + key).disabled = false;
+                $('bhagoSave_' + key).disabled = false;
+                $('bhagoStatus_' + key).textContent = url ? 'Saved' : 'No sheet saved yet';
+                setBhagoSheetLink(key, url);
+            });
+        } catch (e) {
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
+            bhagoSources.forEach(([key]) => { $('bhagoStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
+            $('bhagoRetryLoad').hidden = false;
+        }
+    }
+
+    function selectBhagoSheetTab(source) {
+        bhagoSources.forEach(([key]) => {
+            const active = key === source;
+            $('bhagoTab_' + key).setAttribute('aria-selected', String(active));
+            $('bhagoTab_' + key).className = 'btn ' + (active ? 'btn-primary' : 'btn-secondary');
+            $('bhagoPanel_' + key).hidden = !active;
+        });
+    }
+
+    function setBhagoSheetLink(source, url) {
+        const link = $('bhagoOpen_' + source);
+        link.hidden = true;
+        link.removeAttribute('href');
+        if (!url) return;
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:' || parsed.host !== 'docs.google.com' || parsed.username || parsed.password || !/^\/spreadsheets\/d\/[A-Za-z0-9_-]+(?:\/.*)?$/.test(parsed.pathname)) return;
+            link.href = url;
+            link.hidden = false;
+        } catch (_) {}
+    }
+
+    async function saveBhagoSheet(source) {
+        const accountId = selectedAccountId, version = bhagoRenderVersion;
+        if (!isBhagoMobility(allAccounts.find(a => a.id === accountId))) return;
+        const input = $('bhagoUrl_' + source), button = $('bhagoSave_' + source);
+        const url = input.value.trim();
+        button.disabled = true;
+        input.disabled = true;
+        button.textContent = 'Saving…';
+        try {
+            const data = await api('PUT', `/bhago/${accountId}/sheets/${source}`, {url});
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
+            input.value = data.url;
+            $('bhagoStatus_' + source).textContent = data.url ? 'Saved' : 'No sheet saved yet';
+            setBhagoSheetLink(source, data.url);
+            toast('Sheet link saved');
+        } catch (e) {
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
+            $('bhagoStatus_' + source).textContent = 'Not saved: ' + e.message;
+            toast(e.message, true);
+        } finally {
+            if (accountId === selectedAccountId && version === bhagoRenderVersion && $('bhagoSheetsWorkspace')) {
+                input.disabled = false;
+                button.disabled = false;
+                button.textContent = 'Save';
+            }
+        }
     }
 
     async function renderReport(account) {
