@@ -70,8 +70,10 @@ function tlgCallingWrite_(snapshot,start,end) {
     const ss=SpreadsheetApp.openById(book.id), sheet=ss.getSheetByName('Analysis')||ss.insertSheet('Analysis');
     if(sheet.getMaxColumns()<26) sheet.insertColumnsAfter(sheet.getMaxColumns(),26-sheet.getMaxColumns());
     sheet.getRange(1,1,40,26).breakApart().clear(); sheet.showColumns(1,26);
-    sheet.getRange('A1:Z1').merge().setValue('TLG — Centrewise Calling MIS').setFontSize(16).setFontWeight('bold');
-    sheet.getRange('A2:Z2').merge().setValue(start+' to '+end+' · Updated '+Utilities.formatDate(new Date(snapshot.checked_at),'Asia/Kolkata','dd MMM yyyy, h:mm a')+' IST · Daily refresh 9am IST');
+    sheet.getRange('A1:B1').merge().setValue('TLG').setFontSize(16).setFontWeight('bold');
+    sheet.getRange('C1:Z1').merge().setValue('Centrewise Calling MIS').setFontSize(16).setFontWeight('bold');
+    sheet.getRange('A2:B2').merge().setValue(start+' to '+end).setWrap(true);
+    sheet.getRange('C2:Z2').merge().setValue('Updated '+Utilities.formatDate(new Date(snapshot.checked_at),'Asia/Kolkata','dd MMM yyyy, h:mm a')+' IST · Daily refresh 9am IST');
     [[1,10,'Leads Outcome','#dbeafe'],[11,8,'Outcomes of contacted leads','#ede9fe'],[19,8,'Visit outcomes','#d1fae5']].forEach(([col,width,label,color])=>{
       sheet.getRange(4,col===1?3:col,1,col===1?width-2:width).merge().setValue(label).setBackground(color).setFontWeight('bold');
       sheet.getRange(5,col,6,width).setBackground(color);
