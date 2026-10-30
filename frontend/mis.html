@@ -2575,7 +2575,7 @@
             <div style="overflow:auto"><table class="data-table" style="width:100%;min-width:1000px"><thead><tr><th>Branch Name</th><th>Meta Ads</th><th>Google Ads</th><th>Master Lead Sheet</th><th>Branch Calling Sheet</th></tr></thead><tbody id="tlgCentres"></tbody></table></div></section>
             <section class="tlg-panel"><div class="tlg-toolbar"><div><h2>Advertising Performance</h2><p class="tlg-subtitle" style="margin-bottom:0">Live campaigns · Results from master lead sheets · Spend from Meta</p></div>
 </div>
-            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><aside id="tlgFunds" class="tlg-funds" aria-label="TLG available funds">Loading verified available funds…</aside>            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" onchange="tlgApplyPeriod()"></label><label>To <input type="date" id="tlgEnd" onchange="tlgApplyPeriod()"></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div><div id="tlgMis"></div></section></div>`;
+            <p id="tlgMisFreshness" class="tlg-subtitle" style="margin-bottom:8px" role="status">Sheet counts sync every 5 minutes. Refresh MIS reloads the latest received counts and Meta spend.</p><p id="tlgMisStatus" class="tlg-subtitle" role="status"></p><aside id="tlgFunds" class="tlg-funds" aria-label="TLG available funds">Loading verified available funds…</aside>            <div class="tlg-dates"><label>From <input type="date" id="tlgStart" onchange="tlgApplyPeriod()"></label><label>To <input type="date" id="tlgEnd" onchange="tlgApplyPeriod()"></label><button class="btn" id="tlgRefreshMis" type="button" onclick="tlgRefreshMis()">Refresh MIS</button></div><div id="tlgMis"></div><div id="tlgCallingAnalysis" aria-live="polite"></div></section></div>`;
         tlgLoadCentres().then(()=>tlgPerformance());
         tlgTimer = setInterval(() => {
             if (selectedAccountId !== account.id || !$('tlgCentres')) { clearInterval(tlgTimer); return; }
@@ -3751,5 +3751,6 @@
         }
     })();
     </script>
+<script src="/static/tlg-calling-analysis.js"></script>
 </body>
 </html>

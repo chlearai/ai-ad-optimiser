@@ -28,7 +28,8 @@ def serial(row):
     return {k: (getattr(row, k).isoformat() + "Z" if k == "last_sync" and row.last_sync else getattr(row, k)) for k in ("id", "name", "source_url", "destination_url", "enabled", "last_sync", "copied", "error")}
 
 class SheetCounts(BaseModel):
-    daily_counts: dict[str, int]
+    daily_counts: dict[str, int] | None = None
+    calling_report: dict | None = None
     daily_test_counts: dict[str, int] = Field(default_factory=dict)
     filter_version: int = 0
 
@@ -111,16 +112,32 @@ def receive_sheet_counts(account_id: int, centre_id: int, body: SheetCounts, aut
         raise HTTPException(409, "Master sheet changed; reconnect lead counts")
     if body.filter_version != 1:
         raise HTTPException(409, "Update Reporting.gs to exclude test leads")
-    if len(body.daily_counts) + len(body.daily_test_counts) > 10000:
+    if len(body.daily_counts or {}) + len(body.daily_test_counts) > 10000:
         raise HTTPException(400, "Too many dates")
-    for day, count in list(body.daily_counts.items()) + list(body.daily_test_counts.items()):
+    for day, count in list((body.daily_counts or {}).items()) + list(body.daily_test_counts.items()):
         try:
             if date.fromisoformat(day).isoformat() != day or count < 0:
                 raise ValueError()
         except ValueError:
             raise HTTPException(400, "Invalid daily lead counts")
-    row.daily_counts = json.dumps({"version":1, "leads":body.daily_counts, "tests":body.daily_test_counts})
-    row.updated_at = datetime.utcnow()
+    saved = json.loads(row.daily_counts or '{}')
+    if body.calling_report is not None:
+        from backend.services.tlg_calling_analysis import validate_snapshot
+        try:
+            snapshot = validate_snapshot(body.calling_report)
+            allowed = {c.name for c in db.query(TlgCentre).filter_by(account_id=account_id).all()}
+            if any(c['name'] not in allowed for c in snapshot['centres']):
+                raise ValueError('Calling report contains an unknown centre')
+            previous = saved.get('calling_report', {}).get('checked_at', '')
+            if previous and datetime.fromisoformat(snapshot['checked_at'].replace('Z', '+00:00')) < datetime.fromisoformat(previous.replace('Z', '+00:00')):
+                raise ValueError('A newer calling report is already saved')
+            saved['calling_report'] = snapshot
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(400, 'Invalid calling report: ' + str(exc))
+    if body.daily_counts is not None:
+        saved.update(version=1, leads=body.daily_counts, tests=body.daily_test_counts)
+        row.updated_at = datetime.utcnow()
+    row.daily_counts = json.dumps(saved)
     db.commit()
     return {"saved":True}
 
@@ -292,3 +309,17 @@ def performance(account_id: int, start: date | None = None, end: date | None = N
             for centre in names:
                 statuses[centre][platform] = "Unavailable"
     return {"rows": rows, "statuses": statuses, "errors": errors, "currency": account.currency, "start":str(start), "end":str(end), "checked_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}
+
+
+@router.get("/{account_id}/calling-analysis")
+def calling_analysis(account_id: int, start: date | None = None, end: date | None = None, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    access(account_id, db, user)
+    start, end = selected_mis_period(start, end)
+    from backend.services.tlg_calling_analysis import aggregate_snapshot
+    reports = db.query(TlgSheetReport).join(TlgCentre, TlgCentre.id == TlgSheetReport.centre_id).filter(TlgCentre.account_id == account_id).all()
+    snapshots = [json.loads(r.daily_counts or '{}').get('calling_report') for r in reports]
+    snapshots = [s for s in snapshots if s]
+    if not snapshots:
+        return {'rows': None, 'message': 'Awaiting the first daily calling report.'}
+    snapshot = max(snapshots, key=lambda s: s['checked_at'])
+    return aggregate_snapshot(snapshot, start, end)
