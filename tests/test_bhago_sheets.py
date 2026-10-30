@@ -59,8 +59,8 @@ class SheetTests(unittest.TestCase):
         app.include_router(ns['router'])
         self.client = TestClient(app)
 
-    def test_five_links_persist_and_save_independently(self):
-        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed']
+    def test_six_links_persist_and_save_independently(self):
+        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test']
         self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'], dict.fromkeys(sources, ''))
         for source in sources:
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=0'
@@ -72,7 +72,7 @@ class SheetTests(unittest.TestCase):
         for source in sources[1:]:
             self.assertEqual(saved[source], reloaded[source])
         with self.Session() as db:
-            self.assertEqual(db.query(AppSetting).count(), 5)
+            self.assertEqual(db.query(AppSetting).count(), 6)
 
     def test_invalid_urls_and_sources_do_not_save(self):
         for url in ['javascript:alert(1)', 'https://docs.google.com.evil.test/spreadsheets/d/abc',

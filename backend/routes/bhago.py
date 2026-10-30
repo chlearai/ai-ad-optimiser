@@ -1,4 +1,4 @@
-"""Bhago Mobility's five saved sheet links. Does not read sheets or start calls."""
+"""Bhago Mobility's saved sheet links. Does not read sheets or start calls."""
 from typing import Literal
 from urllib.parse import urlparse
 import re
@@ -10,7 +10,7 @@ from backend.db.models import Account, AppSetting, UserAccountAssignment
 from backend.routes.auth import get_current_user_required
 
 router = APIRouter(prefix="/api/bhago", tags=["Bhago Mobility"])
-SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed")
+SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test")
 
 
 def access(account_id, db, user):
@@ -54,7 +54,7 @@ def get_sheets(account_id: int, db: Session = Depends(get_db), user=Depends(get_
 
 
 @router.put("/{account_id}/sheets/{source}")
-def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed"],
+def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test"],
                body: SheetLink, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
     url = validate_sheet_url(body.url)
