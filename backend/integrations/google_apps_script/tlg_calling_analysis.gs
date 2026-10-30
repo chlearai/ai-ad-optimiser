@@ -63,30 +63,31 @@ function tlgCallingRow_(row) {
   return [row.name,row.leads,row.called,ratio(row.called,row.leads),row.not_called,ratio(row.not_called,row.leads),row.contacted,ratio(row.contacted,row.called),row.not_contactable,ratio(row.not_contactable,row.called),row.interested,ratio(row.interested,row.contacted),row.not_interested,ratio(row.not_interested,row.contacted),row.junk,ratio(row.junk,row.contacted),row.pending,ratio(row.pending,row.contacted),row.scheduled,ratio(row.scheduled,row.interested),row.not_scheduled,ratio(row.not_scheduled,row.interested),row.visited,ratio(row.visited,row.scheduled),row.not_visited,ratio(row.not_visited,row.scheduled)];
 }
 function tlgCallingWrite_(snapshot,start,end) {
-  const rows=snapshot.centres.map(c=>tlgCallingAggregate_(c,start,end));
-  const total={name:'Total',...Object.fromEntries(TLG_CALLING_KEYS.map(k=>[k,rows.reduce((s,r)=>s+r[k],0)]))};
   const headers=['Centre','Leads','Called','%','Not called','%','Contacted','%','Not contactable','%','Interested','%','Not interested','%','Junk','%','Pending / Unclassified','%','Scheduled','%','Not scheduled','%','Visited','%','Not visited','%'];
   TLG_CALLING_BOOKS.forEach(book=>{
+    // Each shared workbook receives only its own centre. Consolidation stays in InsightDesk.
+    const ownCentre=snapshot.centres.filter(c=>c.name===book.name);
+    if(ownCentre.length!==1) throw new Error(book.name+': exactly one matching centre is required');
+    const rows=[tlgCallingAggregate_(ownCentre[0],start,end)];
     const ss=SpreadsheetApp.openById(book.id), sheet=ss.getSheetByName('Analysis')||ss.insertSheet('Analysis');
     if(sheet.getMaxColumns()<26) sheet.insertColumnsAfter(sheet.getMaxColumns(),26-sheet.getMaxColumns());
-    sheet.getRange(1,1,40,26).breakApart().clear(); sheet.showColumns(1,26);
+    sheet.getRange(1,1,100,26).breakApart().clear(); sheet.showColumns(1,26);
     sheet.getRange('A1:B1').merge().setValue('TLG').setFontSize(16).setFontWeight('bold');
-    sheet.getRange('C1:Z1').merge().setValue('Centrewise Calling MIS').setFontSize(16).setFontWeight('bold');
+    sheet.getRange('C1:Z1').merge().setValue(book.name+' — Calling MIS').setFontSize(16).setFontWeight('bold');
     sheet.getRange('A2:B2').merge().setValue(start+' to '+end).setWrap(true);
     sheet.getRange('C2:Z2').merge().setValue('Updated '+Utilities.formatDate(new Date(snapshot.checked_at),'Asia/Kolkata','dd MMM yyyy, h:mm a')+' IST · Daily refresh 9am IST');
     [[1,10,'Leads Outcome','#dbeafe'],[11,8,'Outcomes of contacted leads','#ede9fe'],[19,8,'Visit outcomes','#d1fae5']].forEach(([col,width,label,color])=>{
       sheet.getRange(4,col===1?3:col,1,col===1?width-2:width).merge().setValue(label).setBackground(color).setFontWeight('bold');
-      sheet.getRange(5,col,6,width).setBackground(color);
+      sheet.getRange(5,col,2,width).setBackground(color);
     });
     sheet.getRange(5,1,1,26).setValues([headers]).setFontWeight('bold').setWrap(true);
-    sheet.getRange(6,1,5,26).setValues([...rows,total].map(tlgCallingRow_)).setNumberFormat('0');
-    [4,6,8,10,12,14,16,18,20,22,24,26].forEach(c=>sheet.getRange(6,c,5,1).setNumberFormat('0.0%'));
-    sheet.getRange('A10:Z10').setFontWeight('bold').setBackground('#e2e8f0');
-    sheet.getRange('C12:Z12').merge().setValue('% bases: Called / Not called → Leads; Contacted / Not contactable → Called; outcomes → Contacted; Scheduled / Not scheduled → Interested; Visited / Not visited → Scheduled.').setWrap(true);
-    sheet.getRange('C13:Z13').merge().setValue('Wrong / invalid numbers are Not contactable. Scheduled includes completed visits. Test names/emails excluded; repeated submissions remain separate.');
-    sheet.getRange('C14:Z14').merge().setValue('Legacy remarks and new calling fields are used. Unknown dates are included for continuity. Conflicting / unclear notes need branch review.');
-    sheet.getRange('C16:J16').merge().setValue('Junk reasons — centrewise').setFontWeight('bold');
-    let line=17;
+    sheet.getRange(6,1,1,26).setValues(rows.map(tlgCallingRow_)).setNumberFormat('0');
+    [4,6,8,10,12,14,16,18,20,22,24,26].forEach(c=>sheet.getRange(6,c,1,1).setNumberFormat('0.0%'));
+    sheet.getRange('C8:Z8').merge().setValue('% bases: Called / Not called → Leads; Contacted / Not contactable → Called; outcomes → Contacted; Scheduled / Not scheduled → Interested; Visited / Not visited → Scheduled.').setWrap(true);
+    sheet.getRange('C9:Z9').merge().setValue('Wrong / invalid numbers are Not contactable. Scheduled includes completed visits. Test names/emails excluded; repeated submissions remain separate.');
+    sheet.getRange('C10:Z10').merge().setValue('Legacy remarks and new calling fields are used. Unknown dates are included for continuity. Conflicting / unclear notes need branch review.');
+    sheet.getRange('C12:J12').merge().setValue('Junk reasons — '+book.name).setFontWeight('bold');
+    let line=13;
     rows.forEach(row=>{
       sheet.getRange(line++,3,1,8).merge().setValue(row.name+' — '+row.junk+' Junk').setFontWeight('bold');
       const entries=Object.entries(row.reasons);
@@ -98,7 +99,7 @@ function tlgCallingWrite_(snapshot,start,end) {
     sheet.setColumnWidth(1,150);sheet.setColumnWidth(2,70);
     for(let c=3;c<=26;c++) sheet.setColumnWidth(c,c%2===0?72:116);
     sheet.setColumnWidth(17,155);sheet.setRowHeight(5,56);sheet.setFrozenRows(5);sheet.setFrozenColumns(2);
-    sheet.getRange(6,2,5,25).setHorizontalAlignment('center');
+    sheet.getRange(6,2,1,25).setHorizontalAlignment('center');
   });
   SpreadsheetApp.flush();
 }
