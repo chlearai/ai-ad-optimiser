@@ -65,6 +65,8 @@ async def security_headers_middleware(request: Request, call_next):
 # Register API routes
 from backend.routes import tlg
 app.include_router(tlg.router)
+from backend.routes import bhago
+app.include_router(bhago.router)
 app.include_router(config.router)
 app.include_router(accounts.router)
 app.include_router(categories.router)
