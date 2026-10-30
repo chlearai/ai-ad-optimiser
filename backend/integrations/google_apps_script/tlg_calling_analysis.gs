@@ -26,7 +26,7 @@ function tlgCallingClassify_(text, hasCalls) {
   m.scheduled=+(m.interested && scheduled); m.not_scheduled=m.interested-m.scheduled;
   m.visited=+(m.scheduled && visited); m.not_visited=m.scheduled-m.visited;
   let reason='';
-  if(m.junk) reason=/ha[ds](n.t| not) enquir|never enquir|didn.t enquir|hadn.t enquir|wrong enquir/.test(text)?'Denied enquiry':/classes for adults/.test(text)?'Adult classes':/age|too old|too young/.test(text)?'Age unsuitable':/location|far|distance|another city|other city/.test(text)?'Location mismatch':/no kid|no child|doesn.t have.*(kid|child)/.test(text)?'No child':'Unspecified junk';
+  if(m.junk) reason=/classes for adults/.test(text)?'Adult classes':/age|too old|too young|\b\d+\s*(year|yr)/.test(text)?'Age unsuitable':/ha[ds](n.t| not) enquir|never enquir|didn.t enquir|hadn.t enquir|wrong enquir|not enquir/.test(text)?'Denied enquiry':/location|far|distance|another city|other city|different town/.test(text)?'Location mismatch':/no kid|no child|(don.t|doesn.t|do not|does not).*have.*(kid|child)/.test(text)?'No child':'Unspecified junk';
   return {metrics:m,reason,invalid:+(invalid && called)};
 }
 function tlgCallingRead_(book) {
@@ -131,5 +131,5 @@ function updateTlgCallingSheetsNow() {
   const end=Utilities.formatDate(yesterday,'Asia/Kolkata','yyyy-MM-dd');
   const snapshot={version:1,checked_at:now.toISOString(),centres:TLG_CALLING_BOOKS.map(tlgCallingRead_)};
   tlgCallingWrite_(snapshot,'2026-08-01',end);
-  console.log(JSON.stringify(snapshot));
+  console.log('Combined tables updated in all four Analysis tabs.');
 }
