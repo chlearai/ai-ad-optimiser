@@ -323,3 +323,17 @@ def calling_analysis(account_id: int, start: date | None = None, end: date | Non
         return {'rows': None, 'message': 'Awaiting the first daily calling report.'}
     snapshot = max(snapshots, key=lambda s: s['checked_at'])
     return aggregate_snapshot(snapshot, start, end)
+
+
+@router.get("/{account_id}/calling-analysis/export")
+def export_calling_analysis(account_id: int, start: date | None = None, end: date | None = None, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    # Reuse the same account authorization, date selection and aggregate data as the table.
+    report = calling_analysis(account_id, start, end, db, user)
+    if not report.get('rows'):
+        raise HTTPException(409, 'Calling report is not available for export yet')
+    from backend.services.tlg_calling_export import calling_analysis_workbook
+    from fastapi.responses import StreamingResponse
+    filename = f"TLG_Calling_MIS_{report['start']}_to_{report['end']}.xlsx"
+    return StreamingResponse(calling_analysis_workbook(report),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"', 'Cache-Control': 'no-store'})
