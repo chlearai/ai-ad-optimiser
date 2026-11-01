@@ -2756,7 +2756,7 @@
 
     const bhagoSources = [
         ['swiggy', 'SWIGGY Data'], ['zomato', 'ZOMATO Data'], ['qwqer', 'QWQER Data'],
-        ['payment_reminder', 'PAYMENT REMINDER Data'], ['dialed', 'DIALED Data'], ['test', 'TEST Data']
+        ['payment_reminder', 'PAYMENT REMINDER Data'], ['test', 'TEST Data']
     ];
     let bhagoRenderVersion = 0;
 
@@ -2766,7 +2766,12 @@
             <style>#bhagoSheetsWorkspace [hidden] { display: none !important; }</style>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem">
                 <h2 style="margin:0">Bhago Sakha</h2>
-                <button type="button" class="btn btn-primary" id="bhagoRunBtn" onclick="toast('The calling workflow is not configured yet.')">RUN</button>
+            </div>
+            <p id="bhagoWorkerStatus" role="status">Checking calling worker…</p>
+            <div id="bhagoRunStatus" role="status" style="white-space:pre-line;margin-bottom:1rem"></div>
+            <div id="bhagoRunActions" style="display:flex;gap:.75rem;margin-bottom:1rem" hidden>
+                <button class="btn btn-primary" id="bhagoLaunch" onclick="bhagoRunAction('launch')">Launch campaign</button>
+                <button class="btn btn-secondary" id="bhagoCancel" onclick="bhagoRunAction('cancel')">Cancel run</button>
             </div>
             ${bhagoSources.map(([key, label]) => `<section id="bhagoPanel_${key}" aria-labelledby="bhagoHeading_${key}" style="padding:1.25rem 0;border-top:1px solid var(--color-border)">
                 <h3 id="bhagoHeading_${key}" style="margin-top:0">${label}</h3>
@@ -2774,8 +2779,10 @@
                 <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center">
                     <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled style="flex:1;min-width:220px;width:auto;max-width:100%;box-sizing:border-box;padding:.7rem .85rem;border:1px solid var(--color-border-input);border-radius:8px;background:var(--color-bg-input);color:var(--color-text-primary);font:inherit" oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
                     <button type="button" id="bhagoSave_${key}" class="btn btn-primary" disabled onclick="saveBhagoSheet('${key}')">Save</button>
+                    ${key === 'test' ? `<button class="btn btn-secondary" id="bhagoRun_test_lead" onclick="startBhagoRun('test','lead')">Lead Calling Test</button><button class="btn btn-secondary" id="bhagoRun_test_payment" onclick="startBhagoRun('test','payment')">Payment Reminder Test</button>` : `<button class="btn btn-secondary" id="bhagoRun_${key}" onclick="startBhagoRun('${key}','${key === 'payment_reminder' ? 'payment' : 'lead'}')">RUN</button>`}
                     <a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet</a>
                 </div>
+                ${['swiggy','zomato','qwqer'].includes(key) ? `<div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin-top:.75rem"><label>Lead dates from <input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to <input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : ''}
                 <p role="status" id="bhagoStatus_${key}" style="font-size:.85rem;color:var(--color-text-secondary);margin-bottom:0">Loading saved link…</p>
             </section>`).join('')}
             <button type="button" id="bhagoRetryLoad" class="btn btn-secondary" hidden onclick="renderBhagoEmptyState()">Retry loading links</button>
@@ -2791,11 +2798,73 @@
                 $('bhagoStatus_' + key).textContent = url ? 'Saved' : 'No sheet saved yet';
                 setBhagoSheetLink(key, url);
             });
+            pollBhagoRun(accountId, version);
         } catch (e) {
             if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
             bhagoSources.forEach(([key]) => { $('bhagoStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
             $('bhagoRetryLoad').hidden = false;
         }
+    }
+
+    let bhagoCurrentRun = null;
+    let bhagoPollTimer = null;
+    function bhagoPreviousDay() {
+        return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()-86400000));
+    }
+    function showBhagoRun(data) {
+        const run = data.run;
+        bhagoCurrentRun = run;
+        $('bhagoWorkerStatus').textContent = data.worker_online ? 'Calling worker connected · 1 concurrent call · 4-second delay · retries off' : 'Calling worker offline · campaigns cannot launch';
+        const active = run && ['queued_preview','reading','ready','queued_launch','launching'].includes(run.state);
+        document.querySelectorAll('[id^="bhagoRun_"]').forEach(button => button.disabled = !!active);
+        const lines = run ? [(run.source === 'test' ? (run.calling_type === 'lead' ? 'Lead Calling Test' : 'Payment Reminder Test') : run.source.toUpperCase()), run.message || run.state] : [];
+        if (run && run.campaign_name) lines.push('Campaign: ' + run.campaign_name);
+        if (run && run.total !== undefined) lines.push('Recipients: ' + run.total);
+        if (run && run.counts) Object.entries(run.counts).forEach(([city,count]) => lines.push(city + ': ' + count));
+        if (run && run.duplicate_count) lines.push('Repeated phone numbers: ' + run.duplicate_count + ' (included as supplied)');
+        if (run && run.campaign_status) lines.push('Samvaad: ' + run.campaign_status);
+        $('bhagoRunStatus').textContent = lines.join('\n');
+        $('bhagoRunActions').hidden = !run || !['ready','queued_preview'].includes(run.state);
+        $('bhagoLaunch').hidden = !run || run.state !== 'ready';
+        $('bhagoCancel').hidden = !run || !['ready','queued_preview'].includes(run.state);
+    }
+    async function pollBhagoRun(accountId, version) {
+        clearTimeout(bhagoPollTimer);
+        try {
+            const data = await api('GET', `/bhago/${accountId}/run`);
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoWorkerStatus')) return;
+            showBhagoRun(data);
+        } catch (e) {
+            if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoWorkerStatus')) return;
+            $('bhagoWorkerStatus').textContent = 'Could not check calling worker: ' + e.message;
+        }
+        if (accountId === selectedAccountId && version === bhagoRenderVersion && $('bhagoWorkerStatus')) bhagoPollTimer = setTimeout(() => pollBhagoRun(accountId,version), 4000);
+    }
+    async function startBhagoRun(source, callingType) {
+        const accountId = selectedAccountId, version = bhagoRenderVersion;
+        if (!isBhagoMobility(allAccounts.find(a => a.id === accountId))) return;
+        if ($('bhagoStatus_' + source).textContent !== 'Saved') return toast('Save the sheet link before running.', true);
+        const body = {source, calling_type:callingType};
+        if (source !== 'test' && callingType === 'lead') {
+            body.start_date = $('bhagoFrom_' + source).value;
+            body.end_date = $('bhagoTo_' + source).value;
+            if (!body.start_date || !body.end_date || body.start_date > body.end_date) return toast('Choose a valid lead date range.', true);
+        }
+        document.querySelectorAll('[id^="bhagoRun_"]').forEach(button => button.disabled = true);
+        try { await api('POST', `/bhago/${accountId}/run`, body); }
+        catch (e) { toast(e.message, true); }
+        await pollBhagoRun(accountId,version);
+    }
+    async function bhagoRunAction(action) {
+        const accountId = selectedAccountId, version = bhagoRenderVersion;
+        if (!bhagoCurrentRun || !isBhagoMobility(allAccounts.find(a => a.id === accountId))) return;
+        $('bhagoLaunch').disabled = $('bhagoCancel').disabled = true;
+        try { await api('POST', `/bhago/${accountId}/run/${bhagoCurrentRun.id}/${action}`, {}); }
+        catch (e) { toast(e.message, true); }
+        finally {
+            if (accountId === selectedAccountId && version === bhagoRenderVersion && $('bhagoLaunch')) $('bhagoLaunch').disabled = $('bhagoCancel').disabled = false;
+        }
+        await pollBhagoRun(accountId,version);
     }
 
     function setBhagoSheetLink(source, url) {

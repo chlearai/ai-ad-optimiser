@@ -3,6 +3,8 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+import json
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, Column, Integer, String, Text
@@ -93,6 +95,46 @@ class SheetTests(unittest.TestCase):
             db.add(UserAccountAssignment(user_id=10, account_id=1))
             db.commit()
         self.assertEqual(self.client.put('/api/bhago/1/sheets/swiggy', json={'url': ''}).status_code, 200)
+
+    def ready_worker(self):
+        with self.Session() as db:
+            db.add(AppSetting(key='bhago:1:worker', value=json.dumps({'browser_ready': True, 'updated_at': datetime.now(timezone.utc).isoformat()})))
+            db.commit()
+        self.client.put('/api/bhago/1/sheets/test', json={'url':'https://docs.google.com/spreadsheets/d/current-test/edit'})
+
+    def test_offline_and_wrong_account_cannot_queue_calls(self):
+        body = {'source':'test','calling_type':'payment'}
+        self.assertEqual(self.client.post('/api/bhago/1/run', json=body).status_code, 409)
+        self.assertEqual(self.client.post('/api/bhago/2/run', json=body).status_code, 404)
+        self.assertEqual(self.client.post('/api/bhago/1/run', json={'source':'dialed','calling_type':'lead'}).status_code, 422)
+
+    def test_preview_must_be_ready_and_launch_is_idempotent(self):
+        self.ready_worker()
+        body = {'source':'test','calling_type':'payment'}
+        queued = self.client.post('/api/bhago/1/run', json=body)
+        self.assertEqual(queued.status_code, 200, queued.text)
+        run = queued.json()['run']
+        self.assertEqual(run['state'], 'queued_preview')
+        self.assertEqual(self.client.post('/api/bhago/1/run', json=body).status_code, 409)
+        endpoint = '/api/bhago/1/run/' + run['id'] + '/launch'
+        self.assertEqual(self.client.post(endpoint).status_code, 409)
+        with self.Session() as db:
+            row = db.query(AppSetting).filter_by(key='bhago:1:run:current').first()
+            run.update(state='ready',total=1,counts={})
+            row.value = json.dumps(run)
+            db.commit()
+        self.assertEqual(self.client.post(endpoint).json()['run']['state'], 'queued_launch')
+        self.assertEqual(self.client.post(endpoint).status_code, 409)
+        self.assertEqual(self.client.get('/api/bhago/2/run').status_code, 404)
+
+    def test_cancel_and_source_rules(self):
+        self.ready_worker()
+        self.assertEqual(self.client.post('/api/bhago/1/run',json={'source':'swiggy','calling_type':'payment'}).status_code,400)
+        self.assertEqual(self.client.post('/api/bhago/1/run',json={'source':'swiggy','calling_type':'lead'}).status_code,400)
+        run=self.client.post('/api/bhago/1/run',json={'source':'test','calling_type':'lead'}).json()['run']
+        response=self.client.post('/api/bhago/1/run/'+run['id']+'/cancel')
+        self.assertEqual(response.json()['run']['state'],'cancelled')
+        self.assertEqual(self.client.post('/api/bhago/1/run/'+run['id']+'/launch').status_code,409)
 
 
 if __name__ == '__main__':
