@@ -61,8 +61,8 @@ class SheetTests(unittest.TestCase):
         app.include_router(ns['router'])
         self.client = TestClient(app)
 
-    def test_six_links_persist_and_save_independently(self):
-        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test']
+    def test_links_persist_and_save_independently(self):
+        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment']
         self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'], dict.fromkeys(sources, ''))
         for source in sources:
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=0'
@@ -74,7 +74,7 @@ class SheetTests(unittest.TestCase):
         for source in sources[1:]:
             self.assertEqual(saved[source], reloaded[source])
         with self.Session() as db:
-            self.assertEqual(db.query(AppSetting).count(), 6)
+            self.assertEqual(db.query(AppSetting).count(), 8)
 
     def test_invalid_urls_and_sources_do_not_save(self):
         for url in ['javascript:alert(1)', 'https://docs.google.com.evil.test/spreadsheets/d/abc',
@@ -135,6 +135,22 @@ class SheetTests(unittest.TestCase):
         response=self.client.post('/api/bhago/1/run/'+run['id']+'/cancel')
         self.assertEqual(response.json()['run']['state'],'cancelled')
         self.assertEqual(self.client.post('/api/bhago/1/run/'+run['id']+'/launch').status_code,409)
+
+    def test_separate_test_links_and_fixed_calling_types(self):
+        self.ready_worker()
+        for source in ('test_lead','test_payment'):
+            url='https://docs.google.com/spreadsheets/d/'+source+'/edit'
+            self.assertEqual(self.client.put('/api/bhago/1/sheets/'+source,json={'url':url}).status_code,200)
+        saved=self.client.get('/api/bhago/1/sheets').json()['sheets']
+        self.assertNotEqual(saved['test_lead'],saved['test_payment'])
+        self.assertIn('current-test',saved['test'])
+        for source,correct,wrong in [('test_lead','lead','payment'),('test_payment','payment','lead')]:
+            self.assertEqual(self.client.post('/api/bhago/1/run',json={'source':source,'calling_type':wrong}).status_code,400)
+            response=self.client.post('/api/bhago/1/run',json={'source':source,'calling_type':correct})
+            self.assertEqual(response.status_code,200,response.text)
+            run=response.json()['run']
+            self.assertEqual(run['source'],source)
+            self.assertEqual(self.client.post('/api/bhago/1/run/'+run['id']+'/cancel').status_code,200)
 
 
 if __name__ == '__main__':

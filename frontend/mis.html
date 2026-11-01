@@ -131,7 +131,8 @@
         #bhagoSheetsWorkspace .bhago-source-icon.zomato { color:#c3304b; background:#fff0f3; }
         #bhagoSheetsWorkspace .bhago-source-icon.qwqer { color:#7050b4; background:#f3efff; }
         #bhagoSheetsWorkspace .bhago-source-icon.payment_reminder { color:#15724e; background:#e9f7ef; }
-        #bhagoSheetsWorkspace .bhago-source-icon.test { color:#2466af; background:#eaf3ff; }
+        #bhagoSheetsWorkspace .bhago-source-icon.test_lead { color:#2466af; background:#eaf3ff; }
+        #bhagoSheetsWorkspace .bhago-source-icon.test_payment { color:#15724e; background:#e9f7ef; }
         #bhagoSheetsWorkspace .bhago-source-header h3 { font-size:14px; font-weight:700; letter-spacing:.01em; margin:0; }
         #bhagoSheetsWorkspace .bhago-source-description { color:var(--color-text-secondary); font-size:12px; margin-top:2px; }
         #bhagoSheetsWorkspace .bhago-mode { color:var(--color-text-secondary); background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:600; white-space:nowrap; }
@@ -2831,14 +2832,15 @@
 
     const bhagoSources = [
         ['swiggy', 'SWIGGY Data'], ['zomato', 'ZOMATO Data'], ['qwqer', 'QWQER Data'],
-        ['payment_reminder', 'PAYMENT REMINDER Data'], ['test', 'TEST Data']
+        ['payment_reminder', 'PAYMENT REMINDER Data'], ['test_lead', 'Lead Calling Test'], ['test_payment', 'Payment Reminder Test']
     ];
     const bhagoSourceDetails = {
         swiggy: ['S', 'Delivery partner leads', 'Lead calling'],
         zomato: ['Z', 'Fleet partner leads', 'Lead calling'],
         qwqer: ['Q', 'Rider lead data', 'Lead calling'],
         payment_reminder: ['payment', 'Pending payment follow-ups', 'Payment calling'],
-        test: ['test', 'Validate your calling setup', 'Test workspace']
+        test_lead: ['phone', 'Test with name, mobile number and city', 'Lead test'],
+        test_payment: ['payment', 'Test with name, mobile number and vehicle number', 'Payment test']
     };
     function bhagoIcon(kind) {
         const paths = {
@@ -2873,7 +2875,7 @@
             <div class="bhago-section-label"><strong>Data sources</strong><span>Prepare, review, then launch your campaign</span></div>
             ${bhagoSources.map(([key, label]) => `<section class="bhago-source-card" id="bhagoPanel_${key}" aria-labelledby="bhagoHeading_${key}">
                 <div class="bhago-source-header">
-                    <div class="bhago-source-title"><span class="bhago-source-icon ${key}">${key === 'test' || key === 'payment_reminder' ? bhagoIcon(bhagoSourceDetails[key][0]) : bhagoSourceDetails[key][0]}</span><div><h3 id="bhagoHeading_${key}">${label}</h3><p class="bhago-source-description">${bhagoSourceDetails[key][1]}</p></div></div>
+                    <div class="bhago-source-title"><span class="bhago-source-icon ${key}">${key.startsWith('test_') || key === 'payment_reminder' ? bhagoIcon(bhagoSourceDetails[key][0]) : bhagoSourceDetails[key][0]}</span><div><h3 id="bhagoHeading_${key}">${label}</h3><p class="bhago-source-description">${bhagoSourceDetails[key][1]}</p></div></div>
                     <span class="bhago-mode">${bhagoSourceDetails[key][2]}</span>
                 </div>
                 <div class="bhago-source-body">
@@ -2885,8 +2887,8 @@
                     <div class="bhago-link-meta"><p class="bhago-sheet-status" role="status" id="bhagoStatus_${key}">Loading saved link…</p><a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
                 </div>
                 <div class="bhago-source-footer">
-                    ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : `<span class="bhago-footer-note">${key === 'test' ? 'Use the latest saved test sheet' : 'Name, mobile number &amp; vehicle number'}</span>`}
-                    ${key === 'test' ? `<div class="bhago-test-actions"><button type="button" class="btn bhago-run" id="bhagoRun_test_lead" onclick="startBhagoRun('test','lead')">${bhagoIcon('phone')}Lead Calling Test</button><button type="button" class="btn bhago-save" id="bhagoRun_test_payment" onclick="startBhagoRun('test','payment')">${bhagoIcon('payment')}Payment Reminder Test</button></div>` : `<button type="button" class="btn bhago-run" id="bhagoRun_${key}" aria-label="RUN" onclick="startBhagoRun('${key}','${key === 'payment_reminder' ? 'payment' : 'lead'}')">${bhagoIcon('play')}RUN</button>`}
+                    ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : `<span class="bhago-footer-note">${key.startsWith('test_') ? 'Read the latest data from this test sheet' : 'Name, mobile number &amp; vehicle number'}</span>`}
+                    <button type="button" class="btn bhago-run" id="bhagoRun_${key}" aria-label="RUN" onclick="startBhagoRun('${key}','${key === 'payment_reminder' || key === 'test_payment' ? 'payment' : 'lead'}')">${bhagoIcon('play')}RUN</button>
                 </div>
             </section>`).join('')}
             <button type="button" id="bhagoRetryLoad" class="btn btn-secondary" hidden onclick="renderBhagoEmptyState()">Retry loading links</button>
@@ -2923,7 +2925,7 @@
         $('bhagoActivity').hidden = !run;
         const active = run && ['queued_preview','reading','ready','queued_launch','launching'].includes(run.state);
         document.querySelectorAll('[id^="bhagoRun_"]').forEach(button => button.disabled = !!active);
-        const lines = run ? [(run.source === 'test' ? (run.calling_type === 'lead' ? 'Lead Calling Test' : 'Payment Reminder Test') : run.source.toUpperCase()), run.message || run.state] : [];
+        const lines = run ? [(['test','test_lead','test_payment'].includes(run.source) ? (run.calling_type === 'lead' ? 'Lead Calling Test' : 'Payment Reminder Test') : run.source.toUpperCase()), run.message || run.state] : [];
         if (run && run.campaign_name) lines.push('Campaign: ' + run.campaign_name);
         if (run && run.total !== undefined) lines.push('Recipients: ' + run.total);
         if (run && run.counts) Object.entries(run.counts).forEach(([city,count]) => lines.push(city + ': ' + count));
@@ -2952,7 +2954,7 @@
         if (!isBhagoMobility(allAccounts.find(a => a.id === accountId))) return;
         if ($('bhagoStatus_' + source).textContent !== 'Saved') return toast('Save the sheet link before running.', true);
         const body = {source, calling_type:callingType};
-        if (source !== 'test' && callingType === 'lead') {
+        if (!['test','test_lead','test_payment'].includes(source) && callingType === 'lead') {
             body.start_date = $('bhagoFrom_' + source).value;
             body.end_date = $('bhagoTo_' + source).value;
             if (!body.start_date || !body.end_date || body.start_date > body.end_date) return toast('Choose a valid lead date range.', true);

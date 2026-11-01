@@ -13,7 +13,8 @@ from backend.db.models import Account, AppSetting, UserAccountAssignment
 from backend.routes.auth import get_current_user_required
 
 router = APIRouter(prefix="/api/bhago", tags=["Bhago Mobility"])
-SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test")
+SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment")
+TEST_SOURCES = ("test", "test_lead", "test_payment")
 
 
 def access(account_id, db, user):
@@ -57,7 +58,7 @@ def get_sheets(account_id: int, db: Session = Depends(get_db), user=Depends(get_
 
 
 @router.put("/{account_id}/sheets/{source}")
-def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test"],
+def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment"],
                body: SheetLink, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
     url = validate_sheet_url(body.url)
@@ -73,12 +74,12 @@ def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "pa
     return {"source": source, "url": url, "saved": True}
 
 
-RUN_SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "test")
+RUN_SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "test", "test_lead", "test_payment")
 ACTIVE_STATES = ("queued_preview", "reading", "ready", "queued_launch", "launching")
 
 
 class RunRequest(BaseModel):
-    source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "test"]
+    source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "test", "test_lead", "test_payment"]
     calling_type: Literal["lead", "payment"]
     start_date: date | None = None
     end_date: date | None = None
@@ -111,9 +112,9 @@ def get_run(account_id: int, db: Session = Depends(get_db), user=Depends(get_cur
 @router.post("/{account_id}/run")
 def request_run(account_id: int, body: RunRequest, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
-    if body.source != "test" and body.calling_type != ("payment" if body.source == "payment_reminder" else "lead"):
+    if body.source != "test" and body.calling_type != ("payment" if body.source in ("payment_reminder", "test_payment") else "lead"):
         raise HTTPException(400, "Calling type does not match this source")
-    if body.calling_type == "lead" and body.source != "test":
+    if body.calling_type == "lead" and body.source not in TEST_SOURCES:
         if not body.start_date or not body.end_date or body.start_date > body.end_date:
             raise HTTPException(400, "Choose a valid lead date range")
     if not runner_online(db, account_id):
