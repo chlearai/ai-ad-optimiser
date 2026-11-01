@@ -98,6 +98,80 @@
             --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
             --overlay-bg: rgba(0,0,0,0.6);
         }
+        /* Bhago-only campaign workspace. */
+        #bhagoSheetsWorkspace { padding:0; border:0; background:transparent; box-shadow:none; font-family:'Inter',-apple-system,sans-serif; }
+        #bhagoSheetsWorkspace [hidden] { display:none !important; }
+        #bhagoSheetsWorkspace .bhago-hero { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:26px 28px; border:1px solid var(--color-border); border-radius:16px; background:var(--color-bg-input); }
+        #bhagoSheetsWorkspace .bhago-heading { display:flex; align-items:center; gap:16px; }
+        #bhagoSheetsWorkspace .bhago-mark { display:grid; place-items:center; width:52px; height:52px; flex-shrink:0; border-radius:15px; color:var(--color-accent); background:var(--color-accent-light); }
+        #bhagoSheetsWorkspace .bhago-mark svg { width:25px; height:25px; }
+        #bhagoSheetsWorkspace .bhago-eyebrow { color:var(--color-text-secondary); font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; margin-bottom:3px; }
+        #bhagoSheetsWorkspace h2 { font-size:25px; line-height:1.25; letter-spacing:-.6px; margin:0; }
+        #bhagoSheetsWorkspace .bhago-intro { font-size:13px; color:var(--color-text-secondary); margin-top:5px; }
+        #bhagoSheetsWorkspace .bhago-connection { display:flex; align-items:center; gap:8px; border:1px solid var(--color-border); border-radius:100px; padding:7px 12px; font-size:12px; font-weight:600; white-space:nowrap; color:var(--color-text-secondary); }
+        #bhagoSheetsWorkspace .bhago-connection::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--color-text-muted); }
+        #bhagoSheetsWorkspace .bhago-connection[data-connected="true"] { color:var(--color-success-text); background:var(--color-success-light); border-color:transparent; }
+        #bhagoSheetsWorkspace .bhago-connection[data-connected="true"]::before { background:var(--color-success); }
+        #bhagoSheetsWorkspace .bhago-settings { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:16px 0 24px; }
+        #bhagoSheetsWorkspace .bhago-settings span { padding:5px 10px; border:1px solid var(--color-border); border-radius:7px; color:var(--color-text-secondary); font-size:11px; background:var(--color-bg-input); }
+        #bhagoSheetsWorkspace .bhago-settings .bhago-settings-label { border:0; padding-left:0; background:transparent; font-weight:600; }
+        #bhagoSheetsWorkspace .bhago-activity { padding:18px 22px; margin-bottom:24px; border:1px solid var(--color-border); border-left:3px solid var(--color-accent); border-radius:12px; background:var(--color-bg-input); }
+        #bhagoSheetsWorkspace .bhago-activity h3 { font-size:12px; margin-bottom:7px; color:var(--color-text-secondary); }
+        #bhagoSheetsWorkspace #bhagoRunStatus { white-space:pre-line; overflow-wrap:anywhere; font-size:12px; line-height:1.8; }
+        #bhagoSheetsWorkspace #bhagoRunActions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+        #bhagoSheetsWorkspace .bhago-section-label { display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; color:var(--color-text-secondary); font-size:12px; }
+        #bhagoSheetsWorkspace .bhago-section-label strong { color:var(--color-text-primary); font-weight:600; }
+        #bhagoSheetsWorkspace .bhago-source-card { border:1px solid var(--color-border); border-radius:13px; margin-bottom:14px; background:var(--color-bg-input); overflow:hidden; }
+        #bhagoSheetsWorkspace .bhago-source-header { padding:20px 22px 16px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+        #bhagoSheetsWorkspace .bhago-source-title { display:flex; gap:12px; align-items:center; min-width:0; }
+        #bhagoSheetsWorkspace .bhago-source-icon { width:38px; height:38px; display:grid; place-items:center; flex-shrink:0; border-radius:10px; font-size:16px; font-weight:700; }
+        #bhagoSheetsWorkspace .bhago-source-icon svg { width:19px; height:19px; }
+        #bhagoSheetsWorkspace .bhago-source-icon.swiggy { color:#b54a12; background:#fff2e8; }
+        #bhagoSheetsWorkspace .bhago-source-icon.zomato { color:#c3304b; background:#fff0f3; }
+        #bhagoSheetsWorkspace .bhago-source-icon.qwqer { color:#7050b4; background:#f3efff; }
+        #bhagoSheetsWorkspace .bhago-source-icon.payment_reminder { color:#15724e; background:#e9f7ef; }
+        #bhagoSheetsWorkspace .bhago-source-icon.test { color:#2466af; background:#eaf3ff; }
+        #bhagoSheetsWorkspace .bhago-source-header h3 { font-size:14px; font-weight:700; letter-spacing:.01em; margin:0; }
+        #bhagoSheetsWorkspace .bhago-source-description { color:var(--color-text-secondary); font-size:12px; margin-top:2px; }
+        #bhagoSheetsWorkspace .bhago-mode { color:var(--color-text-secondary); background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:600; white-space:nowrap; }
+        #bhagoSheetsWorkspace .bhago-source-body { padding:0 22px 18px; }
+        #bhagoSheetsWorkspace .bhago-field-label { display:block; color:var(--color-text-secondary); font-size:11px; font-weight:600; margin-bottom:7px; }
+        #bhagoSheetsWorkspace .bhago-link-row { display:flex; align-items:center; gap:10px; }
+        #bhagoSheetsWorkspace input[type="url"] { flex:1; min-width:0; width:100%; height:42px; padding:10px 12px; border:1px solid var(--color-border-input); border-radius:8px; background:var(--color-bg-page); color:var(--color-text-primary); font:inherit; font-size:12px; }
+        #bhagoSheetsWorkspace .bhago-link-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:9px; min-height:20px; }
+        #bhagoSheetsWorkspace .bhago-sheet-status { color:var(--color-text-secondary); font-size:11px; overflow-wrap:anywhere; }
+        #bhagoSheetsWorkspace .bhago-link-meta a { color:var(--color-accent); text-decoration:none; font-size:11px; font-weight:600; flex-shrink:0; }
+        #bhagoSheetsWorkspace .bhago-link-meta a:hover { text-decoration:underline; }
+        #bhagoSheetsWorkspace .bhago-source-footer { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:14px 22px; border-top:1px solid var(--color-border); background:var(--color-bg-card); }
+        #bhagoSheetsWorkspace .bhago-range { display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px; }
+        #bhagoSheetsWorkspace .bhago-range label { display:flex; flex-direction:column; gap:5px; font-size:10px; font-weight:600; color:var(--color-text-secondary); }
+        #bhagoSheetsWorkspace .bhago-range input { height:36px; padding:6px 9px; min-width:133px; border:1px solid var(--color-border-input); border-radius:7px; color:var(--color-text-primary); background:var(--color-bg-input); font:inherit; font-size:12px; color-scheme:light; }
+        html.dark-mode #bhagoSheetsWorkspace input[type="date"] { color-scheme:dark; }
+        #bhagoSheetsWorkspace .bhago-footer-note { color:var(--color-text-secondary); font-size:11px; align-self:center; }
+        #bhagoSheetsWorkspace .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 15px; border-radius:8px; font-family:inherit; font-size:12px; font-weight:600; line-height:1.4; cursor:pointer; transition:background .15s,box-shadow .15s; white-space:nowrap; }
+        #bhagoSheetsWorkspace .btn svg { width:14px; height:14px; flex-shrink:0; }
+        #bhagoSheetsWorkspace .bhago-save { color:var(--color-text-primary); border:1px solid var(--color-border-strong); background:var(--color-bg-input); box-shadow:0 1px 2px rgba(0,0,0,.03); }
+        #bhagoSheetsWorkspace .bhago-save:hover { background:var(--color-bg-card-hover); }
+        #bhagoSheetsWorkspace .bhago-run { color:var(--color-text-on-accent); border:1px solid var(--color-accent); background:var(--color-accent); min-width:100px; box-shadow:0 2px 3px rgba(0,0,0,.07); }
+        #bhagoSheetsWorkspace .bhago-run:hover { background:var(--color-accent-hover); border-color:var(--color-accent-hover); }
+        #bhagoSheetsWorkspace .btn:focus-visible, #bhagoSheetsWorkspace input:focus-visible, #bhagoSheetsWorkspace a:focus-visible { outline:2px solid var(--color-accent); outline-offset:3px; }
+        #bhagoSheetsWorkspace .btn:disabled { opacity:.5; cursor:not-allowed; box-shadow:none; }
+        #bhagoSheetsWorkspace .bhago-test-actions { display:flex; flex-wrap:wrap; gap:10px; margin-left:auto; }
+        #bhagoSheetsWorkspace .bhago-test-actions .btn { min-width:165px; }
+        @media(max-width:700px) {
+            #bhagoSheetsWorkspace .bhago-hero { padding:20px; align-items:flex-start; flex-direction:column; gap:16px; }
+            #bhagoSheetsWorkspace h2 { font-size:23px; }
+            #bhagoSheetsWorkspace .bhago-source-header { padding:18px 16px 14px; align-items:flex-start; }
+            #bhagoSheetsWorkspace .bhago-source-body { padding:0 16px 16px; }
+            #bhagoSheetsWorkspace .bhago-source-footer { padding:14px 16px; flex-wrap:wrap; align-items:center; }
+            #bhagoSheetsWorkspace .bhago-range { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; }
+            #bhagoSheetsWorkspace .bhago-range input { min-width:0; width:100%; }
+            #bhagoSheetsWorkspace .bhago-source-footer > .bhago-run { width:100%; }
+            #bhagoSheetsWorkspace .bhago-test-actions { margin:0; width:100%; }
+            #bhagoSheetsWorkspace .bhago-test-actions .btn { flex:1; min-width:0; white-space:normal; }
+            #bhagoSheetsWorkspace .bhago-section-label span { display:none; }
+            #bhagoSheetsWorkspace .bhago-mode { font-size:9px; }
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', -apple-system, sans-serif; background: var(--color-bg-page); color: var(--color-text-primary); height: 100vh; overflow: hidden; display: flex; font-size: 14px; line-height: 1.6; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
         h1,h2,h3,h4,.font-outfit { font-family: 'DM Sans', -apple-system, sans-serif; }
@@ -2758,32 +2832,61 @@
         ['swiggy', 'SWIGGY Data'], ['zomato', 'ZOMATO Data'], ['qwqer', 'QWQER Data'],
         ['payment_reminder', 'PAYMENT REMINDER Data'], ['test', 'TEST Data']
     ];
+    const bhagoSourceDetails = {
+        swiggy: ['S', 'Delivery partner leads', 'Lead calling'],
+        zomato: ['Z', 'Fleet partner leads', 'Lead calling'],
+        qwqer: ['Q', 'Rider lead data', 'Lead calling'],
+        payment_reminder: ['payment', 'Pending payment follow-ups', 'Payment calling'],
+        test: ['test', 'Validate your calling setup', 'Test workspace']
+    };
+    function bhagoIcon(kind) {
+        const paths = {
+            phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z"/>',
+            play: '<path d="m9 5 11 7-11 7V5Z"/>',
+            payment: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18m-13 5h3"/>',
+            test: '<path d="M9 3h6m-5 0v7L4.8 19a1.3 1.3 0 0 0 1.1 2h12.2a1.3 1.3 0 0 0 1.1-2L14 10V3M8 15h8"/>'
+        };
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind] || paths.phone}</svg>`;
+    }
     let bhagoRenderVersion = 0;
 
     async function renderBhagoEmptyState() {
         const accountId = selectedAccountId, version = ++bhagoRenderVersion;
         $('reportContent').innerHTML = `<div class="card" id="bhagoSheetsWorkspace">
-            <style>#bhagoSheetsWorkspace [hidden] { display: none !important; }</style>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem">
-                <h2 style="margin:0">Bhago Sakha</h2>
-            </div>
-            <p id="bhagoWorkerStatus" role="status">Checking calling worker…</p>
-            <div id="bhagoRunStatus" role="status" style="white-space:pre-line;margin-bottom:1rem"></div>
-            <div id="bhagoRunActions" style="display:flex;gap:.75rem;margin-bottom:1rem" hidden>
-                <button class="btn btn-primary" id="bhagoLaunch" onclick="bhagoRunAction('launch')">Launch campaign</button>
-                <button class="btn btn-secondary" id="bhagoCancel" onclick="bhagoRunAction('cancel')">Cancel run</button>
-            </div>
-            ${bhagoSources.map(([key, label]) => `<section id="bhagoPanel_${key}" aria-labelledby="bhagoHeading_${key}" style="padding:1.25rem 0;border-top:1px solid var(--color-border)">
-                <h3 id="bhagoHeading_${key}" style="margin-top:0">${label}</h3>
-                <label for="bhagoUrl_${key}" style="display:block;margin-bottom:.5rem">Google Sheet link</label>
-                <div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center">
-                    <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled style="flex:1;min-width:220px;width:auto;max-width:100%;box-sizing:border-box;padding:.7rem .85rem;border:1px solid var(--color-border-input);border-radius:8px;background:var(--color-bg-input);color:var(--color-text-primary);font:inherit" oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
-                    <button type="button" id="bhagoSave_${key}" class="btn btn-primary" disabled onclick="saveBhagoSheet('${key}')">Save</button>
-                    ${key === 'test' ? `<button class="btn btn-secondary" id="bhagoRun_test_lead" onclick="startBhagoRun('test','lead')">Lead Calling Test</button><button class="btn btn-secondary" id="bhagoRun_test_payment" onclick="startBhagoRun('test','payment')">Payment Reminder Test</button>` : `<button class="btn btn-secondary" id="bhagoRun_${key}" onclick="startBhagoRun('${key}','${key === 'payment_reminder' ? 'payment' : 'lead'}')">RUN</button>`}
-                    <a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet</a>
+            <div class="bhago-hero">
+                <div class="bhago-heading">
+                    <div class="bhago-mark">${bhagoIcon('phone')}</div>
+                    <div><div class="bhago-eyebrow">Bhago Mobility</div><h2>Bhago Sakha</h2><p class="bhago-intro">Your calling campaign workspace</p></div>
                 </div>
-                ${['swiggy','zomato','qwqer'].includes(key) ? `<div style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin-top:.75rem"><label>Lead dates from <input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to <input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : ''}
-                <p role="status" id="bhagoStatus_${key}" style="font-size:.85rem;color:var(--color-text-secondary);margin-bottom:0">Loading saved link…</p>
+                <p id="bhagoWorkerStatus" class="bhago-connection" role="status">Checking calling worker…</p>
+            </div>
+            <div class="bhago-settings"><span class="bhago-settings-label">Calling settings</span><span>1 concurrent call</span><span>4-second delay</span><span>Retries off</span></div>
+            <div class="bhago-activity" id="bhagoActivity" hidden>
+                <h3>Latest activity</h3>
+                <div id="bhagoRunStatus" role="status"></div>
+                <div id="bhagoRunActions" hidden>
+                    <button type="button" class="btn bhago-run" id="bhagoLaunch" onclick="bhagoRunAction('launch')">${bhagoIcon('play')}Launch campaign</button>
+                    <button type="button" class="btn bhago-save" id="bhagoCancel" onclick="bhagoRunAction('cancel')">Cancel run</button>
+                </div>
+            </div>
+            <div class="bhago-section-label"><strong>Data sources</strong><span>Prepare, review, then launch your campaign</span></div>
+            ${bhagoSources.map(([key, label]) => `<section class="bhago-source-card" id="bhagoPanel_${key}" aria-labelledby="bhagoHeading_${key}">
+                <div class="bhago-source-header">
+                    <div class="bhago-source-title"><span class="bhago-source-icon ${key}">${key === 'test' || key === 'payment_reminder' ? bhagoIcon(bhagoSourceDetails[key][0]) : bhagoSourceDetails[key][0]}</span><div><h3 id="bhagoHeading_${key}">${label}</h3><p class="bhago-source-description">${bhagoSourceDetails[key][1]}</p></div></div>
+                    <span class="bhago-mode">${bhagoSourceDetails[key][2]}</span>
+                </div>
+                <div class="bhago-source-body">
+                    <label class="bhago-field-label" for="bhagoUrl_${key}">Google Sheet link</label>
+                    <div class="bhago-link-row">
+                        <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
+                        <button type="button" id="bhagoSave_${key}" class="btn bhago-save" disabled onclick="saveBhagoSheet('${key}')">Save</button>
+                    </div>
+                    <div class="bhago-link-meta"><p class="bhago-sheet-status" role="status" id="bhagoStatus_${key}">Loading saved link…</p><a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
+                </div>
+                <div class="bhago-source-footer">
+                    ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : `<span class="bhago-footer-note">${key === 'test' ? 'Use the latest saved test sheet' : 'Name, mobile number &amp; vehicle number'}</span>`}
+                    ${key === 'test' ? `<div class="bhago-test-actions"><button type="button" class="btn bhago-run" id="bhagoRun_test_lead" onclick="startBhagoRun('test','lead')">${bhagoIcon('phone')}Lead Calling Test</button><button type="button" class="btn bhago-save" id="bhagoRun_test_payment" onclick="startBhagoRun('test','payment')">${bhagoIcon('payment')}Payment Reminder Test</button></div>` : `<button type="button" class="btn bhago-run" id="bhagoRun_${key}" aria-label="RUN" onclick="startBhagoRun('${key}','${key === 'payment_reminder' ? 'payment' : 'lead'}')">${bhagoIcon('play')}RUN</button>`}
+                </div>
             </section>`).join('')}
             <button type="button" id="bhagoRetryLoad" class="btn btn-secondary" hidden onclick="renderBhagoEmptyState()">Retry loading links</button>
         </div>`;
@@ -2814,7 +2917,9 @@
     function showBhagoRun(data) {
         const run = data.run;
         bhagoCurrentRun = run;
-        $('bhagoWorkerStatus').textContent = data.worker_online ? 'Calling worker connected · 1 concurrent call · 4-second delay · retries off' : 'Calling worker offline · campaigns cannot launch';
+        $('bhagoWorkerStatus').textContent = data.worker_online ? 'Calling worker connected' : 'Calling worker offline';
+        $('bhagoWorkerStatus').dataset.connected = String(!!data.worker_online);
+        $('bhagoActivity').hidden = !run;
         const active = run && ['queued_preview','reading','ready','queued_launch','launching'].includes(run.state);
         document.querySelectorAll('[id^="bhagoRun_"]').forEach(button => button.disabled = !!active);
         const lines = run ? [(run.source === 'test' ? (run.calling_type === 'lead' ? 'Lead Calling Test' : 'Payment Reminder Test') : run.source.toUpperCase()), run.message || run.state] : [];
@@ -2837,6 +2942,7 @@
         } catch (e) {
             if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoWorkerStatus')) return;
             $('bhagoWorkerStatus').textContent = 'Could not check calling worker: ' + e.message;
+            $('bhagoWorkerStatus').dataset.connected = 'false';
         }
         if (accountId === selectedAccountId && version === bhagoRenderVersion && $('bhagoWorkerStatus')) bhagoPollTimer = setTimeout(() => pollBhagoRun(accountId,version), 4000);
     }
