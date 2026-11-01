@@ -83,6 +83,7 @@ class RunRequest(BaseModel):
     calling_type: Literal["lead", "payment"]
     start_date: date | None = None
     end_date: date | None = None
+    auto_launch: bool = False
 
 
 def run_key(account_id):
@@ -130,6 +131,7 @@ def request_run(account_id: int, body: RunRequest, db: Session = Depends(get_db)
     run = {"id": uuid4().hex, "source": body.source, "calling_type": body.calling_type,
            "start_date": body.start_date.isoformat() if body.start_date else None,
            "end_date": body.end_date.isoformat() if body.end_date else None,
+           "auto_launch": body.auto_launch,
            "state": "queued_preview", "requested_by": user.id,
            "created_at": datetime.now(timezone.utc).isoformat(),
            "message": "Reading the latest saved sheet. No calls started."}

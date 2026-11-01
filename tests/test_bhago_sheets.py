@@ -152,6 +152,13 @@ class SheetTests(unittest.TestCase):
             self.assertEqual(run['source'],source)
             self.assertEqual(self.client.post('/api/bhago/1/run/'+run['id']+'/cancel').status_code,200)
 
+    def test_single_click_intent_is_recorded_once(self):
+        self.ready_worker()
+        response=self.client.post('/api/bhago/1/run',json={'source':'test','calling_type':'payment','auto_launch':True})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertIs(response.json()['run']['auto_launch'],True)
+        self.assertEqual(self.client.post('/api/bhago/1/run',json={'source':'test','calling_type':'payment','auto_launch':True}).status_code,409)
+
 
 if __name__ == '__main__':
     unittest.main()

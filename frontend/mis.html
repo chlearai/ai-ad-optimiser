@@ -2872,7 +2872,7 @@
                     <button type="button" class="btn bhago-save" id="bhagoCancel" onclick="bhagoRunAction('cancel')">Cancel run</button>
                 </div>
             </div>
-            <div class="bhago-section-label"><strong>Data sources</strong><span>Prepare, review, then launch your campaign</span></div>
+            <div class="bhago-section-label"><strong>Data sources</strong><span>RUN creates your campaign and starts calling</span></div>
             ${bhagoSources.map(([key, label]) => `<section class="bhago-source-card" id="bhagoPanel_${key}" aria-labelledby="bhagoHeading_${key}">
                 <div class="bhago-source-header">
                     <div class="bhago-source-title"><span class="bhago-source-icon ${key}">${key.startsWith('test_') || key === 'payment_reminder' ? bhagoIcon(bhagoSourceDetails[key][0]) : bhagoSourceDetails[key][0]}</span><div><h3 id="bhagoHeading_${key}">${label}</h3><p class="bhago-source-description">${bhagoSourceDetails[key][1]}</p></div></div>
@@ -2953,7 +2953,7 @@
         const accountId = selectedAccountId, version = bhagoRenderVersion;
         if (!isBhagoMobility(allAccounts.find(a => a.id === accountId))) return;
         if ($('bhagoStatus_' + source).textContent !== 'Saved') return toast('Save the sheet link before running.', true);
-        const body = {source, calling_type:callingType};
+        const body = {source, calling_type:callingType, auto_launch:true};
         if (!['test','test_lead','test_payment'].includes(source) && callingType === 'lead') {
             body.start_date = $('bhagoFrom_' + source).value;
             body.end_date = $('bhagoTo_' + source).value;
