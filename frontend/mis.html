@@ -2839,8 +2839,8 @@
         zomato: ['Z', 'Fleet partner leads', 'Lead calling'],
         qwqer: ['Q', 'Rider lead data', 'Lead calling'],
         payment_reminder: ['payment', 'Pending payment follow-ups', 'Payment calling'],
-        test_lead: ['phone', 'Test with name, mobile number and city', 'Lead test'],
-        test_payment: ['payment', 'Test with name, mobile number and vehicle number', 'Payment test']
+        test_lead: ['phone', 'Test with rider name and mobile number', 'Lead test'],
+        test_payment: ['payment', 'Test with rider, mobile, vehicle and outstanding amount', 'Payment test']
     };
     function bhagoIcon(kind) {
         const paths = {
@@ -2887,7 +2887,7 @@
                     <div class="bhago-link-meta"><p class="bhago-sheet-status" role="status" id="bhagoStatus_${key}">Loading saved link…</p><a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
                 </div>
                 <div class="bhago-source-footer">
-                    ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}"></label></div>` : `<span class="bhago-footer-note">${key.startsWith('test_') ? 'Read the latest data from this test sheet' : 'Name, mobile number &amp; vehicle number'}</span>`}
+                    ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}" oninput="this.dataset.userEdited='true'"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}" oninput="this.dataset.userEdited='true'"></label></div>` : `<span class="bhago-footer-note">${key.startsWith('test_') ? 'Read the latest data from this test sheet' : 'Name, mobile number, vehicle &amp; outstanding amount'}</span>`}
                     <button type="button" class="btn bhago-run" id="bhagoRun_${key}" aria-label="RUN" onclick="startBhagoRun('${key}','${key === 'payment_reminder' || key === 'test_payment' ? 'payment' : 'lead'}')">${bhagoIcon('play')}RUN</button>
                 </div>
             </section>`).join('')}
@@ -2955,6 +2955,10 @@
         if ($('bhagoStatus_' + source).textContent !== 'Saved') return toast('Save the sheet link before running.', true);
         const body = {source, calling_type:callingType, auto_launch:true};
         if (!['test','test_lead','test_payment'].includes(source) && callingType === 'lead') {
+            for (const field of ['bhagoFrom_','bhagoTo_']) {
+                const input = $(field + source);
+                if (!input.dataset.userEdited) input.value = bhagoPreviousDay();
+            }
             body.start_date = $('bhagoFrom_' + source).value;
             body.end_date = $('bhagoTo_' + source).value;
             if (!body.start_date || !body.end_date || body.start_date > body.end_date) return toast('Choose a valid lead date range.', true);
