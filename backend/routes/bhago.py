@@ -103,6 +103,14 @@ def runner_online(db, account_id):
         return False
 
 
+def require_calling_worker(db, account_id):
+    if not runner_online(db, account_id):
+        raise HTTPException(409, "Bhago calling worker is unavailable. Check the Bhago cloud worker in Railway.")
+    heartbeat = read_json(db.query(AppSetting).filter_by(key=f"bhago:{account_id}:worker").first()) or {}
+    if heartbeat.get("calling_enabled") is False:
+        raise HTTPException(409, "Bhago cloud worker is connected and in standby. Calling awaits go-live approval.")
+
+
 @router.get("/{account_id}/run")
 def get_run(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
@@ -118,8 +126,7 @@ def request_run(account_id: int, body: RunRequest, db: Session = Depends(get_db)
     if body.calling_type == "lead" and body.source not in TEST_SOURCES:
         if not body.start_date or not body.end_date or body.start_date > body.end_date:
             raise HTTPException(400, "Choose a valid lead date range")
-    if not runner_online(db, account_id):
-        raise HTTPException(409, "Bhago calling worker is offline. Open the dedicated Bhago browser worker on Shekhar's computer.")
+    require_calling_worker(db, account_id)
     db.query(Account).filter_by(id=account_id).with_for_update().first()
     row = db.query(AppSetting).filter_by(key=run_key(account_id)).first()
     previous = read_json(row)
@@ -155,8 +162,7 @@ def run_action(account_id: int, request_id: str, action: Literal["launch", "canc
     if action == "launch":
         if run.get("state") != "ready":
             raise HTTPException(409, "Only a validated preview can be launched")
-        if not runner_online(db, account_id):
-            raise HTTPException(409, "Calling worker is offline")
+        require_calling_worker(db, account_id)
         run.update(state="queued_launch", launched_by=user.id,
                    message="Campaign launch requested. Do not submit again.")
     else:

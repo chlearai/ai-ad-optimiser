@@ -96,6 +96,20 @@ class SheetTests(unittest.TestCase):
             db.commit()
         self.assertEqual(self.client.put('/api/bhago/1/sheets/swiggy', json={'url': ''}).status_code, 200)
 
+    def test_standby_worker_rejects_run_without_queuing(self):
+        self.ready_worker()
+        with self.Session() as db:
+            row = db.query(AppSetting).filter_by(key='bhago:1:worker').first()
+            value = json.loads(row.value)
+            value['calling_enabled'] = False
+            row.value = json.dumps(value)
+            db.commit()
+        response = self.client.post('/api/bhago/1/run', json={'source':'test_payment','calling_type':'payment','auto_launch':True})
+        self.assertEqual(response.status_code, 409)
+        self.assertIn('go-live approval', response.json()['detail'])
+        with self.Session() as db:
+            self.assertIsNone(db.query(AppSetting).filter_by(key='bhago:1:run:current').first())
+
     def ready_worker(self):
         with self.Session() as db:
             db.add(AppSetting(key='bhago:1:worker', value=json.dumps({'browser_ready': True, 'updated_at': datetime.now(timezone.utc).isoformat()})))
