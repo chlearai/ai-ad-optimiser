@@ -1,6 +1,12 @@
 'use strict';
-exports.configure=async function(page){
+exports.configure=async function(page,totalAttempts=2){
+  if(![1,2].includes(totalAttempts))throw new Error('Invalid remaining attempt budget');
   const toggle=page.locator('#retry-toggle');
+  if(totalAttempts===1){
+    if(!(await toggle.locator('span').getAttribute('class')).includes('translate-x-[2px]'))await toggle.click();
+    if(!(await toggle.locator('span').getAttribute('class')).includes('translate-x-[2px]'))throw new Error('Carried Attempt 2 must have retries off');
+    return;
+  }
   if(!(await toggle.locator('span').getAttribute('class')).includes('translate-x-[22px]')) {
     // The observed switch uses translate-x-[2px] when off.
     if((await toggle.locator('span').getAttribute('class')).includes('translate-x-[2px]')) await toggle.click();

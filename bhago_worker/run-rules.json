@@ -14,7 +14,10 @@
     "startDate": "2026-11-13",
     "priority": "Yesterday first; then oldest unprocessed backlog in controlled batches",
     "batchSize": 10,
-    "newBatchCutoff": "17:00 IST; remaining time reserved for retries and completion"
+    "newBatchCutoff": "18:00 IST",
+    "endOfDay": "Permanently stop the unfinished campaign at 18:00 IST. Never resume or re-run it.",
+    "nextDay": "Create new campaigns: yesterday first, then older pending rows after a fresh source read and final outcome reconciliation.",
+    "pendingAttempts": "Retain prior call IDs and Attempt 1/2. Undialed rows get two total attempts; rows with one prior unconnected attempt get only Attempt 2, with retries off."
   },
   "callingWindow": {
     "timeZone": "Asia/Calcutta",

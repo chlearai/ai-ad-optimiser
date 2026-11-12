@@ -17,6 +17,20 @@ EXTRA = {'lead':['Interest Level','Qualified For Followup'],
          'payment':['Payment Commitment','Promised Payment Date','Promised Amount']}
 EMPTY = {'', '-', 'null', 'none', 'unknown'}
 TERMINAL = {'ended','completed','failed','busy','no-answer','no_answer','unanswered','cancelled','canceled','not_connected','not connected'}
+CALL_FIELDS = {'Session ID','Campaign Name','Time','Status','Duration','Outcome','Call Summary',
+               'Callback Time','Recording URL','Interest Level','qualified_for_followup',
+               'call_disposition','payment_commitment_status','promised_payment_date','promised_amount'}
+
+
+def merge_calls(prior, current):
+    """Retain only approved outcome fields; Session IDs deduplicate across campaigns/days."""
+    found={r['Session ID']:{k:v for k,v in r.items() if k in CALL_FIELDS} for r in prior+current}
+    return sorted(found.values(),key=lambda r:(r['Time'],r['Session ID']))
+
+
+def calls_complete(calls, kind):
+    return len(calls)>=2 or any(c.get('Status','').casefold() in ('ended','completed') and
+        result_values(c,kind)['Duration (seconds)'] not in (0,'') for c in calls)
 
 
 def clean(value):
@@ -211,8 +225,9 @@ def mark_submitted(job, state='submitted'):
         ref=r.get('source_ref') or {}
         if not ref.get('row_id'):
             continue
+        carried=merge_calls(r.get('prior_calls',[]),[])
         save_state(state_key(ref['row_id']),{'signature':signature(r),'state':state,'run_id':job['runId'],
-                    'campaign':job['campaignName'],'source':ref['source'],'attempts':[]})
+                    'campaign':job['campaignName'],'source':ref['source'],'attempts':[c['Session ID'] for c in carried],'calls':carried})
 
 
 def pending_manifests():
@@ -235,6 +250,8 @@ def write_attempts(writer, recipient, kind, calls):
     number=matches[0]
     current=writer.values(ref['spreadsheet_id'],[a1(title,f'A{number}:{get_column_letter(width)}{number}'),a1(title,f'A1:{get_column_letter(width)}1')])
     row=current[0][0] if current[0] else [];headers=current[1][0]
+    if any(col>=len(headers) or headers[col]!=label for label,col in mapping.items() if label in columns(kind)):
+        raise ValueError('Result columns moved during sync; updates held for a fresh source read.')
     indices=field_indices(headers,{'source':ref['source'],'calling_type':kind})
     if not identity_matches(row,recipient,indices):
         raise ValueError('Phone or name changed on the matched row; results held for review.')
@@ -285,18 +302,23 @@ def reconcile_export(text):
     result={'synced_rows':0,'held_rows':0}
     with google_session(write=True) as session:
         writer=SheetsWriter(session)
-        for key,job in pending_manifests():
+        manifests=pending_manifests()
+        keys=[state_key(r['source_ref']['row_id']) for _,job in manifests for r in job['recipients'] if (r.get('source_ref') or {}).get('row_id')]
+        keys+=['bhago:18:inflight:lead','bhago:18:inflight:payment']
+        states=load_states(keys)
+        for key,job in manifests:
             for recipient in job['recipients']:
                 row_id=(recipient.get('source_ref') or {}).get('row_id')
                 if not row_id:
                     continue
-                previous=load_state(state_key(row_id)) or {}
+                previous=states.get(state_key(row_id)) or {}
                 if previous.get('run_id') and previous['run_id']!=job['runId']:
                     continue
                 relevant=grouped.get((job['campaignName'],recipient['phone']),[])
                 if not relevant:
                     continue
-                fingerprint=hashlib.sha256(json.dumps(sorted(relevant,key=lambda c:c['Session ID']),sort_keys=True).encode()).hexdigest()
+                relevant=merge_calls(recipient.get('prior_calls',[]),relevant)
+                fingerprint=hashlib.sha256(json.dumps(relevant,sort_keys=True).encode()).hexdigest()
                 if previous.get('result_fingerprint')==fingerprint:
                     continue
                 peers=[r for r in job['recipients'] if r['phone']==recipient['phone']]
@@ -305,13 +327,15 @@ def reconcile_export(text):
                     result['held_rows']+=1;continue
                 try:
                     ids=write_attempts(writer,recipient,job['type'],relevant)
-                    save_state(state_key(recipient['source_ref']['row_id']),{'signature':signature(recipient),
-                        'state':'complete' if any(c.get('Status','').casefold() in ('ended','completed') and result_values(c,job['type'])['Duration (seconds)'] not in (0,'') for c in relevant) or len(ids)==2 else 'awaiting_second_attempt',
-                        'run_id':job['runId'],'source':recipient['source_ref']['source'],'attempts':ids,'campaign':job['campaignName'],'result_fingerprint':fingerprint})
+                    updated={'signature':signature(recipient),
+                        'state':'complete' if calls_complete(relevant,job['type']) else 'pending' if previous.get('closed_campaign') else 'awaiting_second_attempt',
+                        'closed_campaign':previous.get('closed_campaign',False),'calls':relevant,
+                        'run_id':job['runId'],'source':recipient['source_ref']['source'],'attempts':ids,'campaign':job['campaignName'],'result_fingerprint':fingerprint}
+                    save_state(state_key(row_id),updated);states[state_key(row_id)]=updated
                     result['synced_rows']+=1
                 except ValueError:
                     result['held_rows']+=1
-            inflight=load_state('bhago:18:inflight:'+job['type']) or {}
-            if inflight.get('run_id')==job['runId'] and all((load_state(state_key(r['source_ref']['row_id'])) or {}).get('state')=='complete' for r in job['recipients']):
+            inflight=states.get('bhago:18:inflight:'+job['type']) or {}
+            if inflight.get('run_id')==job['runId'] and all((states.get(state_key(r['source_ref']['row_id'])) or {}).get('state')=='complete' for r in job['recipients']):
                 save_state('bhago:18:inflight:'+job['type'],dict(inflight,state='complete'))
     return result

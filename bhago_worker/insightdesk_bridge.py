@@ -495,6 +495,11 @@ def preview(run):
         name += ("_TEST" if run["source"] in TEST_SOURCES else "") + "_" + run["id"][:8]
         job = {"runId": run["id"], "source": run["source"], "type": run["calling_type"], "test": run["source"] in TEST_SOURCES,
                "campaignName": name, "recipients": rows, "sourceSnapshot": snapshot}
+        job['totalAttempts']=2
+        if run.get('requested_by')=='daily_backlog':
+            budgets={2-len(row.get('prior_calls',[])) for row in rows}
+            if len(budgets)!=1 or not budgets.issubset({1,2}):raise ValueError('Pending attempt budgets need separate campaigns.')
+            job['totalAttempts']=budgets.pop()
         if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
             register_manifest(job)
         atomic_json(JOBS / (run["id"] + ".json"), job)

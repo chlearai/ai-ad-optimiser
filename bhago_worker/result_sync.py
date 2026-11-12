@@ -22,7 +22,7 @@ def tick():
         if result.get('state')=='downloaded':
             try:
                 report=reconcile_export(Path(result['csvPath']).read_text(encoding='utf-8-sig'))
-                status={'state':'ready','updated_at':now(),**report}
+                status={'state':'ready','updated_at':now(),'exported_at':result.get('completedAt'),**report}
             except Exception as error:
                 status={'state':'needs_attention','updated_at':now(),'error_type':type(error).__name__,
                         'message':str(error)[:500] if isinstance(error,ValueError) else 'Result sync could not finish; no calling retry was made.'}

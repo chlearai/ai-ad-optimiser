@@ -22,7 +22,12 @@ def eligible(recipients, today, states):
                 continue
             if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt'):
                 continue
-        result.append(recipient)
+        row=dict(recipient)
+        if prior and prior.get('calls'):
+            from outcomes import merge_calls
+            row['prior_calls']=merge_calls(prior.get('calls',[]),[])
+            if len(row['prior_calls'])>=2:continue
+        result.append(row)
     return sorted(result,key=lambda r:(r['sourceDate']!=yesterday.isoformat(),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
 
 
@@ -53,7 +58,11 @@ def plan(kind, today):
     if fresh:queue=fresh
     # One occurrence of a phone per campaign makes exported calls unambiguous across sources.
     selected=[];phones=set()
+    budget=None
     for row in queue:
+        remaining=2-len(row.get('prior_calls',[]))
+        if budget is not None and budget!=remaining:break
+        budget=remaining
         if row['phone'] in phones:continue
         selected.append(row);phones.add(row['phone'])
         if len(selected)==10:break
@@ -65,7 +74,7 @@ def tick(moment=None):
     import os
     if os.environ.get('BHAGO_RUNTIME')!='cloud' or os.environ.get('BHAGO_SCHEDULE_ENABLED')!='true' or not calling_enabled():return
     moment=moment or dt.datetime.now(IST)
-    # A short final batch is not started near the cutoff; Samvaad still enforces 10:00–18:00.
+    # Samvaad enforces 10:00–18:00; closing the campaign prevents next-day resumption.
     config=json.loads(get_value('bhago:18:schedule') or '{}')
     if not config.get('enabled'):return
     if config.get('start_date') and moment.date().isoformat()<config['start_date']:return
@@ -73,32 +82,28 @@ def tick(moment=None):
         control(None,None,None);return
     current=json.loads(get_value(KEY) or '{}')
     if current.get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
-    if current.get('requested_by')=='daily_backlog' and current.get('state') in ('uncertain','failed'):return
+    if current.get('requested_by')=='daily_backlog':
+        if current.get('state')=='uncertain':return
+        if current.get('state')=='failed' and dt.datetime.fromisoformat(current['created_at']).astimezone(IST).date()==moment.date():return
     for kind in ('lead','payment'):
         inflight=load_state('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
-        if inflight and inflight.get('state')=='submitted':
-            if (moment.hour==17 and moment.minute>=55) or moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat():
-                control(kind,inflight,'pause');return
+        if inflight and inflight.get('state') in ('submitted','paused'):
+            if moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat():
+                control(kind,inflight,'stop');return
             continue
-        if not 10<=moment.hour<17:continue
+        from rollover import settle
+        if not settle(kind,moment):continue
+        if not 10<=moment.hour<18:continue
         rows,skipped=plan(kind,moment.date())
-        paused=load_state('bhago:18:paused:'+kind) or []
-        for old in list(paused):
-            job=load_state('bhago:18:manifest:'+old['run_id'])
-            if job and all((load_state(state_key(r['source_ref']['row_id'])) or {}).get('state')=='complete' for r in job['recipients']):
-                paused.remove(old)
-        save_state('bhago:18:paused:'+kind,paused)
-        yesterday=(moment.date()-dt.timedelta(days=1)).isoformat()
-        if paused and not any(r['sourceDate']==yesterday for r in rows):
-            control(kind,paused[0],'resume');return
         if not rows:continue
         run_id=uuid.uuid4().hex
         run={'id':run_id,'source':'lead_batch' if kind=='lead' else 'payment_reminder','calling_type':kind,
              'start_date':min(r['sourceDate'] for r in rows),'end_date':max(r['sourceDate'] for r in rows),
              'lead_sources':sorted({r['source_ref']['source'] for r in rows}) if kind=='lead' else [],'auto_launch':True,'_skip_invalid':True,
-             '_planned_recipients':rows,'_skipped_sources':skipped,'state':'queued_preview',
+             '_plan_key':'bhago:18:plan:'+run_id,'_skipped_sources':skipped,'state':'queued_preview',
              'requested_by':'daily_backlog','created_at':now(),'message':'Yesterday first, then oldest unprocessed backlog.'}
+        save_state(run['_plan_key'],rows)
         with connect() as db,db.cursor() as cur:
             cur.execute('SELECT value FROM app_settings WHERE key=%s FOR UPDATE',(KEY,));old=cur.fetchone()
             if old and json.loads(old[0]).get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
@@ -107,7 +112,8 @@ def tick(moment=None):
 
 
 def select_planned(run, live_rows):
-    planned=run.get('_planned_recipients')
+    planned=load_state(run['_plan_key']) if run.get('_plan_key') else run.get('_planned_recipients')
+    if run.get('_plan_key') and planned is None:raise ValueError('Encrypted calling plan is unavailable; no campaign was started.')
     if planned is None:return live_rows
     by_ref={(r['source_ref']['spreadsheet_id'],r['source_ref']['sheet_id'],r['source_ref']['row']):r for r in live_rows}
     result=[]
@@ -115,7 +121,9 @@ def select_planned(run, live_rows):
         ref=old['source_ref'];key=(ref['spreadsheet_id'],ref['sheet_id'],ref['row'])
         live=by_ref.get(key)
         if not live or signature(live)!=signature(old):raise ValueError('Planned backlog row changed; no campaign was started.')
-        live['source_ref']['row_id']=ref['row_id'];result.append(live)
+        live['source_ref']['row_id']=ref['row_id']
+        if 'prior_calls' in old:live['prior_calls']=old['prior_calls']
+        result.append(live)
     return result
 
 
@@ -133,17 +141,15 @@ def control(kind, campaign, action):
                 save_state('bhago:18:backlog_attention',{'state':'needs_attention','reason':'Campaign ordering control timed out; automatic dialing held.'})
             return None
         result=json.loads(file.read_text());file.unlink();task=_control;_control=None
-        if result['state'] not in ('paused','submitted','complete'):
+        if result['state'] not in ('stopped','complete'):
             save_state('bhago:18:backlog_attention',result);return None
-        inflight=dict(task['campaign'],state=result['state'])
-        if result['state']=='submitted':
-            from insightdesk_bridge import IST
-            inflight['day']=dt.datetime.now(IST).date().isoformat()
+        from insightdesk_bridge import now
+        inflight=dict(task['campaign'],state='stopped',stopped_at=now())
         save_state('bhago:18:inflight:'+task['kind'],inflight)
-        paused=load_state('bhago:18:paused:'+task['kind']) or []
-        paused=[p for p in paused if p['run_id']!=inflight['run_id']]
-        if result['state']=='paused':paused.append(inflight)
-        save_state('bhago:18:paused:'+task['kind'],paused)
+        stopped=load_state('bhago:18:stopped:'+task['kind']) or []
+        stopped=[p for p in stopped if p['run_id']!=inflight['run_id']]
+        stopped.append(inflight)
+        save_state('bhago:18:stopped:'+task['kind'],stopped)
         return inflight
     ident=uuid.uuid4().hex
     atomic_json(JOBS/(ident+'.control.json'),{'campaign':campaign['campaign'],'action':action})

@@ -102,7 +102,7 @@ exports.run=async function(ctx,request) {
       }
       if((await down.locator('..').locator('span').innerText()).trim()!==target+suffix) throw new Error(label+' verification failed');
     }
-    await require('./retry-settings.cjs').configure(page);
+    await require('./retry-settings.cjs').configure(page,job.totalAttempts??2);
     const mode=page.getByRole('button',{name:'Send Now Calls start immediately',exact:true});
     if(!(await mode.getAttribute('class')).includes('border-primary')) await mode.click();
     if(!(await mode.getAttribute('class')).includes('border-primary')) throw new Error('Send Now mode is not selected');
@@ -120,7 +120,7 @@ exports.run=async function(ctx,request) {
       return;
     }
     receipt={state:'submitting',campaignName:job.campaignName,recipientCount:job.recipients.length,
-      caller:settings.number,agent:settings.agent,concurrency:settings.concurrency,dialDelaySeconds:4,retries:true,maxRetries:1,totalAttempts:2,retryIntervalMinutes:5,
+      caller:settings.number,agent:settings.agent,concurrency:settings.concurrency,dialDelaySeconds:4,retries:(job.totalAttempts??2)===2,maxRetries:(job.totalAttempts??2)-1,totalAttempts:job.totalAttempts??2,retryIntervalMinutes:(job.totalAttempts??2)===2?5:0,
       callingHours:{timeZone:'Asia/Calcutta',from:'10:00',to:'18:00',days:'Every day'},
       fingerprint,csvPath,attemptedAt:new Date().toISOString()};
     // Durable intent BEFORE clicking. Never retry an uncertain submission.

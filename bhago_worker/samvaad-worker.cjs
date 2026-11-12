@@ -37,6 +37,7 @@ function validateJob(job) {
   if (!SETTINGS[job.type]) throw new Error('Calling type must be lead or payment');
   if (!/^[A-Za-z0-9_-]{1,160}$/.test(job.campaignName||'')) throw new Error('Invalid campaign name');
   if (!Array.isArray(job.recipients)||!job.recipients.length) throw new Error('No recipients');
+  if(job.totalAttempts!==undefined && ![1,2].includes(job.totalAttempts))throw new Error('Invalid remaining attempt budget');
   const rows=job.recipients.map(row=>{
     const phone=normalizePhone(row.phone), name=String(row.name||'').trim();
     if (!name || /^[=+@-]/.test(name) || /[,"\r\n]/.test(name)) throw new Error('Name needs review before CSV upload');
