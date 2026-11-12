@@ -83,6 +83,9 @@ def columns(kind):
 
 def schema(writer, ref, kind):
     sid = ref['spreadsheet_id']
+    cache=getattr(writer,'_bhago_schemas',{})
+    cache_key=(sid,ref['sheet_id'],kind)
+    if cache_key in cache:return cache[cache_key]
     if not writer.can_edit(sid):
         raise ValueError('This source has no Editor access; no campaign will be started.')
     meta = writer.metadata(sid)
@@ -108,9 +111,11 @@ def schema(writer, ref, kind):
         headers += ['']*(start-len(headers)) + missing
         # Format only the added output area; client columns and row heights stay untouched.
         writer.request('POST',sid,':batchUpdate',json={'requests':[
-            {'repeatCell':{'range':{'sheetId':ref['sheet_id'],'startRowIndex':0,'endRowIndex':1,'startColumnIndex':start,'endColumnIndex':start+len(missing)},'cell':{'userEnteredFormat':{'backgroundColor':{'red':0.07,'green':0.2,'blue':0.3},'textFormat':{'bold':True,'foregroundColor':{'red':1,'green':1,'blue':1}},'wrapStrategy':'WRAP'}},'fields':'userEnteredFormat'}},
-            {'updateDimensionProperties':{'range':{'sheetId':ref['sheet_id'],'dimension':'COLUMNS','startIndex':start,'endIndex':start+len(missing)},'properties':{'pixelSize':220},'fields':'pixelSize'}}]})
-    return title, {str(h):i for i,h in enumerate(headers) if h}
+            {'repeatCell':{'range':{'sheetId':ref['sheet_id'],'startRowIndex':0,'endRowIndex':1,'startColumnIndex':start,'endColumnIndex':start+len(missing)},'cell':{'userEnteredFormat':{'backgroundColor':{'red':0.07,'green':0.2,'blue':0.3},'textFormat':{'bold':True,'fontSize':10,'foregroundColor':{'red':1,'green':1,'blue':1}},'wrapStrategy':'CLIP'}},'fields':'userEnteredFormat'}},
+            {'updateDimensionProperties':{'range':{'sheetId':ref['sheet_id'],'dimension':'COLUMNS','startIndex':start,'endIndex':start+len(missing)},'properties':{'pixelSize':280},'fields':'pixelSize'}}]})
+    result=title, {str(h):i for i,h in enumerate(headers) if h}
+    cache[cache_key]=result;writer._bhago_schemas=cache
+    return result
 
 
 def identity_matches(row, recipient, indices):
@@ -179,6 +184,16 @@ def load_state(key):
     from credential_store import cipher
     value=get_value(key)
     return json.loads(cipher().decrypt(value.encode())) if value else None
+
+
+def load_states(keys):
+    from insightdesk_bridge import connect
+    from credential_store import cipher
+    if not keys:return {}
+    with connect() as db,db.cursor() as cur:
+        cur.execute('SELECT key,value FROM app_settings WHERE key = ANY(%s)',(list(keys),))
+        codec=cipher()
+        return {key:json.loads(codec.decrypt(value.encode())) for key,value in cur.fetchall()}
 
 
 def signature(recipient):

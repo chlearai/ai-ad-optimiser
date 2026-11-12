@@ -2,7 +2,7 @@
 import datetime as dt
 import json
 import uuid
-from outcomes import bind_rows, load_state, save_state, signature, state_key
+from outcomes import bind_rows, load_state, load_states, save_state, signature, state_key
 from google_access import google_session, SheetsWriter
 
 
@@ -45,7 +45,8 @@ def plan(kind, today):
             # Stable IDs are established before any row enters a calling campaign.
             bind_rows(rows,kind,writer)
             recipients.extend(rows)
-    states={r['source_ref']['row_id']:load_state(state_key(r['source_ref']['row_id'])) for r in recipients}
+    stored=load_states([state_key(r['source_ref']['row_id']) for r in recipients])
+    states={r['source_ref']['row_id']:stored.get(state_key(r['source_ref']['row_id'])) for r in recipients}
     queue=eligible(recipients,today,states)
     yesterday=(today-dt.timedelta(days=1)).isoformat()
     fresh=[r for r in queue if r['sourceDate']==yesterday]
