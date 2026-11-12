@@ -1,6 +1,6 @@
 {
   "dailySchedule": {
-    "enabled": false,
+    "enabled": true,
     "time": "10:00",
     "timeZone": "Asia/Calcutta",
     "leadSources": [
@@ -10,7 +10,11 @@
     "combineLeads": true,
     "paymentSeparate": true,
     "testSections": "manual only",
-    "activation": "After cloud authorization, deployment and noncalling verification"
+    "activation": "After cloud authorization, deployment and noncalling verification",
+    "startDate": "2026-11-13",
+    "priority": "Yesterday first; then oldest unprocessed backlog in controlled batches",
+    "batchSize": 10,
+    "newBatchCutoff": "17:00 IST; remaining time reserved for retries and completion"
   },
   "callingWindow": {
     "timeZone": "Asia/Calcutta",
@@ -19,7 +23,7 @@
     "days": "Every day",
     "appliesTo": "lead and payment calling, including tests",
     "launchOutsideWindow": "blocked; no automatic deferral",
-    "samvaadCampaignSetting": "Set and reopen When Calls Can Run to verify one 10:00\u00e2\u20ac\u201c18:00 range with all seven days selected before Send Now",
+    "samvaadCampaignSetting": "Set and reopen When Calls Can Run: 10:00\u201318:00 IST, all seven days",
     "activeCampaignCutoff": "Samvaad controls queued dialing using the saved campaign calling window; behavior at the cutoff has not been observed in a live campaign"
   },
   "testRuns": {
@@ -37,7 +41,12 @@
       "payment": 1
     },
     "dialDelaySeconds": 4,
-    "retries": false
+    "retries": {
+      "enabled": true,
+      "maximumRetries": 1,
+      "totalAttempts": 2,
+      "intervalMinutes": 5
+    }
   },
   "callingRoutes": {
     "lead": {
@@ -64,8 +73,6 @@
     },
     "trigger": "Save the current source sheet link, then RUN reads it, prepares the local CSV, creates the campaign and starts calls automatically.",
     "laterTuning": [
-      "last-dialed/backlog date rules",
-      "daily 10am scheduling",
       "agent wording"
     ]
   },
@@ -75,7 +82,7 @@
     "reinstatement": "Only on explicit instruction; gaining Editor access alone does not reinstate calling"
   },
   "resultCapture": {
-    "implementationStatus": "pending Google write authorization and outcome integration",
+    "implementationStatus": "Implemented; authenticated Sheets write/read-back and genuine completed payment result verified",
     "expectedTotalAttempts": 2,
     "attemptStorage": "Separate Attempt 1 and Attempt 2 columns on the original source row, each with call ID, called-at time, status, duration, outcome, summary, callback details and recording link when available",
     "retryOwner": "Samvaad; do not create extra retry campaigns",
@@ -83,6 +90,8 @@
       "promised payment date",
       "promised amount"
     ],
-    "paidClaimIsVerifiedPayment": false
+    "paidClaimIsVerifiedPayment": false,
+    "pollIntervalSeconds": 45,
+    "rowMatching": "Saved source workbook/tab, durable row UUID, phone, name, date and payment vehicle"
   }
 }

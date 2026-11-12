@@ -47,6 +47,8 @@ function validateJob(job) {
       if(/[,"\r\n]/.test(value)||/^[=+@-]/.test(value)) value='';
     }
     const result={phone,name,value1:value};
+    if(row.source_ref) result.source_ref=row.source_ref;
+    if(row.sourceDate) result.sourceDate=row.sourceDate;
     if(job.type==='payment') {
       if(!Object.hasOwn(row,'value3')) throw new Error('Payment field mapping changed; reread the saved sheet before creating this campaign');
       const vehicle=String(row.value2??'').trim();

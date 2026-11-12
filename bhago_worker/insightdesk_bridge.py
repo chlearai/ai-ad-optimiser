@@ -100,7 +100,7 @@ def heartbeat():
     ready = browser.get("ready", False) and age < 40
     with connect() as db, db.cursor() as cur:
         cur.execute("INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()",
-                    (f"bhago:{ACCOUNT}:worker", json.dumps({"browser_ready": bool(ready), "calling_enabled": calling_enabled(), "runtime": os.environ.get('BHAGO_RUNTIME', 'local'), "updated_at": now()})))
+                    (f"bhago:{ACCOUNT}:worker", json.dumps({"browser_ready": bool(ready), "calling_enabled": calling_enabled(), "runtime": os.environ.get('BHAGO_RUNTIME', 'local'), "results_enabled":os.environ.get('BHAGO_RESULTS_ENABLED')=='true', "backlog_enabled":os.environ.get('BHAGO_BACKLOG_ENABLED')=='true', "schedule_enabled":os.environ.get('BHAGO_SCHEDULE_ENABLED')=='true', "revision":os.environ.get('RAILWAY_GIT_COMMIT_SHA',''), "updated_at": now()})))
     return ready
 
 
@@ -143,7 +143,7 @@ def lead_date(value):
         return dt.datetime.fromisoformat(text.replace("Z", "+00:00")).date()
     except ValueError:
         pass
-    for fmt in ("%d/%m/%Y", "%d/%m/%Y %H:%M:%S", "%d-%m-%Y", "%d %b %Y", "%d-%b-%Y", "%d %B %Y", "%d/%m/%Y %H:%M"):
+    for fmt in ("%d/%m/%Y", "%d/%m/%Y %H:%M:%S", "%d-%m-%Y", "%d %b %Y", "%d-%b-%Y", "%d %B %Y", "%d/%m/%Y %H:%M", "%d %b %Y, %I:%M %p", "%d %b %Y, %H:%M"):
         try:
             return dt.datetime.strptime(text, fmt).date()
         except ValueError:
@@ -226,7 +226,10 @@ def field_indices(headers, run):
         value_i = index(headers, {"area"}, "city/area", optional=True)
     if value_i is None and payment:
         value_i = index(headers, {"hublocation", "location"}, "city/area", optional=True)
-    date_i = index(headers, {"date", "timestamp", "leaddate", "createdat", "createddate", "creationdate", "leadcreateddate"}, "lead date", optional=payment or source in TEST_SOURCES)
+    date_aliases = {"date", "timestamp", "leaddate", "createdat", "createddate", "creationdate", "leadcreateddate"}
+    if payment:
+        date_aliases.add('end')
+    date_i = index(headers, date_aliases, "payment END date" if payment else "lead date", optional=payment or source in TEST_SOURCES)
     return phone_i, name_i, value_i, date_i
 
 
@@ -266,7 +269,7 @@ def google_reader_workbook(spreadsheet_id, run):
         data = read_secret('google_oauth')
         if not data or data.get('email', '').casefold() != 'shekhar.chlear@gmail.com':
             raise ValueError("Connect Bhago's Google Sheets reader as shekhar.chlear@gmail.com")
-        credentials = UserCredentials.from_authorized_user_info(data['credentials'], scopes=['https://www.googleapis.com/auth/spreadsheets.readonly', 'openid', 'https://www.googleapis.com/auth/userinfo.email'])
+        credentials = UserCredentials.from_authorized_user_info(data['credentials'])
     else:
         credentials = Credentials.from_service_account_file(str(GOOGLE_READER_FILE), scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
         if not credentials.service_account_email.startswith("bhago-sheets-reader@"):
@@ -282,10 +285,11 @@ def google_reader_workbook(spreadsheet_id, run):
         return result.json()
 
     try:
-        metadata = read_json(base, {"fields": "sheets(properties(title,hidden,gridProperties(rowCount,columnCount)))"})
+        metadata = read_json(base, {"fields": "sheets(properties(sheetId,title,hidden,gridProperties(rowCount,columnCount)))"})
         sheets = {s["properties"]["title"]: s["properties"] for s in metadata.get("sheets", []) if not s["properties"].get("hidden")}
         selected = source_sheet_names(list(sheets), run["source"])
         book = openpyxl.Workbook()
+        book._bhago_spreadsheet_id = spreadsheet_id
         book.remove(book.active)
         for title in selected:
             grid = sheets[title].get("gridProperties", {})
@@ -300,7 +304,11 @@ def google_reader_workbook(spreadsheet_id, run):
             amount_i = amount_column(headers, required=run["source"] == "payment_reminder") if run["calling_type"] == "payment" else None
             vehicle_i = vehicle_column(headers) if run["calling_type"] == "payment" else None
             columns = sorted({i for i in (phone_i, name_i, value_i, vehicle_i, amount_i, date_i) if i is not None})
+            row_id_i = next((i for i,h in enumerate(headers) if str(h)=='Bhago Row ID'), None)
+            if row_id_i is not None:
+                columns = sorted(set(columns)|{row_id_i})
             target = book.create_sheet(title)
+            target._bhago_sheet_id = sheets[title].get('sheetId')
             target.append(headers)
             if height < 2:
                 continue
@@ -361,6 +369,14 @@ def recipients_from_workbook(book, run):
                 if re.search(r'[,"\r\n]', value) or value.startswith(('=', '+', '@', '-')):
                     value = ""
                 recipient = {"phone": phone, "name": person, "value1": value}
+                if getattr(book, '_bhago_spreadsheet_id', None) and getattr(sheet, '_bhago_sheet_id', None) is not None:
+                    recipient['source_ref'] = {'spreadsheet_id':book._bhago_spreadsheet_id,
+                        'sheet_id':sheet._bhago_sheet_id,'title':name,'row':row_number,'source':source}
+                    row_id_i = next((i for i,h in enumerate(headers) if str(h)=='Bhago Row ID'), None)
+                    if row_id_i is not None and row_id_i < len(row) and row[row_id_i]:
+                        recipient['source_ref']['row_id'] = str(row[row_id_i])
+                    if date_i is not None and row[date_i]:
+                        recipient['sourceDate'] = lead_date(row[date_i]).isoformat()
                 if payment:
                     vehicle = str(row[vehicle_i] or "").strip()
                     if not re.fullmatch(r"[A-Za-z0-9 -]{5,20}", vehicle):
@@ -373,7 +389,7 @@ def recipients_from_workbook(book, run):
                 seen[phone] += 1
             except (ValueError, IndexError) as exc:
                 errors.append(f"{name}, row {row_number}: {exc}")
-    if errors:
+    if errors and not run.get('_skip_invalid'):
         raise ValueError("Source needs correction before calling. " + "; ".join(errors[:5]))
     if not recipients and not run.get('_allow_empty'):
         raise ValueError("No calling records found for the selected source and date range")
@@ -461,12 +477,26 @@ def preview(run):
         return
     try:
         rows, duplicates, snapshot = read_source(run)
+        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+            from google_access import google_session, SheetsWriter
+            from outcomes import bind_rows, register_manifest
+            from backlog import select_planned
+            rows = select_planned(run, rows)
+            if len({row['phone'] for row in rows}) != len(rows):
+                raise ValueError('Repeated mobile numbers need separate batches so each result maps to one source row.')
+            with google_session(write=True) as session:
+                bind_rows(rows, run['calling_type'], SheetsWriter(session))
+            fresh_rows, _, snapshot = read_source(run)
+            if select_planned(run, fresh_rows) != rows:
+                raise ValueError('Source data changed while preparing result tracking; no campaign was started.')
         today = dt.datetime.now(IST).strftime("%Y-%m-%d")
         name = (f"Payment_Reminder_{today}" if run["calling_type"] == "payment" else
                 f"Lead_Calling_{run['start_date'] or today}_to_{run['end_date'] or today}_{today}")
         name += ("_TEST" if run["source"] in TEST_SOURCES else "") + "_" + run["id"][:8]
         job = {"runId": run["id"], "source": run["source"], "type": run["calling_type"], "test": run["source"] in TEST_SOURCES,
                "campaignName": name, "recipients": rows, "sourceSnapshot": snapshot}
+        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+            register_manifest(job)
         atomic_json(JOBS / (run["id"] + ".json"), job)
         counts = dict(collections.Counter(row["value1"] or "City not provided" for row in rows)) if run["calling_type"] == "lead" else {}
         update_run(run["id"], ["reading"], state="queued_launch" if run.get("auto_launch") else "ready",
@@ -495,6 +525,9 @@ def launch(run):
         _, _, snapshot = read_source(run)
         if snapshot != job["sourceSnapshot"]:
             raise ValueError("The saved sheet or its calling data changed after preview. Start a new run to review the new counts.")
+        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+            from outcomes import mark_submitted
+            mark_submitted(job,'uncertain')
         deadline = time.monotonic() + 15
         while not command({"action": "campaign_step", "stage": "insightdesk_run", "runId": run["id"]}):
             if time.monotonic() > deadline:
@@ -514,6 +547,11 @@ def launch(run):
             time.sleep(1)
         result = json.loads(result_file.read_text())
         success = result["state"] == "campaign_created"
+        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+            from outcomes import mark_submitted, save_state
+            mark_submitted(job, 'submitted' if success else 'uncertain' if result['state']=='uncertain' else 'not_dialed')
+            if success and run.get('requested_by')=='daily_backlog':
+                save_state('bhago:18:inflight:'+job['type'],{'state':'submitted','run_id':job['runId'],'campaign':job['campaignName'],'day':dt.datetime.now(IST).date().isoformat()})
         update_run(run["id"], ["launching"], state="created" if success else result["state"],
                    campaign_status=result.get("campaignRow", "")[:600],
                    message="Campaign created in Samvaad. Call receipt is not yet confirmed." if success else result.get("message", "Check Samvaad before retrying this campaign."))
@@ -569,7 +607,14 @@ def main():
                 last_ping = time.monotonic()
             ready = heartbeat()
             if ready and not first:
-                schedule_tick()
+                if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+                    from result_sync import tick as sync_tick
+                    sync_tick()
+                if os.environ.get('BHAGO_BACKLOG_ENABLED') == 'true':
+                    from backlog import tick as backlog_tick
+                    backlog_tick()
+                else:
+                    schedule_tick()
             raw = get_value(KEY)
             run = json.loads(raw) if raw else None
             if first and run and run["state"] in ("reading", "launching"):

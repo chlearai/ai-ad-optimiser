@@ -86,7 +86,9 @@ exports.run=async function(ctx,request) {
       const fields=[['phone',job.recipients[i].phone],['name',job.recipients[i].name],['value1',job.recipients[i].value1],...(job.type==='payment'?[['value2',job.recipients[i].value2],['value3',job.recipients[i].value3]]:[])];
       for(const [header,value] of fields) {
         const column=headers.indexOf(header);
-        if(column<0 || String(cells[column]??'').trim()!==String(value??'')) throw new Error('Samvaad '+header+' differs from the current CSV mapping');
+        const actual=String(cells[column]??'').trim(), expected=String(value??'');
+        const emptyPlaceholder=expected==='' && ['', '-', '—', '–'].includes(actual);
+        if(column<0 || (!emptyPlaceholder && actual!==expected)) throw new Error('Samvaad '+header+' differs from the current CSV mapping');
       }
     }
     for(const [label,target,suffix] of [['concurrent calls',settings.concurrency,''],['dial delay',4,'s']]) {
@@ -100,8 +102,7 @@ exports.run=async function(ctx,request) {
       }
       if((await down.locator('..').locator('span').innerText()).trim()!==target+suffix) throw new Error(label+' verification failed');
     }
-    if(!(await page.locator('#retry-toggle span').getAttribute('class')).includes('translate-x-[2px]')) await page.locator('#retry-toggle').click();
-    if(!(await page.locator('#retry-toggle span').getAttribute('class')).includes('translate-x-[2px]')) throw new Error('Retries are not off');
+    await require('./retry-settings.cjs').configure(page);
     const mode=page.getByRole('button',{name:'Send Now Calls start immediately',exact:true});
     if(!(await mode.getAttribute('class')).includes('border-primary')) await mode.click();
     if(!(await mode.getAttribute('class')).includes('border-primary')) throw new Error('Send Now mode is not selected');
@@ -119,7 +120,7 @@ exports.run=async function(ctx,request) {
       return;
     }
     receipt={state:'submitting',campaignName:job.campaignName,recipientCount:job.recipients.length,
-      caller:settings.number,agent:settings.agent,concurrency:settings.concurrency,dialDelaySeconds:4,retries:false,
+      caller:settings.number,agent:settings.agent,concurrency:settings.concurrency,dialDelaySeconds:4,retries:true,maxRetries:1,totalAttempts:2,retryIntervalMinutes:5,
       callingHours:{timeZone:'Asia/Calcutta',from:'10:00',to:'18:00',days:'Every day'},
       fingerprint,csvPath,attemptedAt:new Date().toISOString()};
     // Durable intent BEFORE clicking. Never retry an uncertain submission.
