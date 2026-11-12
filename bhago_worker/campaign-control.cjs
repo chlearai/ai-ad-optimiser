@@ -27,10 +27,15 @@ exports.run=async function({page,PRIVATE,assertWorkspace},request){
   try {
    await button.click();
    const dialog=page.getByRole('dialog');
-   if(await dialog.count()===1 && /stop[\s\S]*campaign|campaign[\s\S]*stop/i.test(await dialog.innerText())){
+   const stopped=card.locator('span').filter({hasText:/^Stopped$/});
+   const outcome=await Promise.race([
+    stopped.waitFor({state:'visible',timeout:20000}).then(()=> 'stopped').catch(()=>null),
+    dialog.waitFor({state:'visible',timeout:20000}).then(()=> 'confirmation').catch(()=>null)
+   ]);
+   if(outcome==='confirmation' && /stop[\s\S]*campaign|campaign[\s\S]*stop/i.test(await dialog.innerText())){
     await dialog.getByRole('button',{name:/^Stop(?: Campaign)?$/i}).click();
    }
-   await card.locator('span').filter({hasText:/^Stopped$/}).waitFor({state:'visible',timeout:20000});
+   await stopped.waitFor({state:'visible',timeout:20000});
   } finally {page.removeListener('dialog',nativeConfirm);}
   fs.writeFileSync(resultFile,JSON.stringify({state:'stopped'}));
  } catch(error){fs.writeFileSync(resultFile,JSON.stringify({state:'needs_attention',message:error.message.slice(0,300)}));}
