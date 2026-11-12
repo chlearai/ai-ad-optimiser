@@ -73,6 +73,7 @@ def tick(moment=None):
         control(None,None,None);return
     current=json.loads(get_value(KEY) or '{}')
     if current.get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
+    if current.get('requested_by')=='daily_backlog' and current.get('state') in ('uncertain','failed'):return
     for kind in ('lead','payment'):
         inflight=load_state('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
@@ -94,7 +95,7 @@ def tick(moment=None):
         if not rows:continue
         run_id=uuid.uuid4().hex
         run={'id':run_id,'source':'lead_batch' if kind=='lead' else 'payment_reminder','calling_type':kind,
-             'start_date':'0001-01-01','end_date':(moment.date()-dt.timedelta(days=1)).isoformat(),
+             'start_date':min(r['sourceDate'] for r in rows),'end_date':max(r['sourceDate'] for r in rows),
              'lead_sources':sorted({r['source_ref']['source'] for r in rows}) if kind=='lead' else [],'auto_launch':True,'_skip_invalid':True,
              '_planned_recipients':rows,'_skipped_sources':skipped,'state':'queued_preview',
              'requested_by':'daily_backlog','created_at':now(),'message':'Yesterday first, then oldest unprocessed backlog.'}
