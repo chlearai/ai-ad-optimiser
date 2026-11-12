@@ -33,6 +33,7 @@ function normalizePhone(value) {
 }
 
 function validateJob(job) {
+  if(job.source==='qwqer') throw new Error('QWQER calling is suspended until explicitly reinstated by Shekhar.');
   if (!SETTINGS[job.type]) throw new Error('Calling type must be lead or payment');
   if (!/^[A-Za-z0-9_-]{1,160}$/.test(job.campaignName||'')) throw new Error('Invalid campaign name');
   if (!Array.isArray(job.recipients)||!job.recipients.length) throw new Error('No recipients');

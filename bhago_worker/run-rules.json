@@ -1,6 +1,27 @@
 {
-  "dailySchedule": {"enabled": false, "time": "10:00", "timeZone": "Asia/Calcutta", "leadSources": ["swiggy", "zomato", "qwqer"], "combineLeads": true, "paymentSeparate": true, "testSections": "manual only", "activation": "After cloud authorization, deployment and noncalling verification"},
-  "callingWindow": {"timeZone": "Asia/Calcutta", "start": "10:00", "end": "18:00", "days": "Every day", "appliesTo": "lead and payment calling, including tests", "launchOutsideWindow": "blocked; no automatic deferral", "samvaadCampaignSetting": "Set and reopen When Calls Can Run to verify one 10:00–18:00 range with all seven days selected before Send Now", "activeCampaignCutoff": "Samvaad controls queued dialing using the saved campaign calling window; behavior at the cutoff has not been observed in a live campaign"},
+  "dailySchedule": {
+    "enabled": false,
+    "time": "10:00",
+    "timeZone": "Asia/Calcutta",
+    "leadSources": [
+      "swiggy",
+      "zomato"
+    ],
+    "combineLeads": true,
+    "paymentSeparate": true,
+    "testSections": "manual only",
+    "activation": "After cloud authorization, deployment and noncalling verification"
+  },
+  "callingWindow": {
+    "timeZone": "Asia/Calcutta",
+    "start": "10:00",
+    "end": "18:00",
+    "days": "Every day",
+    "appliesTo": "lead and payment calling, including tests",
+    "launchOutsideWindow": "blocked; no automatic deferral",
+    "samvaadCampaignSetting": "Set and reopen When Calls Can Run to verify one 10:00\u00e2\u20ac\u201c18:00 range with all seven days selected before Send Now",
+    "activeCampaignCutoff": "Samvaad controls queued dialing using the saved campaign calling window; behavior at the cutoff has not been observed in a live campaign"
+  },
   "testRuns": {
     "recipientPolicy": "No one- or two-recipient cap. Every section processes all valid rows from its current saved sheet under the agreed source date rules.",
     "source": "The current saved link in Lead Calling Test (test_lead) or Payment Reminder Test (test_payment) under Bhago Mobility in InsightDesk; each section saves independently",
@@ -11,15 +32,57 @@
       "Create a new calling CSV from that fresh read; never reuse an earlier test's data without verification.",
       "Compare every Samvaad preview recipient and field with the freshly read sheet before launching."
     ],
-    "concurrentCalls": {"lead": 1, "payment": 1},
+    "concurrentCalls": {
+      "lead": 1,
+      "payment": 1
+    },
     "dialDelaySeconds": 4,
     "retries": false
   },
   "callingRoutes": {
-    "lead": {"sources": ["swiggy", "zomato", "qwqer", "test_lead"], "number": "+918069458173", "agent": "Bhago Mobility Outbound", "dateDefault": "previous day in India time for the three regular lead sources; explicit date ranges override it"},
-    "payment": {"sources": ["payment_reminder", "test_payment"], "number": "+918069458175", "agent": "Bhago Payment recovery Agent outbound", "value1": "City/Area", "value2": "Vehicle Number", "value3": "Outstanding Amount", "date": "Retained for processing only; never placed in Value 3"},
+    "lead": {
+      "sources": [
+        "swiggy",
+        "zomato",
+        "test_lead"
+      ],
+      "number": "+918069458173",
+      "agent": "Bhago Mobility Outbound",
+      "dateDefault": "previous day in India time for Swiggy and Zomato; explicit date ranges override it"
+    },
+    "payment": {
+      "sources": [
+        "payment_reminder",
+        "test_payment"
+      ],
+      "number": "+918069458175",
+      "agent": "Bhago Payment recovery Agent outbound",
+      "value1": "City/Area",
+      "value2": "Vehicle Number",
+      "value3": "Outstanding Amount",
+      "date": "Retained for processing only; never placed in Value 3"
+    },
     "trigger": "Save the current source sheet link, then RUN reads it, prepares the local CSV, creates the campaign and starts calls automatically.",
-    "laterTuning": ["last-dialed/backlog date rules", "daily 10am scheduling", "agent wording"]
+    "laterTuning": [
+      "last-dialed/backlog date rules",
+      "daily 10am scheduling",
+      "agent wording"
+    ]
   },
-  "QWQER": {"state": "cancelled", "launchAllowed": false}
+  "QWQER": {
+    "state": "suspended_by_user",
+    "launchAllowed": false,
+    "reinstatement": "Only on explicit instruction; gaining Editor access alone does not reinstate calling"
+  },
+  "resultCapture": {
+    "implementationStatus": "pending Google write authorization and outcome integration",
+    "expectedTotalAttempts": 2,
+    "attemptStorage": "Separate Attempt 1 and Attempt 2 columns on the original source row, each with call ID, called-at time, status, duration, outcome, summary, callback details and recording link when available",
+    "retryOwner": "Samvaad; do not create extra retry campaigns",
+    "paymentExtraFields": [
+      "promised payment date",
+      "promised amount"
+    ],
+    "paidClaimIsVerifiedPayment": false
+  }
 }

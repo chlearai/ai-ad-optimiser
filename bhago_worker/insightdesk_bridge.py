@@ -381,10 +381,13 @@ def recipients_from_workbook(book, run):
 
 
 def read_source(run):
+    if run['source'] == 'qwqer':
+        raise ValueError('QWQER calling is suspended until explicitly reinstated by Shekhar.')
     if run['source'] == 'lead_batch':
         sources = run.get('lead_sources', [])
         if not sources or len(sources) != len(set(sources)) or any(s not in ('swiggy', 'zomato', 'qwqer') for s in sources):
             raise ValueError('Daily lead sources must be the selected Bhago lead sheets')
+        sources = [source for source in sources if source != 'qwqer']
         combined, snapshots = [], []
         for source in sources:
             rows, _, snapshot = read_source(dict(run, source=source, _allow_empty=True))
@@ -421,7 +424,8 @@ def schedule_tick(moment=None):
         sources = config['lead_sources']
         if any(s not in ('swiggy','zomato','qwqer') for s in sources) or len(set(sources)) != len(sources):
             raise ValueError('Invalid scheduled lead source selection')
-        if config.get('combine_leads', False):
+        sources = [source for source in sources if source != 'qwqer']
+        if sources and config.get('combine_leads', False):
             groups.append(('lead_batch', sources))
         else:
             groups.extend((source, None) for source in sources)
