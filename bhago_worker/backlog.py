@@ -157,6 +157,9 @@ def control(kind, campaign, action):
         stopped=[p for p in stopped if p['run_id']!=inflight['run_id']]
         stopped.append(inflight)
         save_state('bhago:18:stopped:'+task['kind'],stopped)
+        from insightdesk_bridge import update_run
+        update_run(inflight['run_id'],['uncertain'],state='created',campaign_status='Stopped',
+                   message='Old campaign stopped. Pending rows will move to new campaigns after next-day outcome reconciliation.')
         return inflight
     ident=uuid.uuid4().hex
     atomic_json(JOBS/(ident+'.control.json'),{'campaign':campaign['campaign'],'action':action})
