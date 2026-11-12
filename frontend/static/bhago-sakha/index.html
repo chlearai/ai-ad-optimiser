@@ -3,7 +3,7 @@
 <style>body{margin:0;background:#f4f7fa;color:#172b45;font:17px/1.7 system-ui,sans-serif}main{max-width:760px;margin:64px auto;padding:36px;background:white;border:1px solid #dce4ed;border-radius:18px}h1{line-height:1.2}a{color:#0f766e}small{color:#536579}</style>
 <main><small>PRIVATE OPERATIONS WORKFLOW</small><h1>Bhago Sakha</h1>
 <p>Bhago Sakha helps the authorised Bhago Mobility operations team prepare lead-calling and payment-reminder campaigns from its selected Google Sheets.</p>
-<p>The Google connection requests read-only access to spreadsheets. The workflow reads the saved source sheets, maps the required calling fields, and prepares CSV files for campaigns in Samvaad. This connection cannot edit Google Sheets.</p>
+<p>The Google connection reads the saved source sheets, prepares calling CSV files for Samvaad, and writes approved call outcomes back into the corresponding original rows. Read-only Drive file metadata is used to check editing permission before a source is called. The program restricts updates to saved Bhago source and test files.</p>
 <p>Lead calling uses the rider's name, phone number and city or area. Payment reminders also use vehicle number and outstanding amount. Source dates support the selected calling period.</p>
 <p>Access is configured for the approved operations account. This page does not provide public registration or access to rider records.</p>
 <p><a href="privacy.html">Privacy and Google data use</a> · <a href="mailto:shekhar.chlear@gmail.com">Contact the administrator</a></p></main></html>
