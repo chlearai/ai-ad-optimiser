@@ -11,7 +11,7 @@
       "Create a new calling CSV from that fresh read; never reuse an earlier test's data without verification.",
       "Compare every Samvaad preview recipient and field with the freshly read sheet before launching."
     ],
-    "concurrentCalls": {"lead": 2, "payment": 1},
+    "concurrentCalls": {"lead": 1, "payment": 1},
     "dialDelaySeconds": 4,
     "retries": false
   },

@@ -9,7 +9,7 @@ const ORIGIN = 'https://samvaad.sakhaa.ai';
 const EXPECTED_ACCOUNT = 'chlearbhago@gmail.com';
 const OUTPUT = process.env.BHAGO_OUTPUT_DIR || 'C:/Users/Shekhar Raju/Downloads/Clients/Bhago';
 const SETTINGS = {
-  lead: {number:'+918069458173', agent:'Bhago Mobility Outbound', concurrency:2, folder:'Lead Calling'},
+  lead: {number:'+918069458173', agent:'Bhago Mobility Outbound', concurrency:1, folder:'Lead Calling'},
   payment: {number:'+918069458175', agent:'Bhago Payment recovery Agent outbound', concurrency:1, folder:'Payment Reminders'}
 };
 
