@@ -539,6 +539,9 @@ def launch(run):
                 raise ValueError("The browser is busy. No launch request was sent; start a new run later.")
             time.sleep(1)
         dispatched = True
+        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true' and run.get('requested_by')=='daily_backlog':
+            from outcomes import save_state
+            save_state('bhago:18:inflight:'+job['type'],{'state':'uncertain','run_id':job['runId'],'campaign':job['campaignName'],'day':dt.datetime.now(IST).date().isoformat()})
         result_file = JOBS / (run["id"] + ".bridge-result.json")
         deadline = time.monotonic() + 300
         last_beat = 0
@@ -557,6 +560,8 @@ def launch(run):
             mark_submitted(job, 'submitted' if success else 'uncertain' if result['state']=='uncertain' else 'not_dialed')
             if success and run.get('requested_by')=='daily_backlog':
                 save_state('bhago:18:inflight:'+job['type'],{'state':'submitted','run_id':job['runId'],'campaign':job['campaignName'],'day':dt.datetime.now(IST).date().isoformat()})
+            elif result['state']=='failed' and run.get('requested_by')=='daily_backlog':
+                save_state('bhago:18:inflight:'+job['type'],{'state':'complete','run_id':job['runId'],'campaign':job['campaignName'],'day':dt.datetime.now(IST).date().isoformat()})
         update_run(run["id"], ["launching"], state="created" if success else result["state"],
                    campaign_status=result.get("campaignRow", "")[:600],
                    message="Campaign created in Samvaad. Call receipt is not yet confirmed." if success else result.get("message", "Check Samvaad before retrying this campaign."))

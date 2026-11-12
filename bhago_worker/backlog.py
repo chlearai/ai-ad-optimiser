@@ -80,13 +80,20 @@ def tick(moment=None):
     if config.get('start_date') and moment.date().isoformat()<config['start_date']:return
     if _control:
         control(None,None,None);return
+    inflights=load_states(['bhago:18:inflight:lead','bhago:18:inflight:payment'])
+    # Closing has priority over a stalled/failed creation request. It never creates a call.
+    for kind in ('lead','payment'):
+        active=inflights.get('bhago:18:inflight:'+kind)
+        if active and active.get('state') in ('submitted','paused','uncertain') and (
+                moment.hour>=18 or moment.hour<10 or active.get('day',moment.date().isoformat())<moment.date().isoformat()):
+            control(kind,active,'stop');return
     current=json.loads(get_value(KEY) or '{}')
     if current.get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
     if current.get('requested_by')=='daily_backlog':
         if current.get('state')=='uncertain':return
         if current.get('state')=='failed' and dt.datetime.fromisoformat(current['created_at']).astimezone(IST).date()==moment.date():return
     for kind in ('lead','payment'):
-        inflight=load_state('bhago:18:inflight:'+kind)
+        inflight=inflights.get('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
         if inflight and inflight.get('state') in ('submitted','paused'):
             if moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat():
