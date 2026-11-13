@@ -619,6 +619,8 @@ def main():
                 last_ping = time.monotonic()
             ready = heartbeat()
             if ready and not first:
+                from report_snapshot import tick as report_tick
+                report_tick()
                 if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
                     from result_sync import tick as sync_tick
                     sync_tick()
