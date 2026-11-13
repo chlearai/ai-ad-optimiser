@@ -44,7 +44,9 @@ def connect():
     database_url = os.environ.get("DATABASE_URL") or dotenv_values(ENV).get("DATABASE_URL")
     if not database_url:
         raise ValueError("Bhago worker database connection has not been configured")
-    return psycopg2.connect(database_url, connect_timeout=15)
+    return psycopg2.connect(database_url, connect_timeout=15, keepalives=1,
+                           keepalives_idle=30, keepalives_interval=10, keepalives_count=3,
+                           tcp_user_timeout=60000, options='-c statement_timeout=45000 -c lock_timeout=10000')
 
 
 def get_value(key):

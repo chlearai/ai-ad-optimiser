@@ -12,6 +12,17 @@ ROOT = Path(__file__).resolve().parent
 PRIVATE = Path(os.environ.get('BHAGO_PRIVATE_DIR', '/data/private'))
 
 
+def unresponsive(private, started, moment=None, limit=480):
+    """Detect a living-but-stalled browser/bridge without depending on its database."""
+    moment=moment or dt.datetime.now(dt.timezone.utc)
+    try:
+        record=json.loads((private/'bridge-browser.json').read_text())
+        progress=dt.datetime.fromisoformat(record['updatedAt'].replace('Z','+00:00'))
+    except (OSError,ValueError,KeyError,TypeError):
+        progress=started
+    return (moment-progress).total_seconds()>limit
+
+
 def seed_session():
     from credential_store import read_secret
     session = read_secret('samvaad_session')
@@ -81,8 +92,12 @@ def main():
             (PRIVATE/'bridge-browser.json').write_text(json.dumps({'ready':False,'updatedAt':dt.datetime.now(dt.timezone.utc).isoformat()}))
             children[:] = [subprocess.Popen(['node', str(ROOT/'samvaad-worker.cjs'), 'cloud']),
                            subprocess.Popen([sys.executable, '-u', str(ROOT/'insightdesk_bridge.py')])]
+            started=dt.datetime.now(dt.timezone.utc)
             while all(child.poll() is None for child in children):
                 time.sleep(5)
+                if unresponsive(PRIVATE,started):
+                    print('Bhago workflow heartbeat stalled; restarting its children. Uncertain launches remain held.',flush=True)
+                    break
         except Exception:
             print('Bhago cloud authorization or connection needs attention; no automatic campaign retry.', flush=True)
         finally:

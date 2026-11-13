@@ -137,6 +137,6 @@ exports.run=async function(ctx,request) {
     await page.screenshot({path:path.join(PRIVATE,'jobs',request.runId+'-launched.png'),fullPage:true});
     fs.writeFileSync(resultFile,JSON.stringify(receipt,null,2));
   } catch(error) {
-    fs.writeFileSync(resultFile,JSON.stringify({state:receipt?'uncertain':'failed',message:error.message,campaignName:receipt?.campaignName}));
+    fs.writeFileSync(resultFile,JSON.stringify({state:receipt||fs.existsSync(journal)?'uncertain':'failed',message:error.message,campaignName:receipt?.campaignName}));
   }
 };
