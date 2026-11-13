@@ -13,7 +13,7 @@
     "activation": "After cloud authorization, deployment and noncalling verification",
     "startDate": "2026-11-13",
     "priority": "Yesterday first; then oldest unprocessed backlog in controlled batches",
-    "batchSize": 10,
+    "batchSize": 30,
     "newBatchCutoff": "18:00 IST",
     "endOfDay": "Permanently stop the unfinished campaign at 18:00 IST. Never resume or re-run it.",
     "nextDay": "Create new campaigns: yesterday first, then older pending rows after a fresh source read and final outcome reconciliation.",

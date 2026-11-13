@@ -56,6 +56,13 @@ def plan(kind, today):
     yesterday=(today-dt.timedelta(days=1)).isoformat()
     fresh=[r for r in queue if r['sourceDate']==yesterday]
     if fresh:queue=fresh
+    batch_size=json.loads(get_value('bhago:18:schedule') or '{}').get('batch_size',30)
+    if not isinstance(batch_size,int) or isinstance(batch_size,bool) or batch_size<1:
+        raise ValueError('Bhago batch size must be a positive whole number.')
+    return select_batch(queue,batch_size),skipped
+
+
+def select_batch(queue,batch_size=30):
     # One occurrence of a phone per campaign makes exported calls unambiguous across sources.
     selected=[];phones=set()
     budget=None
@@ -65,8 +72,8 @@ def plan(kind, today):
         budget=remaining
         if row['phone'] in phones:continue
         selected.append(row);phones.add(row['phone'])
-        if len(selected)==10:break
-    return selected,skipped
+        if len(selected)==batch_size:break
+    return selected
 
 
 def tick(moment=None):
