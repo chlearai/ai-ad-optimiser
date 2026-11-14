@@ -23,12 +23,13 @@ def eligible(recipients, today, states):
             if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt','held_review'):
                 continue
         row=dict(recipient)
+        row['_carryover']=bool(prior and prior.get('closed_campaign') and prior.get('state')=='pending')
         if prior and prior.get('calls'):
             from outcomes import merge_calls
             row['prior_calls']=merge_calls(prior.get('calls',[]),[])
             if len(row['prior_calls'])>=2:continue
         result.append(row)
-    return sorted(result,key=lambda r:(r['sourceDate']!=yesterday.isoformat(),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
+    return sorted(result,key=lambda r:(r['sourceDate']!=yesterday.isoformat(),not r.get('_carryover',False),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
 
 
 def plan(kind, today):
@@ -99,12 +100,16 @@ def tick(moment=None):
     if current.get('requested_by')=='daily_backlog':
         if current.get('state')=='uncertain':return
         if current.get('state')=='failed' and dt.datetime.fromisoformat(current['created_at']).astimezone(IST).date()==moment.date():return
+    inspections=[]
     for kind in ('lead','payment'):
         inflight=inflights.get('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
         if inflight and inflight.get('state') in ('submitted','paused'):
             if moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat():
                 control(kind,inflight,'stop');return
+            checked=inflight.get('last_checked_at')
+            if not checked or (moment-dt.datetime.fromisoformat(checked).astimezone(IST)).total_seconds()>=45:
+                inspections.append((kind,inflight))
             continue
         from rollover import settle
         if not settle(kind,moment):continue
@@ -123,6 +128,9 @@ def tick(moment=None):
             if old and json.loads(old[0]).get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
             cur.execute('INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()', (KEY,json.dumps(run)))
         return
+    if inspections:
+        kind,inflight=min(inspections,key=lambda item:item[1].get('last_checked_at',''))
+        control(kind,inflight,'inspect')
 
 
 def select_planned(run, live_rows):
@@ -147,7 +155,7 @@ def control(kind, campaign, action):
     """Nonblocking control of registered campaigns; ambiguity holds automatic dialing."""
     global _control
     import time
-    from insightdesk_bridge import JOBS, command, atomic_json
+    from insightdesk_bridge import JOBS, command, atomic_json, now
     if _control:
         file=JOBS/(_control['id']+'.control-result.json')
         if not file.exists():
@@ -155,10 +163,15 @@ def control(kind, campaign, action):
                 save_state('bhago:18:backlog_attention',{'state':'needs_attention','reason':'Campaign ordering control timed out; automatic dialing held.'})
             return None
         result=json.loads(file.read_text());file.unlink();task=_control;_control=None
+        if task.get('action')=='inspect' and result['state']=='pending':
+            save_state('bhago:18:inflight:'+task['kind'],dict(task['campaign'],last_checked_at=now()))
+            return None
         if result['state'] not in ('stopped','complete'):
             save_state('bhago:18:backlog_attention',result);return None
         from insightdesk_bridge import now
-        inflight=dict(task['campaign'],state='stopped',stopped_at=now())
+        verified=now()
+        inflight=dict(task['campaign'],state='awaiting_reconciliation' if result['state']=='complete' else 'stopped',
+                      stopped_at=verified,verified_complete=result['state']=='complete')
         save_state('bhago:18:inflight:'+task['kind'],inflight)
         stopped=load_state('bhago:18:stopped:'+task['kind']) or []
         stopped=[p for p in stopped if p['run_id']!=inflight['run_id']]
@@ -171,5 +184,5 @@ def control(kind, campaign, action):
     ident=uuid.uuid4().hex
     atomic_json(JOBS/(ident+'.control.json'),{'campaign':campaign['campaign'],'action':action})
     if command({'action':'campaign_step','stage':'insightdesk_campaign_control','requestId':ident}):
-        _control={'id':ident,'kind':kind,'campaign':campaign,'started':time.monotonic()}
+        _control={'id':ident,'kind':kind,'campaign':campaign,'action':action,'started':time.monotonic()}
     return None

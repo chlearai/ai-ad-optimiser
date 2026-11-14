@@ -12,11 +12,13 @@
     "testSections": "manual only",
     "activation": "After cloud authorization, deployment and noncalling verification",
     "startDate": "2026-11-13",
-    "priority": "Yesterday first; then oldest unprocessed backlog in controlled batches",
+    "priority": "Yesterday first; then unfinished prior-day campaign records; then oldest unprocessed backlog",
     "batchSize": 30,
+    "autoNextBatch": true,
+    "completionCheck": "Inspect the registered Samvaad campaign. When it is Completed, reconcile a fresh result export, hold unresolved rows individually, and create the next campaign on the same day within calling hours.",
     "newBatchCutoff": "18:00 IST",
     "endOfDay": "Permanently stop the unfinished campaign at 18:00 IST. Never resume or re-run it.",
-    "nextDay": "Create new campaigns: yesterday first, then older pending rows after a fresh source read and final outcome reconciliation.",
+    "nextDay": "Create NEW campaigns: yesterday first, then unfinished campaign records, then older backlog after a fresh source read and final outcome reconciliation. Never resume yesterday's campaign.",
     "pendingAttempts": "Retain prior call IDs and Attempt 1/2. Undialed rows get two total attempts; rows with one prior unconnected attempt get only Attempt 2, with retries off."
   },
   "callingWindow": {

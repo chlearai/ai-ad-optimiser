@@ -33,7 +33,9 @@ def settle(kind, moment):
     for closed in stopped:
         stopped_at=dt.datetime.fromisoformat(closed['stopped_at'])
         # Do not requeue on the same day; allow final in-flight outcomes to settle overnight.
-        if moment.date().isoformat()<=closed['day'] or exported_at.astimezone(IST).date()!=moment.date() or exported_at<=stopped_at+dt.timedelta(minutes=1):
+        if ((not closed.get('verified_complete') and moment.date().isoformat()<=closed['day']) or
+                exported_at.astimezone(IST).date()!=moment.date() or
+                exported_at<=stopped_at+dt.timedelta(seconds=0 if closed.get('verified_complete') else 60)):
             remaining.append(closed);continue
         job=load_state('bhago:18:manifest:'+closed['run_id'])
         if not job:
@@ -64,8 +66,16 @@ def settle(kind, moment):
                         'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
                         'attempts':[c['Session ID'] for c in calls],'calls':calls,
                         'result_fingerprint':prior.get('result_fingerprint') if merge_calls(prior.get('calls',[]),[])==calls else None})
-                except ValueError:
-                    held=True
+                except ValueError as error:
+                    # One unresolved row must not stall every untouched customer.
+                    save_state(key,{'state':'held_review','closed_campaign':True,'signature':signature(row),
+                        'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
+                        'attempts':[c['Session ID'] for c in all_calls],'calls':all_calls,
+                        'reason':str(error)[:300]})
         if held:remaining.append(closed)
+        elif closed.get('verified_complete'):
+            active=load_state('bhago:18:inflight:'+kind) or {}
+            if active.get('run_id')==closed['run_id']:
+                save_state('bhago:18:inflight:'+kind,dict(active,state='complete'))
     save_state('bhago:18:stopped:'+kind,remaining)
     return not remaining
