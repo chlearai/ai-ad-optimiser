@@ -20,7 +20,7 @@ def eligible(recipients, today, states):
             if prior.get('signature')!=signature(recipient):
                 # A new END/date/vehicle cycle requires a fresh source record; never borrow old outcomes.
                 continue
-            if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt'):
+            if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt','held_review'):
                 continue
         row=dict(recipient)
         if prior and prior.get('calls'):

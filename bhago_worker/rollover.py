@@ -45,9 +45,21 @@ def settle(kind, moment):
             for row in job['recipients']:
                 key=state_key(row['source_ref']['row_id']);prior=load_state(key) or {}
                 if prior.get('run_id') and prior['run_id']!=job['runId']:continue
+                # Isolate terminal excess-attempt records instead of blocking every fresh lead.
+                current=[c for c in exported if c.get('Campaign Name')==job['campaignName'] and
+                         ''.join(filter(str.isdigit,str(c.get('To Number',''))))[-10:]==
+                         ''.join(filter(str.isdigit,row['phone']))[-10:]]
+                all_calls=merge_calls(row.get('prior_calls',[]),current)
+                if len(all_calls)>2 and all(c.get('Status','').casefold() in TERMINAL for c in all_calls):
+                    save_state(key,{'state':'held_review','closed_campaign':True,'signature':signature(row),
+                        'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
+                        'attempts':[c['Session ID'] for c in all_calls],'calls':all_calls,
+                        'reason':'Excess attempts; excluded from automatic calling pending review.'})
+                    continue
                 try:
                     calls,state=pending_after_stop(dict(row,_closed_campaign=job['campaignName']),kind,exported)
-                    if calls:write_attempts(writer,row,kind,calls)
+                    if calls and not (prior.get('result_fingerprint') and merge_calls(prior.get('calls',[]),[])==calls):
+                        write_attempts(writer,row,kind,calls)
                     save_state(key,{'state':state,'closed_campaign':True,'signature':signature(row),
                         'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
                         'attempts':[c['Session ID'] for c in calls],'calls':calls})

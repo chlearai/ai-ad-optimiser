@@ -240,6 +240,9 @@ def pending_manifests():
 
 def write_attempts(writer, recipient, kind, calls):
     from insightdesk_bridge import field_indices, now
+    ordered=sorted({c['Session ID']:c for c in calls}.values(),key=lambda c:(c['Time'],c['Session ID']))
+    if len(ordered)>2:
+        raise ValueError('More than two attempts found for this campaign/recipient; results held for review.')
     ref=recipient['source_ref'];title,mapping=schema(writer,ref,kind);width=max(mapping.values())+1
     metadata=writer.metadata(ref['spreadsheet_id']);props=next(s['properties'] for s in metadata['sheets'] if s['properties']['sheetId']==ref['sheet_id'])
     idcol=get_column_letter(mapping['Bhago Row ID']+1)
