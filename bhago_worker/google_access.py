@@ -1,6 +1,9 @@
 """Bhago's scoped Google connection. Never logs credentials or source records."""
 from contextlib import contextmanager
 from urllib.parse import quote
+import time
+
+_last_sheet_request=0.0
 
 WRITE_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 META_SCOPE = 'https://www.googleapis.com/auth/drive.metadata.readonly'
@@ -42,7 +45,14 @@ class SheetsWriter:
         if spreadsheet_id not in self.allowed:
             raise ValueError('This spreadsheet is not an approved saved Bhago source.')
         url = 'https://sheets.googleapis.com/v4/spreadsheets/' + spreadsheet_id + suffix
-        response = self.session.request(method, url, timeout=45, **kwargs)
+        global _last_sheet_request
+        # Stay below the per-user Sheets request rate, including result polling.
+        for attempt in range(4):
+            time.sleep(max(0,1.2-(time.monotonic()-_last_sheet_request)))
+            _last_sheet_request=time.monotonic()
+            response = self.session.request(method, url, timeout=45, **kwargs)
+            if response.status_code!=429 or attempt==3:break
+            time.sleep(15*(attempt+1))
         if response.status_code in (401, 403, 404):
             raise ValueError('Google editing access is unavailable for this saved source; calling is blocked.')
         response.raise_for_status()

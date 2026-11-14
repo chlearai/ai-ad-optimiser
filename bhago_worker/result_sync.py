@@ -26,6 +26,8 @@ def tick():
             except Exception as error:
                 status={'state':'needs_attention','updated_at':now(),'error_type':type(error).__name__,
                         'message':str(error)[:500] if isinstance(error,ValueError) else 'Result sync could not finish; no calling retry was made.'}
+                response=getattr(error,'response',None)
+                if response is not None:status['http_status']=response.status_code
             with connect() as db,db.cursor() as cur:
                 cur.execute('INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()',('bhago:18:result_sync',json.dumps(status)))
         file.unlink(missing_ok=True)

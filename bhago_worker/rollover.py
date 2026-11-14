@@ -62,7 +62,8 @@ def settle(kind, moment):
                         write_attempts(writer,row,kind,calls)
                     save_state(key,{'state':state,'closed_campaign':True,'signature':signature(row),
                         'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
-                        'attempts':[c['Session ID'] for c in calls],'calls':calls})
+                        'attempts':[c['Session ID'] for c in calls],'calls':calls,
+                        'result_fingerprint':prior.get('result_fingerprint') if merge_calls(prior.get('calls',[]),[])==calls else None})
                 except ValueError:
                     held=True
         if held:remaining.append(closed)
