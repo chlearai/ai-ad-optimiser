@@ -17,8 +17,9 @@
     "autoNextBatch": true,
     "completionCheck": "Inspect the registered Samvaad campaign. When it is Completed, reconcile a fresh result export, hold unresolved rows individually, and create the next campaign on the same day within calling hours.",
     "newBatchCutoff": "18:00 IST",
-    "endOfDay": "Permanently stop the unfinished campaign at 18:00 IST. Never resume or re-run it.",
-    "nextDay": "Create NEW campaigns: yesterday first, then unfinished campaign records, then older backlog after a fresh source read and final outcome reconciliation. Never resume yesterday's campaign.",
+    "endOfDay": "Interim policy: retain unfinished campaigns waiting outside the saved 10:00-18:00 IST calling window. Do not permanently stop them.",
+    "resumePreviousCampaign": true,
+    "nextDay": "At 10:00 IST let the unfinished campaign resume automatically in Samvaad. After it completes, create new batches: yesterday first, then older backlog. Never duplicate the unfinished campaign's recipients in a new campaign.",
     "pendingAttempts": "Retain prior call IDs and Attempt 1/2. Undialed rows get two total attempts; rows with one prior unconnected attempt get only Attempt 2, with retries off."
   },
   "callingWindow": {

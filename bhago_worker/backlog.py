@@ -82,7 +82,7 @@ def tick(moment=None):
     import os
     if os.environ.get('BHAGO_RUNTIME')!='cloud' or os.environ.get('BHAGO_SCHEDULE_ENABLED')!='true' or not calling_enabled():return
     moment=moment or dt.datetime.now(IST)
-    # Samvaad enforces 10:00–18:00; closing the campaign prevents next-day resumption.
+    # Samvaad enforces 10:00–18:00. Interim policy may retain unfinished campaigns.
     config=json.loads(get_value('bhago:18:schedule') or '{}')
     if not config.get('enabled'):return
     if config.get('start_date') and moment.date().isoformat()<config['start_date']:return
@@ -92,7 +92,7 @@ def tick(moment=None):
     # Closing has priority over a stalled/failed creation request. It never creates a call.
     for kind in ('lead','payment'):
         active=inflights.get('bhago:18:inflight:'+kind)
-        if active and active.get('state') in ('submitted','paused','uncertain') and (
+        if not config.get('resume_previous_campaign') and active and active.get('state') in ('submitted','paused','uncertain') and (
                 moment.hour>=18 or moment.hour<10 or active.get('day',moment.date().isoformat())<moment.date().isoformat()):
             control(kind,active,'stop');return
     current=json.loads(get_value(KEY) or '{}')
@@ -105,7 +105,7 @@ def tick(moment=None):
         inflight=inflights.get('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
         if inflight and inflight.get('state') in ('submitted','paused'):
-            if moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat():
+            if not config.get('resume_previous_campaign') and (moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat()):
                 control(kind,inflight,'stop');return
             checked=inflight.get('last_checked_at')
             if not checked or (moment-dt.datetime.fromisoformat(checked).astimezone(IST)).total_seconds()>=45:
