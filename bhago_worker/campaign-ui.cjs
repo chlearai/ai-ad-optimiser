@@ -1,6 +1,9 @@
 const fs=require('node:fs');
 const path=require('node:path');
 exports.step=async function({page,PRIVATE,prepare,SETTINGS,writeStatus,assertWorkspace},request){
+  if(request.stage==='insightdesk_whatsapp_history') {
+    return require('./whatsapp-ui.cjs').run({page,PRIVATE,assertWorkspace},request);
+  }
   if(request.stage==='insightdesk_campaign_control') {
     return require('./campaign-control.cjs').run({page,PRIVATE,assertWorkspace},request);
   }

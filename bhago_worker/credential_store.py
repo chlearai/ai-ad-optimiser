@@ -17,7 +17,7 @@ def cipher():
 
 
 def read_secret(name):
-    if name not in ('google_oauth', 'samvaad_session'):
+    if name not in ('google_oauth', 'samvaad_session', 'kapso'):
         raise ValueError('Unsupported Bhago credential')
     from insightdesk_bridge import get_value
     encrypted = get_value('bhago:18:credential:' + name)
@@ -25,7 +25,7 @@ def read_secret(name):
 
 
 def save_secret(name, value):
-    if name not in ('google_oauth', 'samvaad_session'):
+    if name not in ('google_oauth', 'samvaad_session', 'kapso'):
         raise ValueError('Unsupported Bhago credential')
     from insightdesk_bridge import connect
     encrypted = cipher().encrypt(json.dumps(value).encode()).decode()

@@ -621,6 +621,8 @@ def main():
             if not first:
                 from client_reports import tick as client_report_tick
                 client_report_tick()
+                from whatsapp_sync import tick as whatsapp_tick
+                whatsapp_tick(ready)
             if ready and not first:
                 from report_snapshot import tick as report_tick
                 report_tick()

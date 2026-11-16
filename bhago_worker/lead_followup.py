@@ -73,9 +73,11 @@ def callback_columns(calls):
 def delivery_status(calls):
     """A send/acceptance response is not proof of delivery. Unknown remains blank."""
     for call in reversed(calls):
+        if 'WhatsApp Delivery Status' not in call:continue
         status = clean(call.get('WhatsApp Delivery Status')).casefold()
         if status in ('delivered', 'read'):
             return 'Delivered'
         if status in ('failed', 'undeliverable', 'not delivered'):
             return 'Not Delivered'
+        return ''
     return ''

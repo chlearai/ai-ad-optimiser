@@ -115,7 +115,11 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     check_manual_columns(grids,kind)
     if not grids['Call History'] or grids['Call History'][0][16]!='Call ID':raise ValueError('Call History headers changed.')
     if not grids[detail] or grids[detail][0][1 if kind=='lead' else 2]!='Mobile':raise ValueError('Client report identity headers changed.')
-    calls,lookup=merge_history(grids['Call History'],exported,jobs,kind,cutoff);data=model(calls,jobs,lookup,kind)
+    calls,lookup=merge_history(grids['Call History'],exported,jobs,kind,cutoff)
+    if kind=='lead':
+        receipts=(load_state('bhago:18:whatsapp:receipts') or {}).get('by_call',{})
+        calls=[dict(c,**{'WhatsApp Delivery Status':receipts[c['Session ID']]}) if c['Session ID'] in receipts else c for c in calls]
+    data=model(calls,jobs,lookup,kind)
     updates=[];ends={}
     def table(title,rows,key,width,defaults=None):
         existing=grids[title];matched=upsert(existing,rows,key);end=max(len(existing),max((n for n,_,_ in matched),default=1));ends[title]=end
