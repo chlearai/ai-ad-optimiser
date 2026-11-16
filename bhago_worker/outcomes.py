@@ -146,10 +146,10 @@ def identity_matches(row, recipient, indices):
         return False
 
 
-def bind_rows(recipients, kind, writer):
+def bind_rows(recipients, kind, writer, skip_duplicate_ids=False):
     """Assign a durable row UUID before dialing, with re-read identity checks."""
     from insightdesk_bridge import field_indices
-    grouped = collections.defaultdict(list)
+    grouped = collections.defaultdict(list);accepted=[]
     for recipient in recipients:
         ref = recipient.get('source_ref')
         if not ref or ref.get('source') == 'qwqer':
@@ -166,19 +166,23 @@ def bind_rows(recipients, kind, writer):
         props=next(s['properties'] for s in writer.metadata(ref['spreadsheet_id'])['sheets'] if s['properties']['sheetId']==ref['sheet_id'])
         ids=writer.values(ref['spreadsheet_id'],[a1(title,f'{idcol}2:{idcol}{props["gridProperties"]["rowCount"]}')])[0]
         counts=collections.Counter(str(r[0]) for r in ids if r and r[0])
-        if any(n>1 for n in counts.values()):raise ValueError('Duplicate Bhago Row IDs must be corrected before calling.')
         for recipient, data in zip(group,current):
             row=data[0] if data else []
+            col=mapping['Bhago Row ID']; old=str(row[col]).strip() if len(row)>col else ''
+            if old and counts[old]>1:
+                if skip_duplicate_ids:continue
+                raise ValueError('Selected row has a duplicate Bhago Row ID; this row must be excluded before calling.')
             if not identity_matches(row,recipient,indices):
                 raise ValueError('A source row moved or changed before dialing; no campaign was started.')
             col=mapping['Bhago Row ID']; old=str(row[col]).strip() if len(row)>col else ''
             if old and not re.fullmatch(r'[a-f0-9]{32}',old):
                 raise ValueError('Bhago Row ID contains unexpected data; review the source.')
             recipient['source_ref'].update(row_id=old or uuid.uuid4().hex,title=title)
+            accepted.append(recipient)
             if not old:
                 updates.append({'range':a1(title,f'{get_column_letter(col+1)}{recipient["source_ref"]["row"]}'),'values':[[recipient['source_ref']['row_id']]]})
         writer.write(ref['spreadsheet_id'],updates)
-    return recipients
+    return accepted
 
 
 def state_key(row_id):

@@ -49,7 +49,10 @@ def plan(kind, today):
                  'end_date':(today-dt.timedelta(days=1)).isoformat(),'_allow_empty':True,'_skip_invalid':True}
             rows,_,_=read_source(run)
             # Stable IDs are established before any row enters a calling campaign.
-            bind_rows(rows,kind,writer)
+            original_count=len(rows)
+            rows=bind_rows(rows,kind,writer,skip_duplicate_ids=True)
+            if len(rows)<original_count:
+                skipped.append({'source':source,'reason':'Duplicate Bhago Row IDs excluded','excluded_rows':original_count-len(rows)})
             recipients.extend(rows)
     stored=load_states([state_key(r['source_ref']['row_id']) for r in recipients])
     states={r['source_ref']['row_id']:stored.get(state_key(r['source_ref']['row_id'])) for r in recipients}
