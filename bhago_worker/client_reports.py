@@ -66,6 +66,8 @@ def model(calls,jobs,lookup,kind):
             plan=callback_plan(cs)
             if plan and plan['state']=='manual_followup':action='Manual follow-up: two total call attempts already used'
             elif plan:action='Callback scheduled for '+plan['due_at']+' (IST)'
+            details[-1][13]=action
+            details[-1].extend([cbdate,cbtime,delivery_status(cs)])
             if any(interest([x])=='Interested' for x in cs):positives.append([0,'Lead',r['name'],r.get('value1',''),p,sources,serial(c['Time']),last(cs,'Interest Level'),last(cs,'Call Summary') or 'No feedback captured',cbtime,action,classification,delivery_status(cs),cbdate])
         else:
             details.append([0,r['name'],p,r.get('value2',''),float(r['value3']) if r.get('value3') else '',last(cs,'promised_payment_date') or 'Not recorded',last(cs,'Call Summary') or 'No feedback captured',r.get('value1',''),serial(cs[0]['Time']),serial(c['Time']),len(cs),sum(answered(x) for x in cs),c['Status'],commitment or 'Not recorded',last(cs,'promised_amount'),callback,action,len({x['Campaign Name'] for x in cs})])
@@ -130,6 +132,10 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     ends['Daily Performance']=len(data['daily'])+1
     if kind=='lead':
         table(detail,data['details'],lambda r:phone(r[1]) if len(r)>1 else '',15,['Pending client review',''])
+        # Keep client-owned P/Q fixed. Append structured follow-up outputs to R:T.
+        updates.append({'range':a1(detail,'R1:T1'),'values':[['Callback Date','Callback Time (IST)','WhatsApp Message Status']]})
+        for n,row,new in upsert(grids[detail],data['details'],lambda r:phone(r[1]) if len(r)>1 else ''):
+            updates.append({'range':a1(detail,f'R{n}:T{n}'),'values':[row[15:18]]})
         matched=table('Lead Interested',[r[:11] for r in data['interested']],lambda r:phone(r[4]) if len(r)>4 else '',11,['Pending client review',''])
         groups={phone(r[4]):r for r in data['interested']}
         updates.append({'range':a1('Lead Interested','C1'),'values':[['Name']]})
@@ -170,7 +176,7 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     formulas=[{'range':a1('MIS',f'{letter(c+1)}{r+1}'),'values':[[v]]} for r,row in enumerate(mis) for c,v in enumerate(row) if isinstance(v,str) and v.startswith('=')]
     for i in range(0,len(formulas),200):writer.request('POST',sid,'/values:batchUpdate',json={'valueInputOption':'USER_ENTERED','data':formulas[i:i+200]})
     for title,n in ends.items():
-        props=tabs[title];sid_=props['sheetId'];w=21 if title=='Call History' or kind=='payment' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
+        props=tabs[title];sid_=props['sheetId'];w=21 if title=='Call History' or kind=='payment' and title==detail else 20 if kind=='lead' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
         req += [{'setBasicFilter':{'filter':{'range':{'sheetId':sid_,'startRowIndex':0,'endRowIndex':n,'startColumnIndex':0,'endColumnIndex':w}}}}]
         datecols=[0] if title in ('Call History','Daily Performance') else [4,5] if kind=='lead' and title==detail else [6] if title=='Lead Interested' else [8,9]
         for c in datecols:req.append({'repeatCell':{'range':{'sheetId':sid_,'startRowIndex':1,'endRowIndex':max(2,n),'startColumnIndex':c,'endColumnIndex':c+1},'cell':{'userEnteredFormat':{'numberFormat':{'type':'DATE','pattern':'dd mmm yyyy'}}},'fields':'userEnteredFormat.numberFormat'}})
