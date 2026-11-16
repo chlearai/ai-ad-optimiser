@@ -62,7 +62,7 @@ class SheetTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_links_persist_and_save_independently(self):
-        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment']
+        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment', 'lead_calling_report', 'payment_calling_report']
         self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'], dict.fromkeys(sources, ''))
         for source in sources:
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=0'
@@ -74,7 +74,20 @@ class SheetTests(unittest.TestCase):
         for source in sources[1:]:
             self.assertEqual(saved[source], reloaded[source])
         with self.Session() as db:
-            self.assertEqual(db.query(AppSetting).count(), 8)
+            self.assertEqual(db.query(AppSetting).count(), 10)
+
+    def test_report_links_are_independent_and_cannot_queue_calls(self):
+        for source in ('lead_calling_report', 'payment_calling_report'):
+            url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=123'
+            self.assertEqual(self.client.put('/api/bhago/1/sheets/' + source, json={'url': url}).status_code, 200)
+            self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'][source], url)
+            self.assertEqual(self.client.post('/api/bhago/1/run', json={'source': source, 'calling_type': 'lead'}).status_code, 422)
+        self.assertEqual(self.client.put('/api/bhago/1/sheets/lead_calling_report', json={'url': ''}).status_code, 200)
+        saved = self.client.get('/api/bhago/1/sheets').json()['sheets']
+        self.assertEqual(saved['lead_calling_report'], '')
+        self.assertIn('payment_calling_report', saved['payment_calling_report'])
+        with self.Session() as db:
+            self.assertIsNone(db.query(AppSetting).filter_by(key='bhago:1:run:current').first())
 
     def test_invalid_urls_and_sources_do_not_save(self):
         for url in ['javascript:alert(1)', 'https://docs.google.com.evil.test/spreadsheets/d/abc',
