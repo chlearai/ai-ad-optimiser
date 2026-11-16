@@ -618,6 +618,9 @@ def main():
                 command({"action": "campaign_step", "stage": "insightdesk_ping"})
                 last_ping = time.monotonic()
             ready = heartbeat()
+            if not first:
+                from client_reports import tick as client_report_tick
+                client_report_tick()
             if ready and not first:
                 from report_snapshot import tick as report_tick
                 report_tick()

@@ -88,6 +88,16 @@
     "reinstatement": "Only on explicit instruction; gaining Editor access alone does not reinstate calling"
   },
   "resultCapture": {
+    "clientReporting": {
+      "enabled": true,
+      "deadline": "18:30 Asia/Calcutta every day",
+      "prepareAt": "18:20",
+      "finalRefreshAt": "18:25",
+      "destinations": ["lead_calling_report", "payment_calling_report"],
+      "updates": "MIS, Daily Performance, Call History and client outcome lists",
+      "preserve": "Client follow-up statuses, client notes and manually verified payment entries",
+      "failurePolicy": "Record needs_attention, preserve previous history and retry; never silently claim success."
+    },
     "implementationStatus": "Implemented; authenticated Sheets write/read-back and genuine completed payment result verified",
     "expectedTotalAttempts": 2,
     "attemptStorage": "Separate Attempt 1 and Attempt 2 columns on the original source row, each with call ID, called-at time, status, duration, outcome, summary, callback details and recording link when available",
