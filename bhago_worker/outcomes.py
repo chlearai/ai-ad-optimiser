@@ -64,6 +64,16 @@ def parse_export(text):
         # Only the approved outbound callers; inbound/support records are never written.
         if re.sub(r'\D','',row.get('From Number','')) not in ('918069458173','918069458175'):
             continue
+        # Explicit lead-only extraction fields avoid collision with Samvaad's built-in columns.
+        if re.sub(r'\D','',row.get('From Number',''))=='918069458173':
+            if clean(row.get('lead_callback_at_ist')):
+                row['Callback Time']=clean(row['lead_callback_at_ist'])
+            requested=clean(row.get('lead_callback_requested')).casefold()
+            if requested in ('yes','true','1'):
+                row['call_disposition']='callback_requested'
+            elif requested in ('no','false','0'):
+                row['Callback Time']=''
+                if clean(row.get('call_disposition')).casefold()=='callback_requested':row['call_disposition']=''
         rows.append(row)
     return rows
 
