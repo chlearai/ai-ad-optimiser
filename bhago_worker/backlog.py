@@ -6,7 +6,7 @@ from outcomes import bind_rows, load_state, load_states, save_state, signature, 
 from google_access import google_session, SheetsWriter
 
 
-def eligible(recipients, today, states):
+def eligible(recipients, today, states, moment=None, lead_callbacks=False):
     yesterday=today-dt.timedelta(days=1)
     result=[]
     for recipient in recipients:
@@ -16,23 +16,30 @@ def eligible(recipients, today, states):
         if date>yesterday:
             continue
         prior=states.get(recipient['source_ref']['row_id'])
+        callback=None
         if prior:
             if prior.get('signature')!=signature(recipient):
                 # A new END/date/vehicle cycle requires a fresh source record; never borrow old outcomes.
                 continue
-            if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt','held_review'):
+            if lead_callbacks and prior.get('state')=='complete':
+                from lead_followup import callback_plan,IST
+                callback=callback_plan(prior.get('calls',[]))
+                if callback and (callback['state']!='scheduled' or dt.datetime.fromisoformat(callback['due_at']) > (moment or dt.datetime.combine(today,dt.time(10),IST))):
+                    continue
+            if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt','held_review') and not callback:
                 continue
         row=dict(recipient)
+        if callback:row['_callback_due']=callback['due_at']
         row['_carryover']=bool(prior and prior.get('closed_campaign') and prior.get('state')=='pending')
         if prior and prior.get('calls'):
             from outcomes import merge_calls
             row['prior_calls']=merge_calls(prior.get('calls',[]),[])
             if len(row['prior_calls'])>=2:continue
         result.append(row)
-    return sorted(result,key=lambda r:(r['sourceDate']!=yesterday.isoformat(),not r.get('_carryover',False),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
+    return sorted(result,key=lambda r:(not bool(r.get('_callback_due')),r.get('_callback_due',''),r['sourceDate']!=yesterday.isoformat(),not r.get('_carryover',False),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
 
 
-def plan(kind, today):
+def plan(kind, today, moment=None):
     from insightdesk_bridge import read_source,get_value
     sources=['swiggy','zomato'] if kind=='lead' else ['payment_reminder']
     recipients=[];skipped=[]
@@ -56,10 +63,12 @@ def plan(kind, today):
             recipients.extend(rows)
     stored=load_states([state_key(r['source_ref']['row_id']) for r in recipients])
     states={r['source_ref']['row_id']:stored.get(state_key(r['source_ref']['row_id'])) for r in recipients}
-    queue=eligible(recipients,today,states)
+    queue=eligible(recipients,today,states,moment,lead_callbacks=kind=='lead')
     yesterday=(today-dt.timedelta(days=1)).isoformat()
     fresh=[r for r in queue if r['sourceDate']==yesterday]
-    if fresh:queue=fresh
+    callbacks=[r for r in queue if r.get('_callback_due')]
+    if callbacks:queue=callbacks
+    elif fresh:queue=fresh
     batch_size=json.loads(get_value('bhago:18:schedule') or '{}').get('batch_size',30)
     if not isinstance(batch_size,int) or isinstance(batch_size,bool) or batch_size<1:
         raise ValueError('Bhago batch size must be a positive whole number.')
@@ -117,7 +126,7 @@ def tick(moment=None):
         from rollover import settle
         if not settle(kind,moment):continue
         if not 10<=moment.hour<18:continue
-        rows,skipped=plan(kind,moment.date())
+        rows,skipped=plan(kind,moment.date(),moment)
         if not rows:continue
         run_id=uuid.uuid4().hex
         run={'id':run_id,'source':'lead_batch' if kind=='lead' else 'payment_reminder','calling_type':kind,

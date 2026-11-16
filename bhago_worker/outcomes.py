@@ -19,7 +19,7 @@ EMPTY = {'', '-', 'null', 'none', 'unknown'}
 TERMINAL = {'ended','completed','failed','busy','no-answer','no_answer','unanswered','cancelled','canceled','not_connected','not connected'}
 CALL_FIELDS = {'Session ID','Campaign Name','Time','Status','Duration','Outcome','Call Summary',
                'Callback Time','Recording URL','Interest Level','qualified_for_followup',
-               'call_disposition','payment_commitment_status','promised_payment_date','promised_amount'}
+               'call_disposition','payment_commitment_status','promised_payment_date','promised_amount','WhatsApp Delivery Status'}
 
 
 def merge_calls(prior, current):
