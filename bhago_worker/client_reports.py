@@ -91,6 +91,13 @@ def upsert(existing,rows,key,manual_defaults=None):
         result.append((positions[k],row,is_new))
     return result
 
+def check_manual_columns(grids,kind):
+    required={'Lead Outcomes':{15:'Client Follow-up Status',16:'Client Notes'},'Lead Interested':{11:'Client Follow-up Status',12:'Client Notes'}} if kind=='lead' else {'Sheet1':{17:'Client Follow-up Status',18:'Client Notes',19:'Payment Verified'}}
+    for title,columns in required.items():
+        header=grids[title][0] if grids.get(title) else []
+        if any(i>=len(header) or header[i]!=label for i,label in columns.items()):
+            raise ValueError('Client-editable columns moved; updates held to preserve client entries.')
+
 def sync_book(writer,sid,kind,exported,jobs,cutoff):
     meta=writer.metadata(sid);tabs={s['properties']['title']:s['properties'] for s in meta['sheets']}
     detail='Lead Outcomes' if kind=='lead' else 'Sheet1'
@@ -98,6 +105,7 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     if any(t not in tabs for t in required):raise ValueError('Report tabs changed; restore the approved report structure.')
     # Bound every read and retain formulas/manual client values.
     grids={t:writer.values(sid,[a1(t,f'A1:{letter(min(tabs[t]["gridProperties"]["columnCount"],26))}{min(tabs[t]["gridProperties"]["rowCount"],20000)}')])[0] for t in required}
+    check_manual_columns(grids,kind)
     if not grids['Call History'] or grids['Call History'][0][16]!='Call ID':raise ValueError('Call History headers changed.')
     if not grids[detail] or grids[detail][0][1 if kind=='lead' else 2]!='Mobile':raise ValueError('Client report identity headers changed.')
     calls,lookup=merge_history(grids['Call History'],exported,jobs,kind,cutoff);data=model(calls,jobs,lookup,kind)
