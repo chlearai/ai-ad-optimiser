@@ -13,17 +13,61 @@ import hmac
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from backend.routes.auth import get_current_user_required
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+from backend.db.database import get_db
+from backend.db.models import Account, AppSetting, UserAccountAssignment
+from backend.routes.bhago import validate_sheet_url
 
 logger = logging.getLogger("AdOptima")
 router = APIRouter(prefix="/api/crashclub", tags=["crashclub"])
 
 WEBHOOK_VERIFY_TOKEN = os.getenv("CRASH_CLUB_WEBHOOK_VERIFY_TOKEN", "crashclub_verify")
 WEBHOOK_APP_SECRET = os.getenv("CRASH_CLUB_WEBHOOK_APP_SECRET", "")
+
+
+def _sheet_access(account_id, db, user):
+    if user.role not in ("admin", "superadmin") and (
+        not user.access_insightdesk or not db.query(UserAccountAssignment).filter_by(
+            user_id=user.id, account_id=account_id).first()
+    ):
+        raise HTTPException(403, "Not authorized for this account")
+    account = db.query(Account).filter_by(id=account_id).first()
+    if not account or account.name.strip().casefold() != "crash club":
+        raise HTTPException(404, "Crash Club account not found")
+
+
+class CrashClubSheetLink(BaseModel):
+    url: str = Field(max_length=2048)
+
+
+@router.get("/ui/{account_id}/sheets")
+def get_sheet_links(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    _sheet_access(account_id, db, user)
+    keys = {source: f"crashclub:{account_id}:sheet:{source}" for source in ("goa", "mw")}
+    rows = db.query(AppSetting).filter(AppSetting.key.in_(list(keys.values()))).all()
+    saved = {row.key: row.value or "" for row in rows}
+    return {"sheets": {source: saved.get(key, "") for source, key in keys.items()}}
+
+
+@router.put("/ui/{account_id}/sheets/{source}")
+def save_sheet_link(account_id: int, source: Literal["goa", "mw"], body: CrashClubSheetLink,
+                    db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    _sheet_access(account_id, db, user)
+    url = validate_sheet_url(body.url)
+    db.query(Account).filter_by(id=account_id).with_for_update().first()
+    key = f"crashclub:{account_id}:sheet:{source}"
+    row = db.query(AppSetting).filter_by(key=key).first()
+    if row:
+        row.value = url
+    else:
+        db.add(AppSetting(key=key, value=url))
+    db.commit()
+    return {"source": source, "url": url, "saved": True}
 
 
 def _verify_signature(raw_body: bytes, x_hub_signature: str) -> bool:

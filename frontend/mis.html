@@ -834,6 +834,19 @@
         .tlg-funds summary { cursor:pointer; font-size:12px; margin-top:8px; }
         .tlg-funds form { display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:8px; }
         .tlg-funds label { display:flex; flex-direction:column; gap:3px; font-size:12px; }
+
+        #crashClubSheetsWorkspace { padding:24px; }
+        #crashClubSheetsWorkspace [hidden] { display:none !important; }
+        #crashClubSheetsWorkspace .card-header { padding:0 0 22px; }
+        .cc-sheet-card { padding:22px; margin-bottom:18px; border:1px solid var(--color-border); border-radius:12px; background:var(--color-bg-input); }
+        .cc-sheet-card h3 { margin:0 0 18px; font-size:17px; }
+        .cc-sheet-card label { display:block; margin-bottom:8px; font-size:12px; color:var(--color-text-secondary); }
+        .cc-sheet-row { display:flex; gap:12px; }
+        .cc-sheet-row input { flex:1; min-width:0; height:42px; padding:10px 12px; border:1px solid var(--color-border-input); border-radius:8px; background:var(--color-bg-page); color:var(--color-text-primary); font:inherit; font-size:13px; }
+        .cc-sheet-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; font-size:12px; }
+        .cc-sheet-meta p { margin:0; color:var(--color-text-secondary); overflow-wrap:anywhere; }
+        .cc-sheet-meta a { color:var(--color-accent); white-space:nowrap; }
+        @media(max-width:640px) { #crashClubSheetsWorkspace { padding:16px; } .cc-sheet-card { padding:16px; } .cc-sheet-row { flex-wrap:wrap; } .cc-sheet-row input { flex-basis:100%; } }
     </style>
     <script src="/india_states.js"></script>
 </head>
@@ -2468,175 +2481,80 @@
         }
     }
 
-    /* ============ Crash Club: tabbed views (Overall / Goa / MW / Bot) ============ */
-    let ccView = 'overall';
-    let ccLastData = { overall: null, goa: null, mw: null };
-
-    function ccViewButtons() {
-        const active = (v) => v === ccView
-            ? 'background:var(--primary,#2563eb); color:#fff; border-color:var(--primary,#2563eb);'
-            : 'background:transparent; color:inherit;';
-        return `
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
-            <button class="btn" style="${active('overall')}" onclick="ccSetView('overall')">Overall Report</button>
-            <button class="btn" style="${active('goa')}" onclick="ccSetView('goa')">Goa Leads Sheet</button>
-            <button class="btn" style="${active('mw')}" onclick="ccSetView('mw')">MW Leads Sheet</button>
-            <button class="btn" style="${active('bot')}" onclick="ccSetView('bot')">▶ Run Leads Sheet Bot</button>
-        </div>`;
+    /* ============ Crash Club saved sheet links ============ */
+    function isCrashClub(account) {
+        return account && (account.name || '').trim().toLowerCase() === 'crash club';
     }
-
-    function ccSetView(view) {
-        ccView = view;
-        const a = allAccounts.find(x => x.id === selectedAccountId);
-        if (!a) return;
-        if (view === 'bot') { ccRunBot(); return; }
-        renderCrashClubReport(a);
-    }
-
-    async function ccRunBot() {
-        const acc = allAccounts.find(x => x.id === selectedAccountId);
-        const botHtml = `
-            <div class="card">
-                <div class="card-header"><div class="report-title">Leads Sheet Bot</div></div>
-                <div id="ccBotStatus" class="empty-state">Starting bot…</div>
-            </div>`;
-        $('reportContent').innerHTML = ccViewButtons() + botHtml;
-        const st = $('ccBotStatus');
-        try {
-            st.textContent = 'Syncing Meta leads → Google Sheet + database… (this can take up to a minute)';
-            const res = await api('POST', '/crashclub/ui/' + selectedAccountId + '/sync', {});
-            const parts = [];
-            if (res.sheet) parts.push(`Sheet: wrote ${res.sheet.written ?? 0}, skipped ${res.sheet.skipped_dedup ?? 0}`);
-            if (res.db) parts.push(`Database: added ${res.db.added ?? 0}, skipped ${res.db.skipped ?? 0}`);
-            if (res.sheet_error) parts.push('Sheet note: ' + res.sheet_error);
-            st.innerHTML = '<div style="color:var(--success,#16a34a); font-weight:600;">✅ Bot run complete</div>' +
-                '<div style="margin-top:0.5rem;">' + parts.join('<br>') + '</div>' +
-                '<div style="margin-top:0.75rem; color:var(--text-muted);">The Google Sheet and these tables are now up to date. Auto-sync also runs every 5 minutes.</div>';
-        } catch (e) {
-            st.innerHTML = '<div style="color:var(--danger,#dc2626); font-weight:600;">❌ Bot failed: ' + escapeHtml(e.message) + '</div>';
-        }
-    }
-
+    const ccSheetSources = [['goa', 'GG — Goa Getaway'], ['mw', 'MW — Magnificent Wedding']];
+    let ccRenderVersion = 0;
     async function renderCrashClubReport(account) {
-        const ccWrapTable = (id, title, rowsBody, count, note) => `
-            <div class="card">
-                <div class="card-header" style="cursor:pointer;" onclick="toggleCcTable('${id}')">
-                    <div class="report-title">${title} <span class="status-badge live" style="margin-left:8px;">${count} leads</span></div>
-                    <div id="${id}_chev" style="font-size:1.1rem;">▾</div>
-                </div>
-                ${note ? `<div style="padding:0.5rem 1rem; color:var(--text-muted); font-size:0.85rem;">${note}</div>` : ''}
-                <div id="${id}_body" style="max-height:420px; overflow:auto;">
-                    <table>
-                        <thead><tr>
-                            <th>Lead Created</th><th>Date &amp; Time</th><th>Source</th>
-                            <th id="${id}_th4"></th><th id="${id}_th5"></th><th id="${id}_th6"></th>
-                            <th>Email</th><th>Full Name</th><th>Phone</th>
-                        </tr></thead>
-                        <tbody>${rowsBody}</tbody>
-                    </table>
-                </div>
-            </div>`;
-
+        const accountId = account.id, version = ++ccRenderVersion;
+        $('reportContent').innerHTML = `<div id="crashClubSheetsWorkspace" class="card">
+            <div class="card-header"><div><h2 style="margin:0">Crash Club lead sheets</h2><p style="margin:8px 0 0;color:var(--color-text-secondary)">Add and save a Google Sheet for each campaign.</p></div></div>
+            ${ccSheetSources.map(([key,label]) => `<section class="cc-sheet-card" aria-labelledby="ccHeading_${key}">
+                <h3 id="ccHeading_${key}">${label}</h3>
+                <label for="ccUrl_${key}">Google Sheet link</label>
+                <div class="cc-sheet-row"><input type="url" id="ccUrl_${key}" maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/..." disabled oninput="ccSheetChanged('${key}')"><button type="button" id="ccSave_${key}" class="btn btn-secondary" disabled onclick="saveCrashClubSheet('${key}')">Save</button></div>
+                <div class="cc-sheet-meta"><p id="ccStatus_${key}" role="status">Loading saved link…</p><a id="ccOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
+            </section>`).join('')}
+            <button id="ccRetryLoad" type="button" class="btn btn-secondary" hidden onclick="renderCrashClubReport(allAccounts.find(a=>a.id===selectedAccountId))">Retry loading links</button>
+        </div>`;
         try {
-            const params = getReportParams();
-            let goa = ccLastData.goa, mw = ccLastData.mw, overall = ccLastData.overall;
-            if (!goa) goa = await api('GET', '/accounts/' + account.id + '/crashclub-leads?form=goa' + params);
-            if (!mw) mw = await api('GET', '/accounts/' + account.id + '/crashclub-leads?form=mw' + params);
-            if (ccView === 'overall' && !overall) overall = await api('GET', '/accounts/' + account.id + '/crm-summary' + params);
-            ccLastData = { overall, goa, mw };
-
-            const rowHtml = (l) => `<tr>
-                <td>${escapeHtml(l.lead_created || '-')}</td>
-                <td>${escapeHtml(l.date_time || '-')}</td>
-                <td><span class="badge badge-meta">${escapeHtml((l.source || 'Meta').toUpperCase())}</span></td>
-                <td>${escapeHtml(l.col_d || '-')}</td>
-                <td>${escapeHtml(l.col_e || '-')}</td>
-                <td>${escapeHtml(l.col_f || '-')}</td>
-                <td>${escapeHtml(l.email || '-')}</td>
-                <td>${escapeHtml(l.name || '-')}</td>
-                <td>${escapeHtml(l.phone || '-')}</td>
-            </tr>`;
-
-            const goaRows = (goa.leads || []).map(rowHtml).join('');
-            const mwRows = (mw.leads || []).map(rowHtml).join('');
-
-            const controls = `
-            <div class="card">
-                <div class="card-header">
-                    <div class="report-title">Report Controls</div>
-                    <div style="display:flex; gap:0.5rem;">
-                        <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
-                        <button class="btn btn-primary" onclick="exportPDF()">Export PDF</button>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Period</label>
-                        <select id="misPeriod" onchange="onPeriodChange(this.value)">
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="fortnightly">Fortnightly</option>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Date Range</label>
-                        <select id="misDatePreset" onchange="onDatePresetChange(this.value)">
-                            <option value="last30">Last 30 Days</option>
-                            <option value="last7">Last 7 Days</option>
-                            <option value="last15">Last 15 Days</option>
-                            <option value="thisMonth">This Month</option>
-                            <option value="lastMonth">Last Month</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="flex:0; min-width:auto;">
-                        <button class="btn btn-primary" onclick="ccRefresh()">Refresh</button>
-                    </div>
-                </div>
-            </div>`;
-
-            const goaHead = ['STORE', 'PURCHASE TIMELINE', 'BUDGET'];
-            const mwHead = ['Plans to purchase before March 2027?', 'Purchase made on cc/CKC before?', 'Tentative Date of Event'];
-
-            let html = ccViewButtons() + controls;
-            if (ccView === 'overall') {
-                html += buildReport(overall, account, true);
-                html += ccWrapTable('ccGoa', 'Goa Leads', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length);
-                html += ccWrapTable('ccMw', 'Magnificent Wedding Leads', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length);
-            } else if (ccView === 'goa') {
-                html += ccWrapTable('ccGoa', 'Goa Leads Sheet', goaRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (goa.leads || []).length, 'Mirrors tab "JUNE - SEPT 2026 - Goa Leads" in the PPC Workbook');
-            } else {
-                html += ccWrapTable('ccMw', 'MW Leads Sheet', mwRows || '<tr><td colspan="9" style="color:var(--text-muted);">No leads in this period.</td></tr>', (mw.leads || []).length, 'Mirrors tab "JUNE - SEPT 2026 - MW Leads" in the PPC Workbook');
-            }
-
-            $('reportContent').innerHTML = html;
-
-            goaHead.forEach((h, i) => { const el = $('ccGoa_th' + (4 + i)); if (el) el.textContent = h; });
-            mwHead.forEach((h, i) => { const el = $('ccMw_th' + (4 + i)); if (el) el.textContent = h; });
-
-            const periodSel = $('misPeriod'); const dateSel = $('misDatePreset');
-            if (periodSel && reportDateRange.preset) periodSel.value = ['daily','weekly','fortnightly','monthly'].includes(reportDateRange.preset) ? reportDateRange.preset : 'daily';
-            if (dateSel && reportDateRange.preset) dateSel.value = reportDateRange.preset;
+            const data = await api('GET', `/crashclub/ui/${accountId}/sheets`);
+            if (!ccSheetCurrent(accountId, version)) return;
+            ccSheetSources.forEach(([key]) => {
+                const url = data.sheets[key] || '';
+                $('ccUrl_' + key).value = url;
+                $('ccUrl_' + key).disabled = false;
+                $('ccSave_' + key).disabled = false;
+                $('ccStatus_' + key).textContent = url ? 'Saved' : 'No sheet saved yet';
+                setCrashClubSheetLink(key, url);
+            });
         } catch (e) {
-            toast(e.message, true);
-            $('reportContent').innerHTML = ccViewButtons() + '<div class="empty-state">Failed to load Crash Club leads: ' + escapeHtml(e.message) + '</div>';
+            if (!ccSheetCurrent(accountId, version)) return;
+            ccSheetSources.forEach(([key]) => { $('ccStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
+            $('ccRetryLoad').hidden = false;
         }
     }
-
-    function ccRefresh() {
-        ccLastData = { overall: null, goa: null, mw: null };
-        const a = allAccounts.find(x => x.id === selectedAccountId);
-        if (a) renderCrashClubReport(a);
+    function ccSheetCurrent(accountId, version) {
+        return accountId === selectedAccountId && version === ccRenderVersion && !!$('crashClubSheetsWorkspace');
     }
-
-    function toggleCcTable(id) {
-        const body = $(id + '_body');
-        const chev = $(id + '_chev');
-        if (!body) return;
-        const hidden = body.style.display === 'none';
-        body.style.display = hidden ? '' : 'none';
-        if (chev) chev.textContent = hidden ? '▾' : '▸';
+    function ccSheetChanged(key) {
+        $('ccStatus_' + key).textContent = 'Unsaved changes';
+        $('ccOpen_' + key).hidden = true;
+    }
+    function setCrashClubSheetLink(key, url) {
+        const link = $('ccOpen_' + key);
+        link.hidden = true;
+        link.removeAttribute('href');
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:' || parsed.host !== 'docs.google.com' || parsed.username || parsed.password || !/^\/spreadsheets\/d\/[A-Za-z0-9_-]+(?:\/.*)?$/.test(parsed.pathname)) return;
+            link.href = url;
+            link.hidden = false;
+        } catch (_) {}
+    }
+    async function saveCrashClubSheet(source) {
+        const accountId = selectedAccountId, version = ccRenderVersion;
+        if (!isCrashClub(allAccounts.find(a => a.id === accountId))) return;
+        const input = $('ccUrl_' + source), button = $('ccSave_' + source);
+        input.disabled = true; button.disabled = true; button.textContent = 'Saving…';
+        try {
+            const data = await api('PUT', `/crashclub/ui/${accountId}/sheets/${source}`, {url:input.value.trim()});
+            if (!ccSheetCurrent(accountId, version)) return;
+            input.value = data.url;
+            $('ccStatus_' + source).textContent = data.url ? 'Saved' : 'No sheet saved yet';
+            setCrashClubSheetLink(source, data.url);
+            toast('Sheet link saved');
+        } catch (e) {
+            if (!ccSheetCurrent(accountId, version)) return;
+            $('ccStatus_' + source).textContent = 'Not saved: ' + e.message;
+            toast(e.message, true);
+        } finally {
+            if (ccSheetCurrent(accountId, version)) {
+                input.disabled = false; button.disabled = false; button.textContent = 'Save';
+            }
+        }
     }
 
     let tlgTimer;
@@ -3029,11 +2947,18 @@
             renderBhagoEmptyState();
             return;
         }
+        if (isCrashClub(account)) {
+            await renderCrashClubReport(account);
+            return;
+        }
+        const requestedAccountId = account.id;
         try {
             const data = await api('GET', '/accounts/' + account.id + '/crm-summary' + getReportParams());
+            if (requestedAccountId !== selectedAccountId) return;
             if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
             buildReport(data, account);
         } catch (e) {
+            if (requestedAccountId !== selectedAccountId) return;
             if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
             toast(e.message, true);
             $('reportContent').innerHTML = '<div class="empty-state">Failed to load report: ' + escapeHtml(e.message) + '</div>';
