@@ -7,10 +7,10 @@ import urllib.parse
 import urllib.request
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Account, AccountGroup, AccountType, AccountStatus, User, UserAccountAssignment, CampaignTypeTag
+from backend.db.models import Account, AccountGroup, AccountType, AccountStatus, User, UserAccountAssignment, CampaignTypeTag, AppSetting
 from backend.db.revenueops_models import RevClient, RevClientStatus
 from backend.services.crypto import encrypt, decrypt
 from backend.services.connectors import get_connector, meta_system_token_configured, get_meta_access_token
@@ -173,6 +173,53 @@ class AccountUpdate(BaseModel):
 
 class GroupCreate(BaseModel):
     name: str
+
+
+class EduInfraSheet(BaseModel):
+    name: str = Field(default="", max_length=100)
+    url: str = Field(default="", max_length=2048)
+
+
+def _eduinfra_access(account_id, db, user):
+    if user.role not in ("admin", "superadmin") and not user.access_insightdesk:
+        raise HTTPException(403, "InsightDesk access required")
+    account = _filter_accounts_for_user(db.query(Account), user).filter(Account.id == account_id).first()
+    if not account:
+        raise HTTPException(404, "Client/Brand not found")
+    if "eduinfra" not in (account.name or "").lower().replace(" ", ""):
+        raise HTTPException(400, "These sheet slots are for EduInfra only")
+
+
+@router.get("/accounts/{account_id}/eduinfra-sheets")
+def get_eduinfra_sheets(account_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    _eduinfra_access(account_id, db, user)
+    slots = []
+    for slot in range(1, 4):
+        setting = db.query(AppSetting).filter_by(key=f"eduinfra_sheets:{account_id}:{slot}").first()
+        slots.append(json.loads(setting.value) if setting else {"name": "", "url": ""})
+    return slots
+
+
+@router.put("/accounts/{account_id}/eduinfra-sheets/{slot}")
+def save_eduinfra_sheet(account_id: int, slot: int, payload: EduInfraSheet, db: Session = Depends(get_db), user: User = Depends(get_current_user_required)):
+    _eduinfra_access(account_id, db, user)
+    if slot not in (1, 2, 3):
+        raise HTTPException(400, "Choose sheet slot 1, 2 or 3")
+    url = payload.url.strip()
+    parsed = urllib.parse.urlsplit(url)
+    import re
+    if url and (parsed.scheme != "https" or parsed.netloc != "docs.google.com" or not re.fullmatch(r"/spreadsheets/d/[A-Za-z0-9_-]+(?:/.*)?", parsed.path)):
+        raise HTTPException(400, "Enter a valid Google Sheets link (https://docs.google.com/spreadsheets/d/...)")
+    value = {"name": payload.name.strip(), "url": url}
+    db.query(Account).filter_by(id=account_id).with_for_update().first()
+    key = f"eduinfra_sheets:{account_id}:{slot}"
+    setting = db.query(AppSetting).filter_by(key=key).first()
+    if not setting:
+        setting = AppSetting(key=key)
+        db.add(setting)
+    setting.value = json.dumps(value)
+    db.commit()
+    return value
 
 
 @router.get("/accounts")

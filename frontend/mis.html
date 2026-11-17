@@ -1015,6 +1015,7 @@
         const sortedAccounts = [...allAccounts].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         sortedAccounts.forEach(a => {
             const el = document.createElement('div');
+            el.dataset.accountId = a.id;
             el.className = 'account-item';
             el.onclick = () => selectAccount(a.id);
             el.innerHTML = `
@@ -1067,9 +1068,8 @@
         selectedAccountId = id;
         $('homeBtn').classList.remove('active');
         document.querySelectorAll('.account-item').forEach(el => el.classList.remove('active'));
-        const items = $('accountList').children;
-        const idx = allAccounts.findIndex(a => a.id === id);
-        if (items[idx]) items[idx].classList.add('active');
+        const activeItem = [...$('accountList').children].find(el => el.dataset.accountId === String(id));
+        if (activeItem) activeItem.classList.add('active');
         const a = allAccounts.find(x => x.id === id);
         $('reportTitle').textContent = 'MIS Report - ' + (a ? a.name : '');
         $('welcomeState').classList.add('hidden');
@@ -1083,6 +1083,10 @@
             syncBtn.textContent = '↻ Sync Leads Now';
         } else {
             syncBtn.style.display = 'none';
+        }
+        if (a && (a.name || '').toLowerCase().replace(/\s/g, '').includes('eduinfra')) {
+            await renderEduInfraSheets(id);
+            return;
         }
         if (isSaburi(a)) {
             await renderSaburiReport(a);
@@ -1115,6 +1119,78 @@
         }
         computeDateRange(reportDateRange.preset || 'last30');
         await renderReport(a);
+    }
+
+    async function renderEduInfraSheets(accountId) {
+        $('reportContent').innerHTML = `
+            <section style="padding:8px;max-width:1000px">
+                <h2>EduInfra Lead Automation</h2>
+                <p style="color:var(--color-text-muted);margin:12px 0 24px">Save up to three Google Sheets links. Open a saved sheet in a new tab.</p>
+                <div id="eduInfraSlots" style="display:grid;gap:20px"></div>
+            </section>`;
+        try {
+            const slots = await api('GET', `/accounts/${accountId}/eduinfra-sheets`);
+            if (selectedAccountId !== accountId) return;
+            $('eduInfraSlots').innerHTML = slots.map((sheet, i) => `
+                <form class="form-group" id="eduSheet${i + 1}" style="border:1px solid var(--color-border,#ddd);border-radius:12px;padding:20px;min-width:0" onsubmit="saveEduInfraSheet(event,${accountId},${i + 1})">
+                    <h3 style="margin-bottom:16px">Google Sheet ${i + 1}</h3>
+                    <label for="eduName${i + 1}">Sheet name (optional)</label>
+                    <input class="form-control" style="width:100%;margin:8px 0 16px" id="eduName${i + 1}" maxlength="100" placeholder="Enter a name" value="${escapeHtml(sheet.name || '')}">
+                    <label for="eduUrl${i + 1}">Google Sheets link</label>
+                    <input class="form-control" style="width:100%;margin:8px 0 16px" id="eduUrl${i + 1}" type="url" maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/..." value="${escapeHtml(sheet.url || '')}">
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                        <button class="btn btn-primary" type="submit">Save</button>
+                        <a id="eduOpen${i + 1}" class="btn btn-secondary" target="_blank" rel="noopener noreferrer" style="display:none">Open Google Sheet</a>
+                        <span id="eduStatus${i + 1}" role="status" style="font-size:13px;color:var(--color-text-muted)"></span>
+                    </div>
+                </form>`).join('');
+            slots.forEach((sheet, i) => {
+                updateEduInfraOpen(i + 1, sheet.url);
+                $('eduStatus' + (i + 1)).textContent = sheet.url ? 'Saved' : 'No sheet saved yet';
+                ['eduName', 'eduUrl'].forEach(prefix => $(prefix + (i + 1)).addEventListener('input', () => {
+                    $('eduStatus' + (i + 1)).textContent = 'Unsaved changes';
+                }));
+            });
+        } catch (e) {
+            if (selectedAccountId !== accountId) return;
+            $('eduInfraSlots').textContent = 'Unable to load saved sheets. Select EduInfra Expand to retry.';
+            toast(e.message, true);
+        }
+    }
+
+    function updateEduInfraOpen(slot, url) {
+        const link = $('eduOpen' + slot);
+        link.removeAttribute('href');
+        link.style.display = 'none';
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:' || parsed.host !== 'docs.google.com' || !/^\/spreadsheets\/d\/[A-Za-z0-9_-]+(?:\/.*)?$/.test(parsed.pathname)) return;
+            link.href = url;
+            link.style.display = '';
+        } catch (e) { /* Empty slots have no Open link. */ }
+    }
+
+    async function saveEduInfraSheet(event, accountId, slot) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const btn = form.querySelector('button[type="submit"]');
+        _setSaving(btn);
+        form.querySelectorAll('input').forEach(input => input.disabled = true);
+        try {
+            const saved = await api('PUT', `/accounts/${accountId}/eduinfra-sheets/${slot}`, {
+                name: $('eduName' + slot).value.trim(), url: $('eduUrl' + slot).value.trim()
+            });
+            if (selectedAccountId !== accountId || !form.isConnected) return;
+            $('eduName' + slot).value = saved.name;
+            $('eduUrl' + slot).value = saved.url;
+            updateEduInfraOpen(slot, saved.url);
+            $('eduStatus' + slot).textContent = saved.url ? 'Saved' : 'Slot cleared';
+            toast('Sheet ' + slot + ' saved');
+        } catch (e) { toast(e.message, true); }
+        finally {
+            _resetSaving(btn);
+            form.querySelectorAll('input').forEach(input => input.disabled = false);
+        }
     }
 
     let dsuT1Range = { preset: 'today', start: '', end: '' };
