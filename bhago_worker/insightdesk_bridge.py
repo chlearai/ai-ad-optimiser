@@ -94,15 +94,20 @@ def command(data):
 
 def heartbeat():
     browser = {}
+    browser_status = {}
     try:
         browser = json.loads((PRIVATE / "bridge-browser.json").read_text())
         age = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(browser["updatedAt"])).total_seconds()
     except (OSError, ValueError, KeyError):
         age = 999
+    try:
+        status = json.loads((PRIVATE / 'status.json').read_text())
+        browser_status = {'state':status.get('state'), 'message':str(status.get('message',''))[:240]}
+    except (OSError, ValueError):pass
     ready = browser.get("ready", False) and age < 40
     with connect() as db, db.cursor() as cur:
         cur.execute("INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()",
-                    (f"bhago:{ACCOUNT}:worker", json.dumps({"browser_ready": bool(ready), "calling_enabled": calling_enabled(), "runtime": os.environ.get('BHAGO_RUNTIME', 'local'), "results_enabled":os.environ.get('BHAGO_RESULTS_ENABLED')=='true', "backlog_enabled":os.environ.get('BHAGO_BACKLOG_ENABLED')=='true', "schedule_enabled":os.environ.get('BHAGO_SCHEDULE_ENABLED')=='true', "revision":os.environ.get('RAILWAY_GIT_COMMIT_SHA',''), "updated_at": now()})))
+                    (f"bhago:{ACCOUNT}:worker", json.dumps({"browser_ready": bool(ready), "browser_status":browser_status, "calling_enabled": calling_enabled(), "runtime": os.environ.get('BHAGO_RUNTIME', 'local'), "results_enabled":os.environ.get('BHAGO_RESULTS_ENABLED')=='true', "backlog_enabled":os.environ.get('BHAGO_BACKLOG_ENABLED')=='true', "schedule_enabled":os.environ.get('BHAGO_SCHEDULE_ENABLED')=='true', "revision":os.environ.get('RAILWAY_GIT_COMMIT_SHA',''), "updated_at": now()})))
     return ready
 
 
@@ -621,8 +626,6 @@ def main():
             if not first:
                 from client_reports import tick as client_report_tick
                 client_report_tick()
-                from whatsapp_sync import tick as whatsapp_tick
-                whatsapp_tick(ready)
             if ready and not first:
                 from report_snapshot import tick as report_tick
                 report_tick()
@@ -644,6 +647,9 @@ def main():
                     preview(run)
                 elif run["state"] == "queued_launch":
                     launch(run)
+            if not first and (not run or run.get('state') not in ('queued_preview','reading','ready','queued_launch','launching')):
+                from whatsapp_sync import tick as whatsapp_tick
+                whatsapp_tick(ready)
             first = False
         except psycopg2.Error:
             raise SystemExit('Bhago database connection interrupted; stopping the queue owner safely')
