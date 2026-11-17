@@ -128,7 +128,7 @@ def allowed_calls(path):
     for call in parse_export(path.read_text(encoding='utf-8-sig')):
         job=jobs.get(call['Campaign Name'])
         if not job or digits(call.get('From Number'))!='918069458173':continue
-        matches=[r for r in job['recipients'] if digits(r['phone'])[-10:]==digits(call.get('To Number'))[-10:]]
+        matches=[r for r in job['recipients'] if r.get('source_ref',{}).get('source') in ('swiggy','zomato') and digits(r['phone'])[-10:]==digits(call.get('To Number'))[-10:]]
         if len(matches)==1:result[call['Session ID']]=call
     return result
 
