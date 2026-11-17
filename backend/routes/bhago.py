@@ -13,7 +13,7 @@ from backend.db.models import Account, AppSetting, UserAccountAssignment
 from backend.routes.auth import get_current_user_required
 
 router = APIRouter(prefix="/api/bhago", tags=["Bhago Mobility"])
-SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment", "lead_calling_report", "payment_calling_report")
+SOURCES = ("swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment", "lead_calling_report", "payment_calling_report", "client_lead_calling_report", "client_payment_reminder_report")
 TEST_SOURCES = ("test", "test_lead", "test_payment")
 
 
@@ -58,7 +58,7 @@ def get_sheets(account_id: int, db: Session = Depends(get_db), user=Depends(get_
 
 
 @router.put("/{account_id}/sheets/{source}")
-def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment", "lead_calling_report", "payment_calling_report"],
+def save_sheet(account_id: int, source: Literal["swiggy", "zomato", "qwqer", "payment_reminder", "dialed", "test", "test_lead", "test_payment", "lead_calling_report", "payment_calling_report", "client_lead_calling_report", "client_payment_reminder_report"],
                body: SheetLink, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
     url = validate_sheet_url(body.url)

@@ -131,8 +131,8 @@
         #bhagoSheetsWorkspace .bhago-source-icon.zomato { color:#c3304b; background:#fff0f3; }
         #bhagoSheetsWorkspace .bhago-source-icon.qwqer { color:#7050b4; background:#f3efff; }
         #bhagoSheetsWorkspace .bhago-source-icon.payment_reminder { color:#15724e; background:#e9f7ef; }
-        #bhagoSheetsWorkspace .bhago-source-icon.test_lead, #bhagoSheetsWorkspace .bhago-source-icon.lead_calling_report { color:#2466af; background:#eaf3ff; }
-        #bhagoSheetsWorkspace .bhago-source-icon.test_payment, #bhagoSheetsWorkspace .bhago-source-icon.payment_calling_report { color:#15724e; background:#e9f7ef; }
+        #bhagoSheetsWorkspace .bhago-source-icon.test_lead, #bhagoSheetsWorkspace .bhago-source-icon.lead_calling_report, #bhagoSheetsWorkspace .bhago-source-icon.client_lead_calling_report { color:#2466af; background:#eaf3ff; }
+        #bhagoSheetsWorkspace .bhago-source-icon.test_payment, #bhagoSheetsWorkspace .bhago-source-icon.payment_calling_report, #bhagoSheetsWorkspace .bhago-source-icon.client_payment_reminder_report { color:#15724e; background:#e9f7ef; }
         #bhagoSheetsWorkspace .bhago-source-header h3 { font-size:14px; font-weight:700; letter-spacing:.01em; margin:0; }
         #bhagoSheetsWorkspace .bhago-source-description { color:var(--color-text-secondary); font-size:12px; margin-top:2px; }
         #bhagoSheetsWorkspace .bhago-mode { color:var(--color-text-secondary); background:var(--color-bg-card); border:1px solid var(--color-border); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:600; white-space:nowrap; }
@@ -2831,7 +2831,8 @@
     const bhagoSources = [
         ['swiggy', 'SWIGGY Data'], ['zomato', 'ZOMATO Data'], ['qwqer', 'QWQER Data'],
         ['payment_reminder', 'PAYMENT REMINDER Data'], ['test_lead', 'Lead Calling Test'], ['test_payment', 'Payment Reminder Test'],
-        ['lead_calling_report', 'Lead Calling Report'], ['payment_calling_report', 'Payment Reminder Report']
+        ['lead_calling_report', 'Lead Calling Report'], ['payment_calling_report', 'Payment Reminder Report'],
+        ['client_lead_calling_report', 'Client-Lead Calling Report'], ['client_payment_reminder_report', 'Client-Payment Reminder Report']
     ];
     const bhagoSourceDetails = {
         swiggy: ['S', 'Delivery partner leads', 'Lead calling'],
@@ -2841,7 +2842,9 @@
         test_lead: ['phone', 'Test with rider name and mobile number', 'Lead test'],
         test_payment: ['payment', 'Test with rider, mobile, vehicle and outstanding amount', 'Payment test'],
         lead_calling_report: ['phone', 'Lead calling results and follow-ups', 'Report'],
-        payment_calling_report: ['payment', 'Payment calling results and follow-ups', 'Report']
+        payment_calling_report: ['payment', 'Payment calling results and follow-ups', 'Report'],
+        client_lead_calling_report: ['phone', 'Client lead calling results and follow-ups', 'Report'],
+        client_payment_reminder_report: ['payment', 'Client payment reminder results and follow-ups', 'Report']
     };
     function bhagoIcon(kind) {
         const paths = {

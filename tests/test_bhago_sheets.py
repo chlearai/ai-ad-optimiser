@@ -62,7 +62,7 @@ class SheetTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_links_persist_and_save_independently(self):
-        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment', 'lead_calling_report', 'payment_calling_report']
+        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment', 'lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report']
         self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'], dict.fromkeys(sources, ''))
         for source in sources:
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=0'
@@ -74,10 +74,10 @@ class SheetTests(unittest.TestCase):
         for source in sources[1:]:
             self.assertEqual(saved[source], reloaded[source])
         with self.Session() as db:
-            self.assertEqual(db.query(AppSetting).count(), 10)
+            self.assertEqual(db.query(AppSetting).count(), 12)
 
     def test_report_links_are_independent_and_cannot_queue_calls(self):
-        for source in ('lead_calling_report', 'payment_calling_report'):
+        for source in ('lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report'):
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=123'
             self.assertEqual(self.client.put('/api/bhago/1/sheets/' + source, json={'url': url}).status_code, 200)
             self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'][source], url)
