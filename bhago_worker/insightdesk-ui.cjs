@@ -7,7 +7,7 @@ exports.run=async function(ctx,request) {
   const {page,PRIVATE,prepare,SETTINGS,assertWorkspace}=ctx;
   if(request.stage==='insightdesk_ping') {
     const ready=page.url().startsWith('https://samvaad.sakhaa.ai/dashboard/') &&
-      (await page.locator('body').innerText()).toLowerCase().includes('chlearbhago@gmail.com');
+      await page.getByText('chlearbhago@gmail.com',{exact:false}).count()>0;
     fs.writeFileSync(path.join(PRIVATE,'bridge-browser.json'),JSON.stringify({ready,updatedAt:new Date().toISOString(),pid:process.pid}));
     if(ready && process.env.BHAGO_RUNTIME==='cloud') {
       const temporary=path.join(PRIVATE,'samvaad-state.tmp');

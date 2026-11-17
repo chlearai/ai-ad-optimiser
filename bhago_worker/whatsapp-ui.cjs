@@ -13,6 +13,7 @@ exports.run=async function({page,PRIVATE,assertWorkspace},request){
     await p.goto(URL,{waitUntil:'domcontentloaded'});await assertWorkspace(p);
     await p.locator('#date-filter').selectOption({label:'All time'});
     await p.getByRole('table').waitFor();
+    await p.getByRole('table').getByText('Bhago Outbound',{exact:true}).first().waitFor({timeout:20000});
     let more=false;
     for(let pageNo=0;pageNo<100;pageNo++){
       const rows=p.getByRole('table').getByRole('row');const count=await rows.count();
@@ -40,6 +41,7 @@ exports.run=async function({page,PRIVATE,assertWorkspace},request){
       await p.waitForFunction(old=>document.querySelector('tbody tr')?.innerText!==old,first).catch(async()=>{
         if(await rows.nth(1).innerText()===first)throw Error('WhatsApp history page did not advance');
       });
+      await p.getByRole('table').getByText('Bhago Outbound',{exact:true}).first().waitFor({timeout:20000});
     }
     fs.writeFileSync(output,JSON.stringify({state:'ready',entries,more,checked_at:new Date().toISOString()}));
   }catch(e){fs.writeFileSync(output,JSON.stringify({state:'needs_attention',entries,message:'Bhago WhatsApp sequence history could not be verified.'}));}
