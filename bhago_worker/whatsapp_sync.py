@@ -29,6 +29,9 @@ _pending=None
 
 
 def digits(value):return re.sub(r'\D','',str(value or ''))
+def indian_recipient(value):
+    value=digits(value)
+    return '91'+value if re.fullmatch(r'[6-9]\d{9}',value) else value
 def moment_of(message):return dt.datetime.fromtimestamp(int(message['timestamp']),dt.timezone.utc).astimezone(IST)
 def status(message):return str(message.get('kapso',{}).get('status','')).lower()
 
@@ -82,7 +85,7 @@ def retry_payload(message,templates):
     template=message.get('template') or {};name=template.get('name');language=(template.get('language') or {}).get('code')
     if message.get('type')!='template' or name not in TEMPLATES or (name,language) not in templates:
         raise ValueError('Only the original approved lead hub template may be resent')
-    to=digits(message.get('to'))
+    to=indian_recipient(message.get('to'))
     if not re.fullmatch(r'91[6-9]\d{9}',to):raise ValueError('Original WhatsApp recipient is unavailable')
     required=set(re.findall(r'\{\{(\w+)\}\}', ' '.join(c.get('text','') for c in templates[(name,language)].get('components',[]))))
     supplied={}
@@ -196,13 +199,15 @@ def sync(config,moment=None,allow_send=True):
                 try:
                     if templates is None:templates=api.templates()
                     payload=retry_payload(message,templates)
-                    if not api.marketing_allowed(payload['to']):raise ValueError('Contact stopped marketing messages')
+                    # Kapso contact lookup uses its stored identifier, which may be local-format.
+                    # Normalize only the wire send address; do not change the preference identity.
+                    if not api.marketing_allowed(str(message['to'])):raise ValueError('Contact stopped marketing messages')
                 except ValueError:
                     held+=1;continue
                 # Persist BEFORE POST. Any crash/timeout is held; never replay a possibly sent message.
                 # Two source attempts can trigger identical hub messages. Resend that case only once.
-                group=(digits(message.get('to')),message.get('template',{}).get('name'),moment_of(message).date())
-                peers=[m for m in linked if m in messages and (digits(messages[m].get('to')),messages[m].get('template',{}).get('name'),moment_of(messages[m]).date())==group]
+                group=(indian_recipient(message.get('to')),message.get('template',{}).get('name'),moment_of(message).date())
+                peers=[m for m in linked if m in messages and (indian_recipient(messages[m].get('to')),messages[m].get('template',{}).get('name'),moment_of(messages[m]).date())==group]
                 if any(status(messages[m]) in ('read','delivered') for m in peers):continue
                 existing=next((retries[m] for m in peers if m in retries),None)
                 if existing:
