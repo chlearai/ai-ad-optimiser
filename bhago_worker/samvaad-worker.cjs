@@ -144,6 +144,20 @@ async function inspectCampaign(page) {
 async function waitForCommands(page) {
   const requestFile=path.join(PRIVATE,'command.json');
   writeStatus('browser_ready',{account:EXPECTED_ACCOUNT,message:'Dedicated browser remains open; waiting for a workflow command.'});
+  // Keep browser liveness independent of background receipt/report HTTP requests.
+  // A long read-only scan must not falsely report the signed-in worker as offline.
+  let checkingHealth=false;
+  const healthTimer=setInterval(async()=>{
+    if(checkingHealth||page.isClosed())return;
+    checkingHealth=true;
+    try{
+      const ready=page.url().startsWith(ORIGIN+'/dashboard/') && await page.getByText(EXPECTED_ACCOUNT,{exact:false}).count()>0;
+      const file=path.join(PRIVATE,'bridge-browser.live.tmp');
+      fs.writeFileSync(file,JSON.stringify({ready,updatedAt:new Date().toISOString(),pid:process.pid}));
+      fs.renameSync(file,path.join(PRIVATE,'bridge-browser.json'));
+    }catch(_){}finally{checkingHealth=false;}
+  },10000);
+  try {
   while(!page.isClosed()) {
     if(fs.existsSync(requestFile)) {
       const request=JSON.parse(fs.readFileSync(requestFile,'utf8'));
@@ -163,6 +177,7 @@ async function waitForCommands(page) {
     }
     await new Promise(resolve=>setTimeout(resolve,1000));
   }
+  } finally {clearInterval(healthTimer);}
 }
 
 async function main() {
