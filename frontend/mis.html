@@ -835,9 +835,9 @@
         .tlg-funds form { display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:8px; }
         .tlg-funds label { display:flex; flex-direction:column; gap:3px; font-size:12px; }
 
-        #crashClubSheetsWorkspace { padding:24px; }
-        #crashClubSheetsWorkspace [hidden] { display:none !important; }
-        #crashClubSheetsWorkspace .card-header { padding:0 0 22px; }
+        #crashClubSheetsWorkspace, #saburiSheetsWorkspace { padding:24px; }
+        :is(#crashClubSheetsWorkspace, #saburiSheetsWorkspace) [hidden] { display:none !important; }
+        :is(#crashClubSheetsWorkspace, #saburiSheetsWorkspace) .card-header { padding:0 0 22px; }
         .cc-sheet-card { padding:22px; margin-bottom:18px; border:1px solid var(--color-border); border-radius:12px; background:var(--color-bg-input); }
         .cc-sheet-card h3 { margin:0 0 18px; font-size:17px; }
         .cc-sheet-card label { display:block; margin-bottom:8px; font-size:12px; color:var(--color-text-secondary); }
@@ -846,7 +846,7 @@
         .cc-sheet-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; font-size:12px; }
         .cc-sheet-meta p { margin:0; color:var(--color-text-secondary); overflow-wrap:anywhere; }
         .cc-sheet-meta a { color:var(--color-accent); white-space:nowrap; }
-        @media(max-width:640px) { #crashClubSheetsWorkspace { padding:16px; } .cc-sheet-card { padding:16px; } .cc-sheet-row { flex-wrap:wrap; } .cc-sheet-row input { flex-basis:100%; } }
+        @media(max-width:640px) { #crashClubSheetsWorkspace, #saburiSheetsWorkspace { padding:16px; } .cc-sheet-card { padding:16px; } .cc-sheet-row { flex-wrap:wrap; } .cc-sheet-row input { flex-basis:100%; } }
     </style>
     <script src="/india_states.js"></script>
 </head>
@@ -1083,6 +1083,10 @@
             syncBtn.textContent = '↻ Sync Leads Now';
         } else {
             syncBtn.style.display = 'none';
+        }
+        if (isSaburi(a)) {
+            await renderSaburiReport(a);
+            return;
         }
         if (isBhagoMobility(a)) {
             renderBhagoEmptyState();
@@ -2557,6 +2561,82 @@
         }
     }
 
+    /* ============ Saburi Plywood saved sheet links ============ */
+    function isSaburi(account) {
+        return account && (account.name || '').trim().toLowerCase() === 'saburi plywood';
+    }
+    const saburiSheetSources = [['leads', 'Saburi Lead Sheet']];
+    let saburiRenderVersion = 0;
+    async function renderSaburiReport(account) {
+        const accountId = account.id, version = ++saburiRenderVersion;
+        $('reportContent').innerHTML = `<div id="saburiSheetsWorkspace" class="card">
+            <div class="card-header"><div><h2 style="margin:0">Saburi Lead Sheet</h2><p style="margin:8px 0 0;color:var(--color-text-secondary)">Save the Google Sheet shared with your clients.</p></div></div>
+            ${saburiSheetSources.map(([key,label]) => `<section class="cc-sheet-card" aria-labelledby="saburiHeading_${key}">
+                <h3 id="saburiHeading_${key}" class="hidden">${label}</h3>
+                <label for="saburiUrl_${key}">Google Sheet link</label>
+                <div class="cc-sheet-row"><input type="url" id="saburiUrl_${key}" maxlength="2048" placeholder="https://docs.google.com/spreadsheets/d/..." disabled oninput="saburiSheetChanged('${key}')"><button type="button" id="saburiSave_${key}" class="btn btn-secondary" disabled onclick="saveSaburiSheet('${key}')">Save</button></div>
+                <div class="cc-sheet-meta"><p id="saburiStatus_${key}" role="status">Loading saved link…</p><a id="saburiOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
+            </section>`).join('')}
+            <button id="saburiRetryLoad" type="button" class="btn btn-secondary" hidden onclick="renderSaburiReport(allAccounts.find(a=>a.id===selectedAccountId))">Retry loading links</button>
+        </div>`;
+        try {
+            const data = await api('GET', `/saburi/${accountId}/sheet`);
+            if (!saburiSheetCurrent(accountId, version)) return;
+            saburiSheetSources.forEach(([key]) => {
+                const url = data.url || '';
+                $('saburiUrl_' + key).value = url;
+                $('saburiUrl_' + key).disabled = false;
+                $('saburiSave_' + key).disabled = false;
+                $('saburiStatus_' + key).textContent = url ? 'Saved' : 'No sheet saved yet';
+                setSaburiSheetLink(key, url);
+            });
+        } catch (e) {
+            if (!saburiSheetCurrent(accountId, version)) return;
+            saburiSheetSources.forEach(([key]) => { $('saburiStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
+            $('saburiRetryLoad').hidden = false;
+        }
+    }
+    function saburiSheetCurrent(accountId, version) {
+        return accountId === selectedAccountId && version === saburiRenderVersion && !!$('saburiSheetsWorkspace');
+    }
+    function saburiSheetChanged(key) {
+        $('saburiStatus_' + key).textContent = 'Unsaved changes';
+        $('saburiOpen_' + key).hidden = true;
+    }
+    function setSaburiSheetLink(key, url) {
+        const link = $('saburiOpen_' + key);
+        link.hidden = true;
+        link.removeAttribute('href');
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:' || parsed.host !== 'docs.google.com' || parsed.username || parsed.password || !/^\/spreadsheets\/d\/[A-Za-z0-9_-]+(?:\/.*)?$/.test(parsed.pathname)) return;
+            link.href = url;
+            link.hidden = false;
+        } catch (_) {}
+    }
+    async function saveSaburiSheet(source) {
+        const accountId = selectedAccountId, version = saburiRenderVersion;
+        if (!isSaburi(allAccounts.find(a => a.id === accountId))) return;
+        const input = $('saburiUrl_' + source), button = $('saburiSave_' + source);
+        input.disabled = true; button.disabled = true; button.textContent = 'Saving…';
+        try {
+            const data = await api('PUT', `/saburi/${accountId}/sheet`, {url:input.value.trim()});
+            if (!saburiSheetCurrent(accountId, version)) return;
+            input.value = data.url;
+            $('saburiStatus_' + source).textContent = data.url ? 'Saved' : 'No sheet saved yet';
+            setSaburiSheetLink(source, data.url);
+            toast('Sheet link saved');
+        } catch (e) {
+            if (!saburiSheetCurrent(accountId, version)) return;
+            $('saburiStatus_' + source).textContent = 'Not saved: ' + e.message;
+            toast(e.message, true);
+        } finally {
+            if (saburiSheetCurrent(accountId, version)) {
+                input.disabled = false; button.disabled = false; button.textContent = 'Save';
+            }
+        }
+    }
+
     let tlgTimer;
     let tlgRows = [];
     function renderLittleGymReport(account) {
@@ -2943,6 +3023,10 @@
     }
 
     async function renderReport(account) {
+        if (isSaburi(account)) {
+            await renderSaburiReport(account);
+            return;
+        }
         if (isBhagoMobility(account)) {
             renderBhagoEmptyState();
             return;
@@ -2955,11 +3039,11 @@
         try {
             const data = await api('GET', '/accounts/' + account.id + '/crm-summary' + getReportParams());
             if (requestedAccountId !== selectedAccountId) return;
-            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
+            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId)) || isSaburi(allAccounts.find(a => a.id === selectedAccountId))) return;
             buildReport(data, account);
         } catch (e) {
             if (requestedAccountId !== selectedAccountId) return;
-            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId))) return;
+            if (isBhagoMobility(allAccounts.find(a => a.id === selectedAccountId)) || isSaburi(allAccounts.find(a => a.id === selectedAccountId))) return;
             toast(e.message, true);
             $('reportContent').innerHTML = '<div class="empty-state">Failed to load report: ' + escapeHtml(e.message) + '</div>';
         }
