@@ -247,7 +247,9 @@ def tick(browser_ready=False):
             save_state(PREFIX+'links',links);file.unlink();_pending=None
             _scan_next=time.monotonic()+(5 if result.get('more') else 120);_next=0
             if result.get('state')!='ready':save_state(PREFIX+'scan_status',{'state':'needs_attention','updated_at':now()})
-            else:save_state(PREFIX+'scan_status',{'state':'ready','updated_at':now(),'runs':len(links),'more':result.get('more',False)})
+            else:save_state(PREFIX+'scan_status',{'state':'ready','updated_at':now(),'runs':len(links),'more':result.get('more',False),
+                'observed_statuses':sorted({e.get('execution_status','') for e in result.get('entries',[])}),
+                'parsed_calls':sum(bool(e.get('call_id')) for e in result.get('entries',[]))})
         elif time.monotonic()-_pending['started']>150:
             _pending=None;_scan_next=time.monotonic()+120
             save_state(PREFIX+'scan_status',{'state':'needs_attention','updated_at':now(),'message':'WhatsApp sequence scan timed out'})

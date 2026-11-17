@@ -27,8 +27,10 @@ exports.run=async function({page,PRIVATE,assertWorkspace},request){
         const text=(await p.locator('body').innerText()).split('Saved execution and message outcomes. Refresh to load the latest status.').pop();
         const callId=text.match(/Source session\s+([a-f0-9-]{36})/i)?.[1]||'';
         const messageIds=[...text.matchAll(/Message ID:\s*(wamid\.[A-Za-z0-9+/=_-]+)/g)].map(m=>m[1]);
-        entries.push({execution_id:id,call_id:callId,message_ids:messageIds,execution_status:cells[3]?.split('\n')[0]?.trim(),
-          failed_before_send:!messageIds.length && /^(Failed)$/i.test(cells[3]?.split('\n')[0]?.trim()||''),
+        const state=cells[3]?.trim().match(/^(completed|failed|active|waiting)/i)?.[1]?.toLowerCase();
+        const executionStatus={completed:'Completed',failed:'Failed',active:'Active',waiting:'Waiting'}[state]||'Unknown';
+        entries.push({execution_id:id,call_id:callId,message_ids:messageIds,execution_status:executionStatus,
+          failed_before_send:!messageIds.length && executionStatus==='Failed',
           checked_at:new Date().toISOString()});
         await p.getByRole('button',{name:'Close',exact:true}).click();
         await p.getByRole('heading',{name:'Sequence run',exact:true}).waitFor({state:'hidden'});
