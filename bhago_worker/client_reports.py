@@ -42,8 +42,11 @@ def merge_history(existing,exported,jobs,kind,cutoff):
         if len(row)<17 or not row[16]:continue
         merged[str(row[16])]={'Time':str(row[6]),'Campaign Name':row[1],'To Number':str(row[4]),'Duration':str(row[7]),'Status':row[8],
             'End Reason':row[10],'Call Summary':row[12],'Callback Time':row[13],'promised_payment_date':row[14],'promised_amount':row[15],
-            'Session ID':str(row[16]),'Interest Level' if kind=='lead' else 'payment_commitment_status':row[11]}
-    for c in exported:merged[c['Session ID']]=c
+            'Session ID':str(row[16]),'Interest Level' if kind=='lead' else 'payment_commitment_status':row[11],
+            'Transcript':row[21] if kind=='payment' and len(row)>21 else ''}
+    for c in exported:
+        previous=merged.get(c['Session ID'],{})
+        merged[c['Session ID']]=dict(c,Transcript=clean(c.get('Transcript')) or previous.get('Transcript',''))
     return sorted([c for c in merged.values() if c['Campaign Name'] in jobs and jobs[c['Campaign Name']]['type']==kind and
                    c.get('Time','')[:10]<=cutoff and (c['Campaign Name'],phone(c['To Number'])) in lookup],key=lambda c:(c['Time'],c['Session ID'])),lookup
 
@@ -53,6 +56,12 @@ def model(calls,jobs,lookup,kind):
         p=phone(c['To Number']);r=lookup[(c['Campaign Name'],p)];day=c['Time'][:10];ans=answered(c)
         key=(p,r.get('value2','')) if kind=='payment' else p;people[key].append(c)
         history.append([serial(day),c['Campaign Name'],r.get('source_ref',{}).get('source','').replace('_',' ').title(),r['name'],p,r.get('value1',''),c['Time'],seconds(c.get('Duration')),c.get('Status',''),int(ans),clean(c.get('End Reason')),clean(c.get('Interest Level' if kind=='lead' else 'payment_commitment_status')),clean(c.get('Call Summary')),clean(c.get('Callback Time')),clean(c.get('promised_payment_date')),clean(c.get('promised_amount')),c['Session ID'],int((day,p) not in seen_day),int(p not in seen),int(ans and (day,p) not in reached_day),int(ans and p not in reached)])
+        if kind=='payment':
+            from payment_followup import view
+            facts=view([c],r)
+            history[-1][11]=facts['commitment'];history[-1][13]=facts['callback_time']
+            history[-1][14]=facts['promised_date'];history[-1][15]=facts['promised_amount']
+            history[-1].extend([clean(c.get('Transcript')),facts['callback_date']])
         seen.add(p);seen_day.add((day,p))
         if ans:reached.add(p);reached_day.add((day,p))
     details=[];positives=[]
@@ -70,7 +79,10 @@ def model(calls,jobs,lookup,kind):
             details[-1].extend([cbdate,cbtime,delivery_status(cs)])
             if any(interest([x])=='Interested' for x in cs):positives.append([0,'Lead',r['name'],r.get('value1',''),p,sources,serial(c['Time']),last(cs,'Interest Level'),last(cs,'Call Summary') or 'No feedback captured',cbtime,action,classification,delivery_status(cs),cbdate])
         else:
-            details.append([0,r['name'],p,r.get('value2',''),float(r['value3']) if r.get('value3') else '',last(cs,'promised_payment_date') or 'Not recorded',last(cs,'Call Summary') or 'No feedback captured',r.get('value1',''),serial(cs[0]['Time']),serial(c['Time']),len(cs),sum(answered(x) for x in cs),c['Status'],commitment or 'Not recorded',last(cs,'promised_amount'),callback,action,len({x['Campaign Name'] for x in cs})])
+            from payment_followup import view
+            facts=view(cs,r)
+            action='Call back at the customer-requested date/time' if facts['commitment']=='Call back requested' else 'Verify payment against accounts' if facts['commitment']=='already paid' else 'Follow up on the confirmed payment commitment' if facts['commitment']=='Committed' else 'Review feedback before further follow-up'
+            details.append([0,r['name'],p,r.get('value2',''),float(r['value3']) if r.get('value3') else '',facts['promised_date'],last(cs,'Call Summary') or 'No feedback captured',r.get('value1',''),serial(cs[0]['Time']),serial(c['Time']),len(cs),sum(answered(x) for x in cs),c['Status'],facts['commitment'],facts['promised_amount'],facts['callback_date'],facts['callback_time'],action,len({x['Campaign Name'] for x in cs}),facts['transcript']])
     daily=[];groups=collections.defaultdict(list)
     for c in calls:groups[(c['Time'][:10],c['Campaign Name'])].append(c)
     first_dates={name:min(c['Time'][:10] for c in calls if c['Campaign Name']==name) for _,name in groups}
@@ -78,8 +90,8 @@ def model(calls,jobs,lookup,kind):
         pp=collections.defaultdict(list)
         for c in cs:pp[phone(c['To Number'])].append(c)
         reached_groups=[g for g in pp.values() if any(answered(x) for x in g)]
-        a=sum(interest(g)=='Interested' if kind=='lead' else last(g,'payment_commitment_status')=='callback_requested' for g in reached_groups)
-        b=sum(interest(g)=='Not Interested' if kind=='lead' else last(g,'payment_commitment_status')=='already_paid' for g in reached_groups)
+        a=sum(interest(g)=='Interested' if kind=='lead' else view(g,lookup[(g[-1]['Campaign Name'],phone(g[-1]['To Number']))])['commitment']=='Call back requested' for g in reached_groups)
+        b=sum(interest(g)=='Not Interested' if kind=='lead' else view(g,lookup[(g[-1]['Campaign Name'],phone(g[-1]['To Number']))])['commitment']=='already paid' for g in reached_groups)
         count=len(jobs[name]['recipients']) if day==first_dates[name] else len(pp)
         daily.append([serial(day),name,kind.title(),count,len(cs),len(reached_groups),max(0,count-len(reached_groups)),len(reached_groups)/count if count else 0,a,b,len(reached_groups)-a-b,'Outcomes recorded' if all(x.get('Status','').casefold() in ('ended','completed','failed','busy','no_answer','cancelled','canceled') for x in cs) else 'In progress'])
     return {'history':history,'details':details,'interested':positives,'daily':daily,'contacts':len(seen),'reached':len(reached)}
@@ -99,7 +111,7 @@ def upsert(existing,rows,key,manual_defaults=None):
     return result
 
 def check_manual_columns(grids,kind):
-    required={'Lead Outcomes':{15:'Client Follow-up Status',16:'Client Notes'},'Lead Interested':{11:'Client Follow-up Status',12:'Client Notes'}} if kind=='lead' else {'Sheet1':{17:'Client Follow-up Status',18:'Client Notes',19:'Payment Verified'}}
+    required={'Lead Outcomes':{15:'Client Follow-up Status',16:'Client Notes'},'Lead Interested':{11:'Client Follow-up Status',12:'Client Notes'}} if kind=='lead' else {'Sheet1':{18:'Client Follow-up Status',19:'Client Notes',20:'Payment Verified',15:'Callback Date',16:'Callback Time',22:'Transcript'}}
     for title,columns in required.items():
         header=grids[title][0] if grids.get(title) else []
         if any(i>=len(header) or header[i]!=label for i,label in columns.items()):
@@ -119,6 +131,9 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     if kind=='lead':
         receipts=(load_state('bhago:18:whatsapp:receipts') or {}).get('by_call',{})
         calls=[dict(c,**{'WhatsApp Delivery Status':receipts[c['Session ID']]}) if c['Session ID'] in receipts else c for c in calls]
+    else:
+        from payment_followup import enrich
+        calls=enrich(calls,lookup)
     data=model(calls,jobs,lookup,kind)
     updates=[];ends={}
     def table(title,rows,key,width,defaults=None):
@@ -130,7 +145,8 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
             updates.append({'range':a1(title,f'A{n}:{letter(width)}{n}'),'values':[row[:width]]})
             if new and defaults:updates.append({'range':a1(title,f'{letter(width+1)}{n}:{letter(width+len(defaults))}{n}'),'values':[defaults]})
         return matched
-    table('Call History',data['history'],lambda r:str(r[16]) if len(r)>16 else '',21)
+    table('Call History',data['history'],lambda r:str(r[16]) if len(r)>16 else '',23 if kind=='payment' else 21)
+    if kind=='payment':updates.append({'range':a1('Call History','V1:W1'),'values':[['Transcript','Callback Date']]})
     # Daily performance is an owned aggregate; dates are raw serials for stable keys.
     if data['daily']:updates.append({'range':a1('Daily Performance',f'A2:L{len(data["daily"])+1}'),'values':data['daily']})
     ends['Daily Performance']=len(data['daily'])+1
@@ -148,11 +164,11 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
             updates.append({'range':a1('Lead Interested',f'A{n}'),'values':[[n-1]]})
             updates.append({'range':a1('Lead Interested',f'N{n}:O{n}'),'values':[[groups[phone(row[4])][12],groups[phone(row[4])][13]]]})
     else:
-        matched=table(detail,[r[:17] for r in data['details']],lambda r:(phone(r[2]),str(r[3]).strip()) if len(r)>3 else '',17,['Pending client review','','Not verified'])
-        counts={(phone(r[2]),r[3]):r[17] for r in data['details']}
+        matched=table(detail,[r[:18] for r in data['details']],lambda r:(phone(r[2]),str(r[3]).strip()) if len(r)>3 else '',18,['Pending client review','','Not verified'])
+        extra={(phone(r[2]),r[3]):[r[18],r[19]] for r in data['details']}
         for n,row,new in matched:
             updates.append({'range':a1(detail,f'A{n}'),'values':[[n-1]]})
-            updates.append({'range':a1(detail,f'U{n}'),'values':[[counts[(phone(row[2]),row[3])]]]})
+            updates.append({'range':a1(detail,f'V{n}:W{n}'),'values':[extra[(phone(row[2]),row[3])]]})
     writer.write(sid,updates)
     # Read back identifiers and managed values before marking the report successful.
     for offset in range(0,len(updates),80):
@@ -168,7 +184,7 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     from insightdesk_bridge import IST
     updated=dt.datetime.now(IST).strftime('%d %b %Y %H:%M IST')
     mis=[['Bhago Mobility — '+title]+['']*7,[f'Production calling through {cutoff}. Updated {updated}. Daily target: 6:30 pm IST.']+['']*7,['Metric','Value']+['']*6]
-    metrics=[('Campaigns',f"=IFERROR(COUNTUNIQUE(FILTER('Daily Performance'!B2:B{dn},'Daily Performance'!B2:B{dn}<>\"\")),0)"),('Distinct mobile numbers',f"=SUM('Call History'!S2:S{end})"),('Call attempts',f"=COUNTA('Call History'!Q2:Q{end})"),('Answered attempts',f"=SUM('Call History'!J2:J{end})"),('Distinct numbers reached',f"=SUM('Call History'!U2:U{end})"),('Reach rate','=IF(B5=0,0,B8/B5)'),('Interested contacts' if kind=='lead' else 'Callback requests',f'=COUNTIF(\'Lead Outcomes\'!J2:J{de},"Interested")' if kind=='lead' else f'=COUNTIF(Sheet1!N2:N{de},"callback_requested")'),('Not interested contacts' if kind=='lead' else 'Already-paid claims',f'=COUNTIF(\'Lead Outcomes\'!J2:J{de},"Not Interested")' if kind=='lead' else f'=COUNTIF(Sheet1!N2:N{de},"already_paid")'),('Payment receipt verification','Not applicable' if kind=='lead' else 'Not verified against accounts')]
+    metrics=[('Campaigns',f"=IFERROR(COUNTUNIQUE(FILTER('Daily Performance'!B2:B{dn},'Daily Performance'!B2:B{dn}<>\"\")),0)"),('Distinct mobile numbers',f"=SUM('Call History'!S2:S{end})"),('Call attempts',f"=COUNTA('Call History'!Q2:Q{end})"),('Answered attempts',f"=SUM('Call History'!J2:J{end})"),('Distinct numbers reached',f"=SUM('Call History'!U2:U{end})"),('Reach rate','=IF(B5=0,0,B8/B5)'),('Interested contacts' if kind=='lead' else 'Callback requests',f'=COUNTIF(\'Lead Outcomes\'!J2:J{de},"Interested")' if kind=='lead' else f'=COUNTIF(Sheet1!N2:N{de},"Call back requested")'),('Not interested contacts' if kind=='lead' else 'Already-paid claims',f'=COUNTIF(\'Lead Outcomes\'!J2:J{de},"Not Interested")' if kind=='lead' else f'=COUNTIF(Sheet1!N2:N{de},"already paid")'),('Payment receipt verification','Not applicable' if kind=='lead' else 'Not verified against accounts')]
     mis += [[k,v]+['']*6 for k,v in metrics]+[['']*8,['Calling Date','Campaigns','Campaign Records','Attempts','Answered Attempts','Distinct Numbers','First-time Numbers','Distinct Reached']]
     for day in days:
         n=len(mis)+1;mis.append([serial(day),f'=COUNTIF(\'Daily Performance\'!A2:A{dn},A{n})',f'=SUMIF(\'Daily Performance\'!A2:A{dn},A{n},\'Daily Performance\'!D2:D{dn})',f'=COUNTIF(\'Call History\'!A2:A{end},A{n})',*[f'=SUMIF(\'Call History\'!A2:A{end},A{n},\'Call History\'!{c}2:{c}{end})' for c in ['J','R','S','T']]])
@@ -180,7 +196,7 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     formulas=[{'range':a1('MIS',f'{letter(c+1)}{r+1}'),'values':[[v]]} for r,row in enumerate(mis) for c,v in enumerate(row) if isinstance(v,str) and v.startswith('=')]
     for i in range(0,len(formulas),200):writer.request('POST',sid,'/values:batchUpdate',json={'valueInputOption':'USER_ENTERED','data':formulas[i:i+200]})
     for title,n in ends.items():
-        props=tabs[title];sid_=props['sheetId'];w=21 if title=='Call History' or kind=='payment' and title==detail else 20 if kind=='lead' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
+        props=tabs[title];sid_=props['sheetId'];w=(23 if kind=='payment' else 21) if title=='Call History' else 23 if kind=='payment' and title==detail else 20 if kind=='lead' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
         req += [{'setBasicFilter':{'filter':{'range':{'sheetId':sid_,'startRowIndex':0,'endRowIndex':n,'startColumnIndex':0,'endColumnIndex':w}}}}]
         datecols=[0] if title in ('Call History','Daily Performance') else [4,5] if kind=='lead' and title==detail else [6] if title=='Lead Interested' else [8,9]
         for c in datecols:req.append({'repeatCell':{'range':{'sheetId':sid_,'startRowIndex':1,'endRowIndex':max(2,n),'startColumnIndex':c,'endColumnIndex':c+1},'cell':{'userEnteredFormat':{'numberFormat':{'type':'DATE','pattern':'dd mmm yyyy'}}},'fields':'userEnteredFormat.numberFormat'}})
