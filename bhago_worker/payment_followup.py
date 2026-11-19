@@ -5,7 +5,7 @@ import hashlib
 import json
 import re
 
-VERSION=4
+VERSION=5
 LABELS={'callback_requested':'Call back requested','committed':'Committed',
         'not_committed':'Not committed','already_paid':'already paid'}
 FIELDS=['status','promised_date','promised_date_expression','promised_amount','callback_date','callback_time',
@@ -133,7 +133,8 @@ def extract(call,recipient,config=None):
             if amount:facts.update(promised_amount=amount.group(1),amount_evidence=text)
         if callback:
             # A payment day in the same utterance is not automatically a callback day.
-            if date_match and not promise:facts.update(callback_date=date_match.group(0),callback_date_evidence=text)
+            if date_match and not promise and not re.fullmatch(r'now|abhi|अ\s*भी',date_match.group(0),re.I):
+                facts.update(callback_date=date_match.group(0),callback_date_evidence=text)
             time=re.search(r'(?:after\s+|at\s+)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.|baje|बजे)\b|\b(?:morning|afternoon|evening|tonight)\b|सुबह|शाम|दोपहर',text,re.I)
             if time:facts.update(callback_time=time.group(0),callback_time_evidence=text)
     return validate(facts,call,recipient)
