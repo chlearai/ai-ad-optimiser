@@ -61,7 +61,7 @@ def model(calls,jobs,lookup,kind):
             facts=view([c],r)
             history[-1][11]=facts['commitment'];history[-1][13]=facts['callback_time']
             history[-1][14]=facts['promised_date'];history[-1][15]=facts['promised_amount']
-            history[-1].extend([clean(c.get('Transcript')),facts['callback_date']])
+            history[-1].append(clean(c.get('Transcript')))
         seen.add(p);seen_day.add((day,p))
         if ans:reached.add(p);reached_day.add((day,p))
     details=[];positives=[]
@@ -145,8 +145,8 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
             updates.append({'range':a1(title,f'A{n}:{letter(width)}{n}'),'values':[row[:width]]})
             if new and defaults:updates.append({'range':a1(title,f'{letter(width+1)}{n}:{letter(width+len(defaults))}{n}'),'values':[defaults]})
         return matched
-    table('Call History',data['history'],lambda r:str(r[16]) if len(r)>16 else '',23 if kind=='payment' else 21)
-    if kind=='payment':updates.append({'range':a1('Call History','V1:W1'),'values':[['Transcript','Callback Date']]})
+    table('Call History',data['history'],lambda r:str(r[16]) if len(r)>16 else '',22 if kind=='payment' else 21)
+    if kind=='payment':updates.append({'range':a1('Call History','V1'),'values':[['Transcript']]})
     # Daily performance is an owned aggregate; dates are raw serials for stable keys.
     if data['daily']:updates.append({'range':a1('Daily Performance',f'A2:L{len(data["daily"])+1}'),'values':data['daily']})
     ends['Daily Performance']=len(data['daily'])+1
@@ -196,8 +196,11 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
     formulas=[{'range':a1('MIS',f'{letter(c+1)}{r+1}'),'values':[[v]]} for r,row in enumerate(mis) for c,v in enumerate(row) if isinstance(v,str) and v.startswith('=')]
     for i in range(0,len(formulas),200):writer.request('POST',sid,'/values:batchUpdate',json={'valueInputOption':'USER_ENTERED','data':formulas[i:i+200]})
     for title,n in ends.items():
-        props=tabs[title];sid_=props['sheetId'];w=(23 if kind=='payment' else 21) if title=='Call History' else 23 if kind=='payment' and title==detail else 20 if kind=='lead' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
+        props=tabs[title];sid_=props['sheetId'];w=(22 if kind=='payment' else 21) if title=='Call History' else 23 if kind=='payment' and title==detail else 20 if kind=='lead' and title==detail else 17 if title==detail else 15 if title=='Lead Interested' else 12
         req += [{'setBasicFilter':{'filter':{'range':{'sheetId':sid_,'startRowIndex':0,'endRowIndex':n,'startColumnIndex':0,'endColumnIndex':w}}}}]
+        if kind=='payment' and title in (detail,'Call History'):
+            # Full multi-line transcripts stay in the cell; keep the client grid readable.
+            req.append({'updateDimensionProperties':{'range':{'sheetId':sid_,'dimension':'ROWS','startIndex':1,'endIndex':max(2,n)},'properties':{'pixelSize':96},'fields':'pixelSize'}})
         datecols=[0] if title in ('Call History','Daily Performance') else [4,5] if kind=='lead' and title==detail else [6] if title=='Lead Interested' else [8,9]
         for c in datecols:req.append({'repeatCell':{'range':{'sheetId':sid_,'startRowIndex':1,'endRowIndex':max(2,n),'startColumnIndex':c,'endColumnIndex':c+1},'cell':{'userEnteredFormat':{'numberFormat':{'type':'DATE','pattern':'dd mmm yyyy'}}},'fields':'userEnteredFormat.numberFormat'}})
     req=req[1:]+[{'mergeCells':{'range':{'sheetId':mid,'startRowIndex':r,'endRowIndex':r+1,'startColumnIndex':0,'endColumnIndex':8},'mergeType':'MERGE_ALL'}} for r in [0,1]+list(range(15+len(days),len(mis)))]
