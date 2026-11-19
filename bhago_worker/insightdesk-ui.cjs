@@ -6,9 +6,25 @@ const {assertCallingWindow}=require('./calling-window.cjs');
 exports.run=async function(ctx,request) {
   const {page,PRIVATE,prepare,SETTINGS,assertWorkspace}=ctx;
   if(request.stage==='insightdesk_ping') {
-    const ready=page.url().startsWith('https://samvaad.sakhaa.ai/dashboard/') &&
+    const isReady=async()=>page.url().startsWith('https://samvaad.sakhaa.ai/dashboard/') &&
       await page.getByText('chlearbhago@gmail.com',{exact:false}).count()>0;
+    let ready=await isReady();
+    // Ping runs through the serial command dispatcher, never during a launch.
+    // Recover an idle stale page in its existing cloud context, without another login.
+    if(!ready && process.env.BHAGO_RUNTIME==='cloud' && Date.now()-(ctx.page._bhagoRecoveryAt||0)>120000) {
+      ctx.page._bhagoRecoveryAt=Date.now();
+      try {
+        await page.goto('https://samvaad.sakhaa.ai/dashboard/analytics',{waitUntil:'domcontentloaded',timeout:30000});
+        await page.getByText('chlearbhago@gmail.com',{exact:false}).first().waitFor({state:'attached',timeout:15000});
+      } catch(_) {}
+      ready=await isReady();
+    }
     fs.writeFileSync(path.join(PRIVATE,'bridge-browser.json'),JSON.stringify({ready,updatedAt:new Date().toISOString(),pid:process.pid}));
+    if(!ready) {
+      const url=new URL(page.url());
+      const state=url.origin==='https://samvaad.sakhaa.ai' && /login|sign.?in|auth/i.test(url.pathname)?'samvaad_login_required':'samvaad_account_unverified';
+      fs.writeFileSync(path.join(PRIVATE,'status.json'),JSON.stringify({state,updatedAt:new Date().toISOString(),message:state==='samvaad_login_required'?'The cloud Samvaad session requires renewed sign-in. No campaign was submitted.':'The cloud page could not verify the Bhago account after refresh. No campaign was submitted.'}));
+    }
     if(ready && process.env.BHAGO_RUNTIME==='cloud') {
       const temporary=path.join(PRIVATE,'samvaad-state.tmp');
       fs.writeFileSync(temporary,JSON.stringify(await page.context().storageState()),{mode:0o600});
