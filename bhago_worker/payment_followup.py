@@ -5,7 +5,7 @@ import hashlib
 import json
 import re
 
-VERSION=3
+VERSION=4
 LABELS={'callback_requested':'Call back requested','committed':'Committed',
         'not_committed':'Not committed','already_paid':'already paid'}
 FIELDS=['status','promised_date','promised_date_expression','promised_amount','callback_date','callback_time',
@@ -115,10 +115,12 @@ def extract(call,recipient,config=None):
     facts=empty()
     for quote in customer_turns(transcript):
         text=re.sub(r'\s+',' ',quote).strip();lower=text.casefold()
+        # ASR often inserts spaces inside Hindi words (e.g. "कर दू ंगा").
+        match_text=lower+' '+re.sub(r'(?<=[\u0900-\u097f])\s+(?=[\u0900-\u097f])','',lower)
         if re.search(r'person.*trying.*re.?ach|record.*message|फॉर सम|कॉल आ.*वेट',lower):continue
-        paid=bool(re.search(r'\b(?:already\s+paid|payment\s+(?:is\s+)?(?:done|made)|have\s+paid|i\s+paid)\b|पे\s*में\s*ट.*(?:कर.*चु\s*के|हो\s*गया|कर\s*दिया)',lower))
-        promise=bool(re.search(r"\b(?:i\s+(?:will|can)\s+pay|i['’]ll\s+pay|pay\s+kar|payment\s+kar)\b|करा\s*एंगे|कराएंगे|कर\s*दूंगा|कर\s*देंगे|भुगतान.*कर",lower))
-        callback=bool(re.search(r'\bcall\b.*\b(?:back|later|tomorrow|today|after|at)\b|\b(?:baad|later)\b.*\bcall\b|(?:बाद|कल|फिर|दुबारा).*कॉल|कॉल.*(?:करिए|करिये|करना)',lower))
+        paid=bool(re.search(r'\b(?:already\s+paid|payment\s+(?:is\s+)?(?:done|made)|have\s+paid|i\s+paid)\b|पे\s*में\s*ट.*(?:कर.*चु\s*के|हो\s*गया|कर\s*दिया)',match_text))
+        promise=bool(re.search(r"\b(?:i\s+(?:will|can)\s+pay|i['’]ll\s+pay|pay\s+kar|payment\s+kar)\b|करा\s*एंगे|कराएंगे|कर\s*दूंगा|कर\s*देंगे|भुगतान.*कर",match_text))
+        callback=bool(re.search(r'\bcall\b.*\b(?:back|later|tomorrow|today|after|at)\b|\b(?:baad|later)\b.*\bcall\b|(?:बाद|कल|फिर|दुबारा).*कॉल|कॉल.*(?:करिए|करिये|करना)',match_text))
         if paid:facts.update(status='already_paid',status_evidence=text)
         elif callback:facts.update(status='callback_requested',status_evidence=text)
         elif promise:facts.update(status='committed',status_evidence=text)
