@@ -201,6 +201,8 @@ def sync_book(writer,sid,kind,exported,jobs,cutoff):
         if kind=='payment' and title in (detail,'Call History'):
             # Full multi-line transcripts stay in the cell; keep the client grid readable.
             req.append({'updateDimensionProperties':{'range':{'sheetId':sid_,'dimension':'ROWS','startIndex':1,'endIndex':max(2,n)},'properties':{'pixelSize':96},'fields':'pixelSize'}})
+        if title=='Daily Performance':
+            req.append({'repeatCell':{'range':{'sheetId':sid_,'startRowIndex':1,'endRowIndex':max(2,n),'startColumnIndex':7,'endColumnIndex':8},'cell':{'userEnteredFormat':{'numberFormat':{'type':'PERCENT','pattern':'0.0%'}}},'fields':'userEnteredFormat.numberFormat'}})
         datecols=[0] if title in ('Call History','Daily Performance') else [4,5] if kind=='lead' and title==detail else [6] if title=='Lead Interested' else [8,9]
         for c in datecols:req.append({'repeatCell':{'range':{'sheetId':sid_,'startRowIndex':1,'endRowIndex':max(2,n),'startColumnIndex':c,'endColumnIndex':c+1},'cell':{'userEnteredFormat':{'numberFormat':{'type':'DATE','pattern':'dd mmm yyyy'}}},'fields':'userEnteredFormat.numberFormat'}})
     req=req[1:]+[{'mergeCells':{'range':{'sheetId':mid,'startRowIndex':r,'endRowIndex':r+1,'startColumnIndex':0,'endColumnIndex':8},'mergeType':'MERGE_ALL'}} for r in [0,1]+list(range(15+len(days),len(mis)))]
