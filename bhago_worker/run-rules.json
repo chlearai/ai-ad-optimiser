@@ -27,7 +27,7 @@
     "start": "10:00",
     "end": "18:00",
     "days": "Every day",
-    "appliesTo": "lead and payment calling, including tests",
+    "appliesTo": "Lead and tests: 10:00-18:00 IST. Production payment: 12:00-18:00 IST.",
     "launchOutsideWindow": "blocked; no automatic deferral",
     "samvaadCampaignSetting": "Set and reopen When Calls Can Run: 10:00\u201318:00 IST, all seven days",
     "activeCampaignCutoff": "Samvaad controls queued dialing using the saved campaign calling window; behavior at the cutoff has not been observed in a live campaign"
@@ -75,7 +75,7 @@
       "value1": "City/Area",
       "value2": "Vehicle Number",
       "value3": "Outstanding Amount",
-      "date": "Retained for processing only; never placed in Value 3"
+      "date": "Ignore for daily recipient selection; retain valid END dates only as source metadata."
     },
     "trigger": "Save the current source sheet link, then RUN reads it, prepares the local CSV, creates the campaign and starts calls automatically.",
     "laterTuning": [
@@ -93,7 +93,10 @@
       "deadline": "18:30 Asia/Calcutta every day",
       "prepareAt": "18:20",
       "finalRefreshAt": "18:25",
-      "destinations": ["lead_calling_report", "payment_calling_report"],
+      "destinations": [
+        "lead_calling_report",
+        "payment_calling_report"
+      ],
       "updates": "MIS, Daily Performance, Call History and client outcome lists",
       "preserve": "Client follow-up statuses, client notes and manually verified payment entries",
       "failurePolicy": "Record needs_attention, preserve previous history and retry; never silently claim success."
@@ -109,5 +112,20 @@
     "paidClaimIsVerifiedPayment": false,
     "pollIntervalSeconds": 45,
     "rowMatching": "Saved source workbook/tab, durable row UUID, phone, name, date and payment vehicle"
+  },
+  "paymentDailySchedule": {
+    "enabled": true,
+    "time": "12:00",
+    "timeZone": "Asia/Calcutta",
+    "callingWindow": "12:00-18:00 IST",
+    "source": "payment_reminder",
+    "selection": "All valid records in the latest saved payment source, ignoring END dates and prior-day calling history",
+    "campaignsPerDay": 1,
+    "batchLimit": null,
+    "duplicates": "One occurrence per phone within the daily campaign",
+    "previousDayCarryover": false,
+    "endOfDay": "Permanent stop requested; implementation deferred by user on 2026-11-21. Calling window alone does not permanently stop Samvaad.",
+    "testSections": "manual only; unchanged",
+    "approvedOn": "2026-11-21"
   }
 }

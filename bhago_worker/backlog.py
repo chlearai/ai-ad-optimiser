@@ -42,6 +42,7 @@ def eligible(recipients, today, states, moment=None, lead_callbacks=False):
 def plan(kind, today, moment=None):
     from insightdesk_bridge import read_source,get_value
     sources=['swiggy','zomato'] if kind=='lead' else ['payment_reminder']
+    config=json.loads(get_value('bhago:18:schedule') or '{}')
     recipients=[];skipped=[]
     with google_session(write=True) as session:
         writer=SheetsWriter(session)
@@ -54,6 +55,8 @@ def plan(kind, today, moment=None):
                 skipped.append({'source':source,'reason':'No Editor access'});continue
             run={'source':source,'calling_type':kind,'start_date':'0001-01-01',
                  'end_date':(today-dt.timedelta(days=1)).isoformat(),'_allow_empty':True,'_skip_invalid':True}
+            if kind=='payment' and config.get('payment_policy',{}).get('mode')=='full_sheet_daily':
+                run['_ignore_payment_dates']=True
             rows,_,_=read_source(run)
             # Stable IDs are established before any row enters a calling campaign.
             original_count=len(rows)
@@ -61,6 +64,8 @@ def plan(kind, today, moment=None):
             if len(rows)<original_count:
                 skipped.append({'source':source,'reason':'Duplicate Bhago Row IDs excluded','excluded_rows':original_count-len(rows)})
             recipients.extend(rows)
+    if kind=='payment' and config.get('payment_policy',{}).get('mode')=='full_sheet_daily':
+        return payment_daily_rows(recipients),skipped
     stored=load_states([state_key(r['source_ref']['row_id']) for r in recipients])
     states={r['source_ref']['row_id']:stored.get(state_key(r['source_ref']['row_id'])) for r in recipients}
     queue=eligible(recipients,today,states,moment,lead_callbacks=kind=='lead')
@@ -73,6 +78,45 @@ def plan(kind, today, moment=None):
     if not isinstance(batch_size,int) or isinstance(batch_size,bool) or batch_size<1:
         raise ValueError('Bhago batch size must be a positive whole number.')
     return select_batch(queue,batch_size),skipped
+
+
+def payment_daily_rows(recipients):
+    """The client maintains the pending list; previous days and END dates do not filter it."""
+    selected=[];phones=set()
+    for recipient in recipients:
+        if recipient['phone'] in phones:continue
+        row=dict(recipient)
+        for key in ('prior_calls','_callback_due','_carryover'):row.pop(key,None)
+        selected.append(row);phones.add(row['phone'])
+    return selected
+
+
+def payment_daily_tick(moment,config):
+    """Queue one complete current list per IST day; never resume a worker backlog plan."""
+    from insightdesk_bridge import get_value,connect,KEY,now
+    if not config.get('payment_reminder') or not 12<=moment.hour<18:return False
+    marker=f'bhago:18:schedule:{moment.date().isoformat()}:payment_reminder'
+    if get_value(marker):return False
+    current=json.loads(get_value(KEY) or '{}')
+    if current.get('state') in ('queued_preview','reading','ready','queued_launch','launching','uncertain'):return False
+    rows,skipped=plan('payment',moment.date(),moment)
+    if not rows:return False
+    run_id=uuid.uuid4().hex
+    run={'id':run_id,'source':'payment_reminder','calling_type':'payment',
+         'start_date':None,'end_date':None,'auto_launch':True,'_skip_invalid':True,
+         '_ignore_payment_dates':True,'_plan_key':'bhago:18:plan:'+run_id,
+         '_skipped_sources':skipped,'state':'queued_preview','requested_by':'daily_payment_full_sheet',
+         'created_at':now(),'message':'Daily noon payment run: complete current pending list, one campaign; no previous-day carryover.'}
+    save_state(run['_plan_key'],rows)
+    with connect() as db,db.cursor() as cur:
+        cur.execute('SELECT id FROM accounts WHERE id=18 FOR UPDATE')
+        cur.execute('SELECT value FROM app_settings WHERE key=%s',(marker,))
+        if cur.fetchone():return False
+        cur.execute('SELECT value FROM app_settings WHERE key=%s FOR UPDATE',(KEY,));old=cur.fetchone()
+        if old and json.loads(old[0]).get('state') in ('queued_preview','reading','ready','queued_launch','launching','uncertain'):return False
+        cur.execute('INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW())',(marker,json.dumps({'run_id':run_id,'policy':'full_sheet_daily','records':len(rows)})))
+        cur.execute('INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()',(KEY,json.dumps(run)))
+    return True
 
 
 def select_batch(queue,batch_size=30):
@@ -98,11 +142,13 @@ def tick(moment=None):
     config=json.loads(get_value('bhago:18:schedule') or '{}')
     if not config.get('enabled'):return
     if config.get('start_date') and moment.date().isoformat()<config['start_date']:return
+    full_payment=config.get('payment_policy',{}).get('mode')=='full_sheet_daily'
+    if full_payment and payment_daily_tick(moment,config):return
     if _control:
         control(None,None,None);return
     inflights=load_states(['bhago:18:inflight:lead','bhago:18:inflight:payment'])
     # Closing has priority over a stalled/failed creation request. It never creates a call.
-    for kind in ('lead','payment'):
+    for kind in (('lead',) if full_payment else ('lead','payment')):
         active=inflights.get('bhago:18:inflight:'+kind)
         if not config.get('resume_previous_campaign') and active and active.get('state') in ('submitted','paused','uncertain') and (
                 moment.hour>=18 or moment.hour<10 or active.get('day',moment.date().isoformat())<moment.date().isoformat()):
@@ -113,7 +159,7 @@ def tick(moment=None):
         if current.get('state')=='uncertain':return
         if current.get('state')=='failed' and dt.datetime.fromisoformat(current['created_at']).astimezone(IST).date()==moment.date():return
     inspections=[]
-    for kind in ('lead','payment'):
+    for kind in (('lead',) if full_payment else ('lead','payment')):
         inflight=inflights.get('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
         if inflight and inflight.get('state') in ('submitted','paused'):

@@ -77,18 +77,20 @@ exports.run=async function(ctx,request) {
     if(original.runId!==request.runId || !['swiggy','zomato','qwqer','lead_batch','payment_reminder','test','test_lead','test_payment'].includes(original.source)) throw new Error('Run scope mismatch');
     if(original.source==='test_lead' && original.type!=='lead' || original.source==='test_payment' && original.type!=='payment') throw new Error('Test calling type mismatch');
     const {job,csvPath,fingerprint}=prepare(original), settings=SETTINGS[job.type];
+    const startHour=job.type==='payment'&&!job.test?12:10;
+    if(request.stage==='insightdesk_run') assertCallingWindow(new Date(),startHour);
     const sourceType={swiggy:'lead',zomato:'lead',qwqer:'lead',lead_batch:'lead',payment_reminder:'payment',test_lead:'lead',test_payment:'payment'}[job.source];
     if(sourceType&&sourceType!==job.type) throw new Error('Source calling type mismatch');
-    await page.goto('https://samvaad.sakhaa.ai/dashboard/campaign-calls/create',{waitUntil:'domcontentloaded'});
+    await page.goto('https://samvaad.sakhaa.ai/dashboard/campaign-calls',{waitUntil:'domcontentloaded'});
     await assertWorkspace(page);
-    await page.getByRole('button',{name:'Create a New Campaign',exact:true}).waitFor({timeout:15000});
-    if(await page.getByRole('row').filter({hasText:job.campaignName}).count()) throw new Error('Campaign already exists');
-    await page.getByRole('button',{name:'Create a New Campaign',exact:true}).click();
+    await page.getByRole('button',{name:'+ Create Campaign',exact:true}).waitFor({timeout:15000});
+    if(await page.getByRole('heading',{name:job.campaignName,exact:true}).count()) throw new Error('Campaign already exists');
+    await page.getByRole('button',{name:'+ Create Campaign',exact:true}).click();
     await page.getByPlaceholder('Enter',{exact:true}).fill(job.campaignName);
     await page.getByRole('button',{name:'Select phone number...',exact:true}).click();
-    await page.getByText(settings.number,{exact:true}).click();
+    await page.getByText(settings.number,{exact:true}).last().click();
     await page.getByRole('button',{name:'Select agent...',exact:true}).click();
-    await page.getByText(settings.agent,{exact:true}).click();
+    await page.getByText(settings.agent,{exact:true}).last().click();
     await page.getByRole('button',{name:'Upload CSV',exact:true}).click();
     await page.locator('input[type="file"]').setInputFiles(csvPath);
     const table=page.getByRole('table').filter({has:page.getByRole('columnheader',{name:/^PHONE$/i})});
@@ -126,7 +128,7 @@ exports.run=async function(ctx,request) {
     if(await page.getByRole('button',{name:settings.agent,exact:true}).count()!==1) throw new Error('Agent mismatch');
     const caller=page.getByRole('button',{name:new RegExp('^'+settings.number.replace('+','\\+'))});
     if(await caller.count()!==1) throw new Error('Caller number mismatch');
-    await require('./calling-window.cjs').configureCallingHours(page);
+    await require('./calling-window.cjs').configureCallingHours(page,`${startHour}:00`);
     const submit=page.getByRole('button',{name:'Send Now',exact:true});
     if(!await submit.isEnabled()) throw new Error('Samvaad launch unavailable');
     await page.screenshot({path:path.join(PRIVATE,'jobs',request.runId+'-ready.png'),fullPage:true});
@@ -137,10 +139,10 @@ exports.run=async function(ctx,request) {
     }
     receipt={state:'submitting',campaignName:job.campaignName,recipientCount:job.recipients.length,
       caller:settings.number,agent:settings.agent,concurrency:settings.concurrency,dialDelaySeconds:4,retries:(job.totalAttempts??2)===2,maxRetries:(job.totalAttempts??2)-1,totalAttempts:job.totalAttempts??2,retryIntervalMinutes:(job.totalAttempts??2)===2?5:0,
-      callingHours:{timeZone:'Asia/Calcutta',from:'10:00',to:'18:00',days:'Every day'},
+      callingHours:{timeZone:'Asia/Calcutta',from:`${startHour}:00`,to:'18:00',days:'Every day'},
       fingerprint,csvPath,attemptedAt:new Date().toISOString()};
     // Durable intent BEFORE clicking. Never retry an uncertain submission.
-    assertCallingWindow();
+    assertCallingWindow(new Date(),startHour);
     fs.writeFileSync(journal,JSON.stringify(receipt,null,2),{flag:'wx'});
     await submit.click();
     const row=page.getByRole('row').filter({hasText:job.campaignName});

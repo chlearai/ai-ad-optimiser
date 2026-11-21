@@ -382,7 +382,7 @@ def recipients_from_workbook(book, run):
                     row_id_i = next((i for i,h in enumerate(headers) if str(h)=='Bhago Row ID'), None)
                     if row_id_i is not None and row_id_i < len(row) and row[row_id_i]:
                         recipient['source_ref']['row_id'] = str(row[row_id_i])
-                    if date_i is not None and row[date_i]:
+                    if date_i is not None and row[date_i] and not payment:
                         recipient['sourceDate'] = lead_date(row[date_i]).isoformat()
                 if payment:
                     vehicle = str(row[vehicle_i] or "").strip()
@@ -391,7 +391,10 @@ def recipients_from_workbook(book, run):
                     recipient["value2"] = vehicle
                     recipient["value3"] = amount_text(row[amount_i]) if amount_i is not None else ""
                     if date_i is not None and row[date_i]:
-                        recipient["sourceDate"] = lead_date(row[date_i]).isoformat()
+                        try:
+                            recipient["sourceDate"] = lead_date(row[date_i]).isoformat()
+                        except ValueError:
+                            if not run.get('_ignore_payment_dates'):raise
                 recipients.append(recipient)
                 seen[phone] += 1
             except (ValueError, IndexError) as exc:
@@ -406,6 +409,9 @@ def recipients_from_workbook(book, run):
 def read_source(run):
     if run['source'] == 'qwqer':
         raise ValueError('QWQER calling is suspended until explicitly reinstated by Shekhar.')
+    if run['source']=='payment_reminder':
+        policy=json.loads(get_value('bhago:18:schedule') or '{}').get('payment_policy',{})
+        if policy.get('mode')=='full_sheet_daily':run=dict(run,_ignore_payment_dates=True)
     if run['source'] == 'lead_batch':
         sources = run.get('lead_sources', [])
         if not sources or len(sources) != len(set(sources)) or any(s not in ('swiggy', 'zomato', 'qwqer') for s in sources):
@@ -442,6 +448,10 @@ def schedule_tick(moment=None):
     config = json.loads(get_value('bhago:18:schedule') or '{}')
     if not config.get('enabled'):
         return
+    full_payment=config.get('payment_policy',{}).get('mode')=='full_sheet_daily'
+    if full_payment:
+        from backlog import payment_daily_tick
+        if payment_daily_tick(moment,config):return
     groups = []
     if config.get('lead_sources'):
         sources = config['lead_sources']
@@ -452,7 +462,7 @@ def schedule_tick(moment=None):
             groups.append(('lead_batch', sources))
         else:
             groups.extend((source, None) for source in sources)
-    if config.get('payment_reminder'):
+    if config.get('payment_reminder') and not full_payment:
         groups.append(('payment_reminder', None))
     today = moment.date().isoformat()
     yesterday = (moment.date()-dt.timedelta(days=1)).isoformat()
