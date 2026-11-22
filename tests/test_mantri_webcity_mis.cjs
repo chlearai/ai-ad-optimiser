@@ -18,6 +18,17 @@ w.fetch=async (url,opts)=>{requests.push({url,opts});return {ok:true,json:async(
     assert(!requests.some(r=>r.url.includes('crm-summary')));
     assert.match(w.document.getElementById('reportContent').textContent,/21-11-2026/);
     assert.match(w.document.getElementById('mantriCoverage').textContent,/Updated through/);
+    assert.equal(w.document.getElementById('mantriFrom').type,'date');
+    assert.equal(w.document.getElementById('mantriTo').type,'date');
+    assert.equal(w.document.querySelectorAll('#mantriExcel').length,1);
+    w.document.getElementById('mantriFrom').value='2026-11-21';
+    w.document.getElementById('mantriTo').value='2026-11-19';
+    await w.applyMantriRange({preventDefault(){}},42);
+    assert.match(w.document.getElementById('mantriRangeError').textContent,/From date/);
+    w.document.getElementById('mantriFrom').value='2026-11-19';
+    w.document.getElementById('mantriTo').value='2026-11-21';
+    await w.applyMantriRange({preventDefault(){}},42);
+    assert.match(requests.at(-1).url,/start=2026-11-19&end=2026-11-21/);
     data={...data,rows:[{date:'2026-11-22',inbound:null,outbound:null,leads:null,checked_at:null}],totals:{inbound:null,outbound:null,leads:null},complete:false,through:'2026-11-22',can_update:false};
     await w.renderMantriWebcityCounts({id:42});
     assert.equal(w.document.querySelectorAll('#mantriCountsForm').length,0);

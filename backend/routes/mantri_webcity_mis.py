@@ -41,13 +41,18 @@ class VerifiedDay(BaseModel):
     checked_at: datetime
 
 
-def build_report(saved, now=None):
+def build_report(saved, now=None, start=None, end=None):
     yesterday = (now or datetime.now(timezone.utc)).astimezone(IST).date() - timedelta(days=1)
+    if (start is None) != (end is None):
+        raise HTTPException(400, 'Select both From and To dates')
+    start, end = start or START, end or yesterday
+    if start < START or end > yesterday or start > end:
+        raise HTTPException(400, 'Select a valid completed date range from 17 November 2026')
     known = {r['date']: {**r, 'checked_at': BASELINE_CHECKED} for r in BASELINE}
     known.update(saved)
     rows = []
-    day = START
-    while day <= yesterday:
+    day = start
+    while day <= end:
         rows.append(known.get(day.isoformat(), {'date': day.isoformat(), 'inbound': None, 'outbound': None, 'leads': None, 'checked_at': None}))
         day += timedelta(days=1)
     complete = all(r['inbound'] is not None and r['outbound'] is not None and r['leads'] is not None for r in rows)
@@ -57,18 +62,64 @@ def build_report(saved, now=None):
         if not row['checked_at']:
             break
         verified_through = row['date']
-    return {'rows': rows, 'totals': totals, 'through': yesterday.isoformat(), 'complete': complete,
+    return {'rows': rows, 'totals': totals, 'start': start.isoformat(), 'end': end.isoformat(),
+            'through': yesterday.isoformat(), 'complete': complete,
             'verified_through': verified_through,
             'checked_at': max((r['checked_at'] for r in rows if r['checked_at']), default=None),
             'timezone': 'Asia/Kolkata'}
 
 
 @router.get('/{account_id}/daily-counts')
-def daily_counts(account_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+def daily_counts(account_id: int, start: date | None = None, end: date | None = None,
+                 db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user)
     setting = db.query(AppSetting).filter_by(key=f'mantri-webcity:{account_id}:daily-counts').first()
     saved = json.loads(setting.value) if setting and setting.value else {}
-    return {**build_report(saved), 'can_update': user.role in ('admin', 'superadmin')}
+    return {**build_report(saved, start=start, end=end), 'can_update': user.role in ('admin', 'superadmin')}
+
+
+@router.get('/{account_id}/daily-counts/export')
+def export_daily_counts(account_id: int, start: date | None = None, end: date | None = None,
+                        db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, Side
+    from fastapi.responses import StreamingResponse
+    report = daily_counts(account_id, start, end, db, user)
+    book = Workbook()
+    sheet = book.active
+    sheet.title = 'Mantri MIS'
+    sheet.append(['Date', 'Call', None, 'Leads in CRM'])
+    sheet.append([None, 'Inbound', 'Outbound', None])
+    for cell_range in ('A1:A2', 'B1:C1', 'D1:D2'):
+        sheet.merge_cells(cell_range)
+    for row in reversed(report['rows']):
+        sheet.append([date.fromisoformat(row['date']), row['inbound'], row['outbound'], row['leads']])
+        sheet.cell(sheet.max_row, 1).number_format = 'DD-MM-YYYY'
+    sheet.append(['Total', report['totals']['inbound'], report['totals']['outbound'], report['totals']['leads']])
+    total_row = sheet.max_row
+    edge = Side(style='thin', color='999999')
+    border = Border(left=edge, right=edge, top=edge, bottom=edge)
+    for row in sheet.iter_rows(min_row=1, max_row=total_row, max_col=4):
+        for cell in row:
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+            cell.font = Font(name='Arial', size=12, bold=cell.row <= 2 or cell.row == total_row)
+        sheet.row_dimensions[row[0].row].height = 25
+    for col in ('A','B','C','D'):
+        sheet.column_dimensions[col].width = 20
+    sheet.freeze_panes = 'B3'
+    sheet.append(['IST · All Exotel call transactions · CRM People created'])
+    sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row, end_column=4)
+    if not report['complete']:
+        sheet.append(['Blank counts are awaiting verification; totals are unavailable.'])
+        sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row, end_column=4)
+    output = BytesIO()
+    book.save(output)
+    output.seek(0)
+    filename = f"Mantri_MIS_{report['start']}_to_{report['end']}.xlsx"
+    return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                             headers={'Content-Disposition': f'attachment; filename="{filename}"', 'Cache-Control': 'no-store'})
 
 
 @router.put('/{account_id}/daily-counts')

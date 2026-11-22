@@ -3109,19 +3109,27 @@
         return account && (account.name || '').trim().toLowerCase() === 'mantri webcity';
     }
 
-    async function renderMantriWebcityCounts(account) {
+    let mantriSelectedRange = null;
+    async function renderMantriWebcityCounts(account, range = null) {
         const accountId = account.id;
         try {
-            const data = await api('GET', `/mantri-webcity/${accountId}/daily-counts`);
+            const query = range ? '?' + new URLSearchParams(range) : '';
+            const data = await api('GET', `/mantri-webcity/${accountId}/daily-counts${query}`);
             if (selectedAccountId !== accountId) return;
+            mantriSelectedRange = {start:data.start || data.rows[0]?.date, end:data.end || data.through};
             const count = value => value === null || value === undefined ? '—' : Number(value).toLocaleString('en-IN');
             const day = value => value.split('-').reverse().join('-');
             $('reportContent').innerHTML = `<section id="mantriDailyMis" style="max-width:760px;margin:16px auto">
                 <style>
                     #mantriDailyMis table {width:100%;border-collapse:collapse;table-layout:fixed;background:var(--color-bg-card);font-size:clamp(14px,1.6vw,19px)}
-                    #mantriDailyMis th,#mantriDailyMis td {border:1px solid var(--color-text-secondary);padding:10px 6px;text-align:center;color:var(--color-text-primary)}
-                    #mantriDailyMis th {font-weight:600;background:var(--color-bg-input)}
-                    #mantriDailyMis tfoot {font-weight:700}
+                    #mantriDailyMis th,#mantriDailyMis td {border:1px solid var(--color-text-secondary);padding:10px 6px;text-align:center;color:var(--color-text-primary);height:44px;box-sizing:border-box;line-height:22px}
+                    #mantriDailyMis th {font-weight:600;background:var(--color-bg-card);position:sticky;top:0;z-index:2}
+                    #mantriDailyMis thead tr:nth-child(2) th {top:44px}
+                    #mantriDailyMis tfoot td {font-weight:700;position:sticky;bottom:0;background:var(--color-bg-card);z-index:2}
+                    #mantriDailyMis .mantri-scroll {max-height:264px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--color-border)}
+                    #mantriDailyMis .mantri-range {display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px}
+                    #mantriDailyMis .mantri-range label {flex:1;min-width:140px}
+                    #mantriDailyMis .mantri-range button {min-height:38px}
                     #mantriDailyMis p {font-size:14px;color:var(--color-text-secondary);line-height:1.5;margin:12px 0}
                     #mantriDailyMis details {font-size:14px;margin-top:20px}
                     #mantriDailyMis form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px 0}
@@ -3129,12 +3137,20 @@
                     #mantriDailyMis input {min-width:0;width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg-input);color:var(--color-text-primary);font:inherit}
                     @media(max-width:600px){body:has(#mantriDailyMis) .sidebar {width:0;overflow:hidden}body:has(#mantriDailyMis) .main {margin-left:0;width:100%;max-width:100%;padding:0 10px}}
                 </style>
-                <table aria-label="Mantri Webcity daily calls and CRM leads">
+                <form class="mantri-range" style="display:flex" onsubmit="applyMantriRange(event,${accountId})" aria-label="Report date range">
+                    <label>From<input id="mantriFrom" type="date" min="2026-11-17" max="${data.through}" value="${mantriSelectedRange.start}" required></label>
+                    <label>To<input id="mantriTo" type="date" min="2026-11-17" max="${data.through}" value="${mantriSelectedRange.end}" required></label>
+                    <button class="btn btn-primary" type="submit">Apply</button>
+                    <button class="btn btn-secondary" type="button" onclick="renderMantriWebcityCounts(allAccounts.find(a=>a.id===${accountId}))">Reset</button>
+                    <button id="mantriExcel" class="btn btn-secondary" type="button" onclick="downloadMantriExcel(${accountId})">Download Excel</button>
+                </form>
+                <span id="mantriRangeError" role="alert"></span>
+                <div class="mantri-scroll" tabindex="0" role="region" aria-label="Daily counts, latest first. Scroll for older dates."><table aria-label="Mantri Webcity daily calls and CRM leads">
                     <thead><tr><th rowspan="2" scope="col" style="width:29%">Date</th><th colspan="2" scope="colgroup">Call</th><th rowspan="2" scope="col" style="width:29%">Leads in CRM</th></tr><tr><th scope="col">Inbound</th><th scope="col">Outbound</th></tr></thead>
-                    <tbody>${data.rows.map(row => `<tr><td>${day(row.date)}</td><td>${count(row.inbound)}</td><td>${count(row.outbound)}</td><td>${count(row.leads)}</td></tr>`).join('')}</tbody>
+                    <tbody>${[...data.rows].reverse().map(row => `<tr><td>${day(row.date)}</td><td>${count(row.inbound)}</td><td>${count(row.outbound)}</td><td>${count(row.leads)}</td></tr>`).join('')}</tbody>
                     <tfoot><tr><td>Total</td><td>${count(data.totals.inbound)}</td><td>${count(data.totals.outbound)}</td><td>${count(data.totals.leads)}</td></tr></tfoot>
-                </table>
-                <p id="mantriCoverage" role="status">${data.complete ? `Updated through ${day(data.through)}` : `Verified through ${data.verified_through ? day(data.verified_through) : '—'} · Awaiting daily update`} · IST</p>
+                </table></div>
+                <p id="mantriCoverage" role="status">${data.complete ? `Updated through ${day(data.end || data.through)}` : `Verified through ${data.verified_through ? day(data.verified_through) : '—'} · Awaiting daily update`} · IST · Latest 3 days visible; scroll for older dates</p>
                 ${data.can_update ? `<details><summary>Update verified counts</summary><form id="mantriCountsForm" onsubmit="saveMantriWebcityCounts(event,${accountId})">
                     <label>Date<input id="mantriCountDate" type="date" min="2026-11-17" max="${data.through}" value="${data.through}" required></label>
                     <label>Inbound<input id="mantriInbound" type="number" min="0" step="1" max="10000000" required></label>
@@ -3153,6 +3169,36 @@
         }
     }
 
+    async function applyMantriRange(event, accountId) {
+        event.preventDefault();
+        const start = $('mantriFrom').value, end = $('mantriTo').value;
+        if (!start || !end || start > end) {
+            $('mantriRangeError').textContent = 'From date must be on or before To date.';
+            return;
+        }
+        await renderMantriWebcityCounts(allAccounts.find(a => a.id === accountId), {start,end});
+    }
+
+    async function downloadMantriExcel(accountId) {
+        if (accountId !== selectedAccountId || !mantriSelectedRange) return;
+        const button = $('mantriExcel');
+        button.disabled = true;
+        try {
+            const query = new URLSearchParams(mantriSelectedRange);
+            const response = await fetch(API + `/mantri-webcity/${accountId}/daily-counts/export?${query}`, {
+                headers:token ? {Authorization:'Bearer ' + token} : {}
+            });
+            if (!response.ok) throw new Error((await response.json().catch(()=>({}))).detail || 'Excel download failed');
+            const url = URL.createObjectURL(await response.blob());
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Mantri_MIS_${mantriSelectedRange.start}_to_${mantriSelectedRange.end}.xlsx`;
+            link.click();
+            setTimeout(()=>URL.revokeObjectURL(url),1000);
+        } catch (error) { toast(error.message,true); }
+        finally { if (button.isConnected) button.disabled = false; }
+    }
+
     async function saveMantriWebcityCounts(event, accountId) {
         event.preventDefault();
         if (accountId !== selectedAccountId) return;
@@ -3164,7 +3210,7 @@
                 outbound:Number($('mantriOutbound').value), leads:Number($('mantriCrmLeads').value),
                 checked_at:$('mantriChecked').value + ':00+05:30'
             });
-            await renderMantriWebcityCounts(allAccounts.find(a => a.id === accountId));
+            await renderMantriWebcityCounts(allAccounts.find(a => a.id === accountId), mantriSelectedRange);
             toast('Verified counts saved');
         } catch (error) {
             if ($('mantriSaveStatus')) $('mantriSaveStatus').textContent = error.message;

@@ -78,4 +78,24 @@ class CountsTests(unittest.TestCase):
         self.assertEqual(self.client.get(root).status_code,200)
         self.assertEqual(self.client.put(root,json=body).status_code,403)
 
+    def test_selected_range_and_excel_match(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        root = '/api/mantri-webcity/1/daily-counts'
+        query = '?start=2026-11-19&end=2026-11-21'
+        report = self.client.get(root+query).json()
+        self.assertEqual(len(report['rows']),3)
+        self.assertEqual(report['totals'],{'inbound':3,'outbound':24,'leads':29})
+        export = self.client.get(root+'/export'+query)
+        self.assertEqual(export.status_code,200)
+        sheet = load_workbook(BytesIO(export.content)).active
+        self.assertEqual(sheet['A3'].value.date().isoformat(),'2026-11-21')
+        self.assertEqual([sheet.cell(6,col).value for col in range(1,5)],['Total',3,24,29])
+        self.assertEqual(sheet['A3'].number_format,'DD-MM-YYYY')
+        for query in ('?start=2026-11-19','?start=2026-11-21&end=2026-11-19','?start=2026-11-01&end=2026-11-21'):
+            self.assertEqual(self.client.get(root+query).status_code,400)
+            self.assertEqual(self.client.get(root+'/export'+query).status_code,400)
+        self.user.role='user'
+        self.assertEqual(self.client.get(root+'/export').status_code,403)
+
 if __name__ == '__main__': unittest.main()
