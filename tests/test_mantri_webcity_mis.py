@@ -89,7 +89,8 @@ class CountsTests(unittest.TestCase):
         export = self.client.get(root+'/export'+query)
         self.assertEqual(export.status_code,200)
         sheet = load_workbook(BytesIO(export.content)).active
-        self.assertEqual(sheet['A3'].value.date().isoformat(),'2026-11-21')
+        self.assertEqual(sheet['A3'].value.date().isoformat(),'2026-11-19')
+        self.assertEqual(sheet['A5'].value.date().isoformat(),'2026-11-21')
         self.assertEqual([sheet.cell(6,col).value for col in range(1,5)],['Total',3,24,29])
         self.assertEqual(sheet['A3'].number_format,'DD-MM-YYYY')
         for query in ('?start=2026-11-19','?start=2026-11-21&end=2026-11-19','?start=2026-11-01&end=2026-11-21'):

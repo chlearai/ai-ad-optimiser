@@ -93,7 +93,7 @@ def export_daily_counts(account_id: int, start: date | None = None, end: date | 
     sheet.append([None, 'Inbound', 'Outbound', None])
     for cell_range in ('A1:A2', 'B1:C1', 'D1:D2'):
         sheet.merge_cells(cell_range)
-    for row in reversed(report['rows']):
+    for row in report['rows']:
         sheet.append([date.fromisoformat(row['date']), row['inbound'], row['outbound'], row['leads']])
         sheet.cell(sheet.max_row, 1).number_format = 'DD-MM-YYYY'
     sheet.append(['Total', report['totals']['inbound'], report['totals']['outbound'], report['totals']['leads']])

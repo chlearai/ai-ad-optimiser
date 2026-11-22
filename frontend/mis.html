@@ -3147,12 +3147,12 @@
                     <button id="mantriExcel" class="btn btn-secondary" type="button" onclick="downloadMantriExcel(${accountId})">Download Excel</button>
                 </form>
                 <span id="mantriRangeError" role="alert"></span>
-                <div class="mantri-scroll" tabindex="0" role="region" aria-label="Daily counts, latest first. Scroll for older dates."><table aria-label="Mantri Webcity daily calls and CRM leads">
+                <div class="mantri-scroll" tabindex="0" role="region" aria-label="Daily counts, latest date at bottom. Scroll up for older dates."><table aria-label="Mantri Webcity daily calls and CRM leads">
                     <thead><tr><th rowspan="2" scope="col" style="width:29%">Date</th><th colspan="2" scope="colgroup">Call</th><th rowspan="2" scope="col" style="width:29%">Leads in CRM</th></tr><tr><th scope="col">Inbound</th><th scope="col">Outbound</th></tr></thead>
-                    <tbody>${[...data.rows].reverse().map(row => `<tr><td>${day(row.date)}</td><td>${count(row.inbound)}</td><td>${count(row.outbound)}</td><td>${count(row.leads)}</td></tr>`).join('')}</tbody>
+                    <tbody>${data.rows.map(row => `<tr><td>${day(row.date)}</td><td>${count(row.inbound)}</td><td>${count(row.outbound)}</td><td>${count(row.leads)}</td></tr>`).join('')}</tbody>
                     <tfoot><tr><td>Total</td><td>${count(data.totals.inbound)}</td><td>${count(data.totals.outbound)}</td><td>${count(data.totals.leads)}</td></tr></tfoot>
                 </table></div>
-                <p id="mantriCoverage" role="status">${data.complete ? `Updated through ${day(data.end || data.through)}` : `Verified through ${data.verified_through ? day(data.verified_through) : '—'} · Awaiting daily update`} · IST · Latest 3 days visible; scroll for older dates</p>
+                <p id="mantriCoverage" role="status">${data.complete ? `Updated through ${day(data.end || data.through)}` : `Verified through ${data.verified_through ? day(data.verified_through) : '—'} · Awaiting daily update`} · IST · Latest 3 days visible; scroll up for older dates</p>
                 ${data.can_update ? `<details><summary>Update verified counts</summary><form id="mantriCountsForm" onsubmit="saveMantriWebcityCounts(event,${accountId})">
                     <label>Date<input id="mantriCountDate" type="date" min="2026-11-17" max="${data.through}" value="${data.through}" required></label>
                     <label>Inbound<input id="mantriInbound" type="number" min="0" step="1" max="10000000" required></label>
@@ -3163,6 +3163,8 @@
                     <span id="mantriSaveStatus" role="status"></span>
                 </form></details>` : ''}
             </section>`;
+            const scrollArea = $('mantriDailyMis').querySelector('.mantri-scroll');
+            scrollArea.scrollTop = scrollArea.scrollHeight;
         } catch (error) {
             if (selectedAccountId === accountId) {
                 $('reportContent').innerHTML = '<p id="mantriLoadError" role="alert"></p>';
