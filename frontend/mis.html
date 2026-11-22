@@ -3127,6 +3127,8 @@
                     #mantriDailyMis thead tr:nth-child(2) th {top:44px}
                     #mantriDailyMis tfoot td {font-weight:700;position:sticky;bottom:0;background:var(--color-bg-card);z-index:2}
                     #mantriDailyMis .mantri-scroll {max-height:264px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--color-border)}
+                    #mantriDailyMis td:first-child {white-space:nowrap}
+                    body:has(#mantriDailyMis) .content {width:100%;max-width:100%}
                     #mantriDailyMis .mantri-range {display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px}
                     #mantriDailyMis .mantri-range label {flex:1;min-width:140px}
                     #mantriDailyMis .mantri-range button {min-height:38px}
@@ -3135,7 +3137,7 @@
                     #mantriDailyMis form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px 0}
                     #mantriDailyMis label {display:grid;gap:5px}
                     #mantriDailyMis input {min-width:0;width:100%;padding:8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-bg-input);color:var(--color-text-primary);font:inherit}
-                    @media(max-width:600px){body:has(#mantriDailyMis) .sidebar {width:0;overflow:hidden}body:has(#mantriDailyMis) .main {margin-left:0;width:100%;max-width:100%;padding:0 10px}}
+                    @media(max-width:600px){body:has(#mantriDailyMis) .sidebar {width:0;overflow:hidden}body:has(#mantriDailyMis) .main {margin-left:0;width:100%;max-width:100%;padding:0 10px}body:has(#mantriDailyMis) .content{padding:8px 0}body:has(#mantriDailyMis) #reportContainer{padding:8px}}
                 </style>
                 <form class="mantri-range" style="display:flex" onsubmit="applyMantriRange(event,${accountId})" aria-label="Report date range">
                     <label>From<input id="mantriFrom" type="date" min="2026-11-17" max="${data.through}" value="${mantriSelectedRange.start}" required></label>
