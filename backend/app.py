@@ -69,6 +69,8 @@ from backend.routes import bhago
 app.include_router(bhago.router)
 from backend.routes import saburi
 app.include_router(saburi.router)
+from backend.routes import mantri_webcity_mis
+app.include_router(mantri_webcity_mis.router)
 app.include_router(config.router)
 app.include_router(accounts.router)
 app.include_router(categories.router)
