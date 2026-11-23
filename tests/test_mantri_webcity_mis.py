@@ -51,7 +51,10 @@ class CountsTests(unittest.TestCase):
         report = self.ns['build_report']({}, datetime(2026,11,23,6,tzinfo=timezone.utc))
         self.assertFalse(report['complete'])
         self.assertIsNone(report['rows'][-1]['leads'])
-        self.assertIsNone(report['totals']['leads'])
+        self.assertEqual(report['totals'], {'inbound':7, 'outbound':26, 'leads':31})
+        self.assertEqual(report['pending_days'],1)
+        empty = self.ns['build_report']({}, datetime(2026,11,23,6,tzinfo=timezone.utc), start=__import__('datetime').date(2026,11,22), end=__import__('datetime').date(2026,11,22))
+        self.assertIsNone(empty['totals']['leads'])
 
     def test_save_reload_and_revise_one_day(self):
         root = '/api/mantri-webcity/1/daily-counts'

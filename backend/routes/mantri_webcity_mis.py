@@ -55,15 +55,16 @@ def build_report(saved, now=None, start=None, end=None):
     while day <= end:
         rows.append(known.get(day.isoformat(), {'date': day.isoformat(), 'inbound': None, 'outbound': None, 'leads': None, 'checked_at': None}))
         day += timedelta(days=1)
-    complete = all(r['inbound'] is not None and r['outbound'] is not None and r['leads'] is not None for r in rows)
-    totals = {key: sum(r[key] for r in rows) if complete else None for key in ('inbound', 'outbound', 'leads')}
+    verified_rows = [r for r in rows if all(r[key] is not None for key in ('inbound', 'outbound', 'leads'))]
+    complete = len(verified_rows) == len(rows)
+    totals = {key: sum(r[key] for r in verified_rows) if verified_rows else None for key in ('inbound', 'outbound', 'leads')}
     verified_through = None
     for row in rows:
         if not row['checked_at']:
             break
         verified_through = row['date']
     return {'rows': rows, 'totals': totals, 'start': start.isoformat(), 'end': end.isoformat(),
-            'through': yesterday.isoformat(), 'complete': complete,
+            'through': yesterday.isoformat(), 'complete': complete, 'pending_days': len(rows) - len(verified_rows),
             'verified_through': verified_through,
             'checked_at': max((r['checked_at'] for r in rows if r['checked_at']), default=None),
             'timezone': 'Asia/Kolkata'}
@@ -96,7 +97,7 @@ def export_daily_counts(account_id: int, start: date | None = None, end: date | 
     for row in report['rows']:
         sheet.append([date.fromisoformat(row['date']), row['inbound'], row['outbound'], row['leads']])
         sheet.cell(sheet.max_row, 1).number_format = 'DD-MM-YYYY'
-    sheet.append(['Total', report['totals']['inbound'], report['totals']['outbound'], report['totals']['leads']])
+    sheet.append(['Total' if report['complete'] else 'Verified subtotal', report['totals']['inbound'], report['totals']['outbound'], report['totals']['leads']])
     total_row = sheet.max_row
     edge = Side(style='thin', color='999999')
     border = Border(left=edge, right=edge, top=edge, bottom=edge)
@@ -112,7 +113,7 @@ def export_daily_counts(account_id: int, start: date | None = None, end: date | 
     sheet.append(['IST · All Exotel call transactions · CRM People created'])
     sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row, end_column=4)
     if not report['complete']:
-        sheet.append(['Blank counts are awaiting verification; totals are unavailable.'])
+        sheet.append([f"Incomplete: {report['pending_days']} day(s) pending. Subtotal includes verified dates only."])
         sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row, end_column=4)
     output = BytesIO()
     book.save(output)
