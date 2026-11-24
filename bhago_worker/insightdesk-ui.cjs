@@ -77,7 +77,7 @@ exports.run=async function(ctx,request) {
     if(original.runId!==request.runId || !['swiggy','zomato','qwqer','lead_batch','payment_reminder','test','test_lead','test_payment'].includes(original.source)) throw new Error('Run scope mismatch');
     if(original.source==='test_lead' && original.type!=='lead' || original.source==='test_payment' && original.type!=='payment') throw new Error('Test calling type mismatch');
     const {job,csvPath,fingerprint}=prepare(original), settings=SETTINGS[job.type];
-    const startHour=job.type==='payment'&&!job.test?12:10;
+    const startHour=job.test?10:12;
     if(request.stage==='insightdesk_run') assertCallingWindow(new Date(),startHour);
     const sourceType={swiggy:'lead',zomato:'lead',qwqer:'lead',lead_batch:'lead',payment_reminder:'payment',test_lead:'lead',test_payment:'payment'}[job.source];
     if(sourceType&&sourceType!==job.type) throw new Error('Source calling type mismatch');

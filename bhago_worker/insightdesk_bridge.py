@@ -453,7 +453,7 @@ def schedule_tick(moment=None):
         from backlog import payment_daily_tick
         if payment_daily_tick(moment,config):return
     groups = []
-    if config.get('lead_sources'):
+    if moment.hour>=12 and config.get('lead_sources'):
         sources = config['lead_sources']
         if any(s not in ('swiggy','zomato','qwqer') for s in sources) or len(set(sources)) != len(sources):
             raise ValueError('Invalid scheduled lead source selection')
@@ -480,7 +480,7 @@ def schedule_tick(moment=None):
             run = {'id':uuid.uuid4().hex, 'source':source, 'calling_type':'payment' if source=='payment_reminder' else 'lead',
                    'start_date':None if source=='payment_reminder' else yesterday, 'end_date':None if source=='payment_reminder' else yesterday,
                    'auto_launch':True, 'state':'queued_preview', 'requested_by':'daily_schedule', 'created_at':now(),
-                   'message':'Daily 10 am IST campaign queued from the saved source sheets.'}
+                   'message':'Daily noon IST campaign queued from the saved source sheets.'}
             if sources:
                 run['lead_sources'] = sources
             payload = json.dumps(run)

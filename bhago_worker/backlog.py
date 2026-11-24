@@ -171,7 +171,7 @@ def tick(moment=None):
             continue
         from rollover import settle
         if not settle(kind,moment):continue
-        if not 10<=moment.hour<18:continue
+        if not (12 if kind=='lead' else 10)<=moment.hour<18:continue
         rows,skipped=plan(kind,moment.date(),moment)
         if not rows:continue
         run_id=uuid.uuid4().hex
