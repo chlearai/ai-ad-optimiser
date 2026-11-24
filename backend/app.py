@@ -47,7 +47,14 @@ async def validation_error(request: Request, exc: RequestValidationError):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled %s for %s", type(exc).__name__, request.method)
+    # Full traceback stays in server logs; the client only gets a generic message.
+    logger.error(
+        "Unhandled %s for %s %s",
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

@@ -285,7 +285,7 @@ class OperationsTests(unittest.TestCase):
         self.assertEqual(self.client.post(f'/api/adguard/leads/{lead.id}/retry-lsq').status_code,404)
 
     def test_admin_instant_onboarding_sets_plan_clock(self):
-        r=self.client.post('/api/adguard/admin/create-subscriber',json={'email':'new@test.local','full_name':'New Subscriber','plan':'pro','mode':'instant'})
+        r=self.client.post('/api/adguard/admin/create-subscriber',json={'email':'new@test.local','full_name':'New Subscriber','plan':'pro','mode':'instant','password':'a-strong-test-password-123'})
         self.assertEqual(r.status_code,200,r.text)
         ws=self.db.get(AdGuardAccount,r.json()['workspace_id'])
         self.assertEqual(ws.lead_quota,5000)

@@ -16,6 +16,8 @@ from backend.services.billing import (
     get_billing_config,
     create_razorpay_order,
     verify_payment_and_upgrade,
+    gateway_configured,
+    simulated_billing_allowed,
     PLAN_CATALOG,
 )
 
@@ -112,9 +114,8 @@ def sandbox_simulate(
     user: User = Depends(get_current_user_required)
 ):
     """Convenience endpoint to simulate successful payment in test/sandbox mode."""
-    cfg = get_billing_config()
-    if not cfg["is_sandbox"] and user.role not in ("admin", "superadmin"):
-        raise HTTPException(status_code=403, detail="Instant simulation only available in sandbox mode")
+    if gateway_configured() or not simulated_billing_allowed(user):
+        raise HTTPException(status_code=403, detail="Payment simulation is disabled")
 
     ws_id = req.workspace_id
     if not ws_id:
@@ -122,6 +123,12 @@ def sandbox_simulate(
         if not ws:
             raise HTTPException(status_code=404, detail="Workspace not found")
         ws_id = ws.id
+    else:
+        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == ws_id).first()
+        if not ws:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        if ws.owner_email != user.email and user.role not in ("admin", "superadmin"):
+            raise HTTPException(status_code=403, detail="Not authorized for this workspace")
 
     mock_pay_id = f"pay_sbx_{int(time.time())}"
     mock_order_id = f"order_sbx_{req.plan}_{int(time.time())}"
