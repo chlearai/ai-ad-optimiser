@@ -1898,7 +1898,8 @@
         $('caEditGoogleLoginCustomerId').value = a.google_login_customer_id || '';
         $('caEditGoogleClientId').value = a.google_client_id || '';
         $('caEditGoogleClientSecret').value = '';
-        $('caEditGoogleDevToken').value = a.google_developer_token || '';
+        $('caEditGoogleDevToken').value = '';
+        $('caEditGoogleDevToken').placeholder = a.google_developer_token_configured ? 'Configured. Leave blank to keep it.' : '';
         $('caEditGoogleStatus').textContent = a.google_credentials_masked ? 'Connected via OAuth' : 'Not connected via OAuth';
         $('caEditGoogleStatus').style.color = a.google_credentials_masked ? 'var(--color-success)' : 'var(--text-muted)';
         $('caEditMetaAdId').value = a.meta_external_id || '';
@@ -1912,7 +1913,8 @@
         updateMetaSystemNotice();
         $('caEditCrmType').value = a.crm_type || 'none';
         $('caEditCrmType').dataset.previousValue = a.crm_type || 'none';
-        $('caEditLsqAccessKey').value = a.lsq_access_key || '';
+        $('caEditLsqAccessKey').value = '';
+        $('caEditLsqAccessKey').placeholder = a.lsq_access_key_configured ? 'Configured. Leave blank to keep it.' : '';
         $('caEditLsqSecretKey').value = '';
         $('caEditLsqBaseUrl').value = a.lsq_base_url || '';
         $('caEditLsqSyncInterval').value = a.lsq_sync_interval_minutes || '';
@@ -2013,7 +2015,9 @@
                 redirect_base_url: window.location.origin,
             };
             const googleSecret = $('caEditGoogleClientSecret').value.trim();
-            if (googleSecret) { body.google_client_id = $('caEditGoogleClientId').value.trim() || null; body.google_client_secret = googleSecret; body.google_developer_token = $('caEditGoogleDevToken').value.trim() || null; body.google_login_customer_id = $('caEditGoogleLoginCustomerId').value.trim() || null; }
+            if (googleSecret) { body.google_client_id = $('caEditGoogleClientId').value.trim() || null; body.google_client_secret = googleSecret; body.google_login_customer_id = $('caEditGoogleLoginCustomerId').value.trim() || null; }
+            const googleDeveloperToken = $('caEditGoogleDevToken').value.trim();
+            if (googleDeveloperToken) body.google_developer_token = googleDeveloperToken;
             const metaSecret = $('caEditMetaAppSecret').value.trim();
             if (metaSecret) { body.meta_app_id = $('caEditMetaAppId').value.trim() || null; body.meta_app_secret = metaSecret; }
             const metaAccessToken = $('caEditMetaAccessToken').value.trim();

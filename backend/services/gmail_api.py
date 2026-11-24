@@ -57,7 +57,7 @@ def _scopes() -> list:
     return ["https://www.googleapis.com/auth/gmail.send"]
 
 
-def build_authorization_url(redirect_uri: Optional[str] = None) -> Dict[str, Any]:
+def build_authorization_url(redirect_uri: Optional[str] = None, state: Optional[str] = None) -> Dict[str, Any]:
     """Build the Google OAuth URL for the admin to authorize Gmail sending.
 
     No PKCE so we don't need to track a code_verifier across requests.
@@ -67,7 +67,7 @@ def build_authorization_url(redirect_uri: Optional[str] = None) -> Dict[str, Any
         return cfg
     if redirect_uri:
         cfg["redirect_uri"] = redirect_uri
-    state = secrets.token_urlsafe(24)
+    state = state or secrets.token_urlsafe(24)
     params = {
         "response_type": "code",
         "client_id": cfg["client_id"],

@@ -26,7 +26,7 @@ from backend.routes.bhago import validate_sheet_url
 logger = logging.getLogger("AdOptima")
 router = APIRouter(prefix="/api/crashclub", tags=["crashclub"])
 
-WEBHOOK_VERIFY_TOKEN = os.getenv("CRASH_CLUB_WEBHOOK_VERIFY_TOKEN", "crashclub_verify")
+WEBHOOK_VERIFY_TOKEN = os.getenv("CRASH_CLUB_WEBHOOK_VERIFY_TOKEN", "")
 WEBHOOK_APP_SECRET = os.getenv("CRASH_CLUB_WEBHOOK_APP_SECRET", "")
 
 
@@ -73,7 +73,7 @@ def save_sheet_link(account_id: int, source: Literal["goa", "mw"], body: CrashCl
 def _verify_signature(raw_body: bytes, x_hub_signature: str) -> bool:
     """X-Hub-Signature-256 check when app secret is configured."""
     if not WEBHOOK_APP_SECRET:
-        return True  # not configured -> skip (acceptable locally)
+        return False
     if not x_hub_signature:
         return False
     expected = "sha256=" + hmac.new(
@@ -88,7 +88,7 @@ def webhook_verify(
     hub_verify_token: str = Query(default="", alias="hub.verify_token"),
     hub_challenge: str = Query(default="", alias="hub.challenge"),
 ):
-    if hub_mode == "subscribe" and hub_verify_token == WEBHOOK_VERIFY_TOKEN:
+    if WEBHOOK_VERIFY_TOKEN and hub_mode == "subscribe" and hmac.compare_digest(hub_verify_token, WEBHOOK_VERIFY_TOKEN):
         return int(hub_challenge) if hub_challenge.isdigit() else hub_challenge
     raise HTTPException(status_code=403, detail="Verification failed")
 
@@ -253,7 +253,7 @@ def status():
         info["sa_configured"] = True
         info["sa_email"] = creds.service_account_email
     except Exception as e:
-        info["sa_error"] = str(e)
+        info["sa_error"] = type(e).__name__
 
     # Probe Meta (cheap call: /me on the token)
     try:
@@ -270,7 +270,7 @@ def status():
         info["meta_identity"] = d.get("name", "")
     except Exception as e:
         info["meta_api_reachable"] = False
-        info["meta_api_error"] = str(e)[:300]
+        info["meta_api_error"] = type(e).__name__
     return info
 
 

@@ -153,7 +153,7 @@ const integrations=[
     {id:'leadsquared',name:'LeadSquared',category:'CRM',icon:'👥',desc:'Pull client leads directly into MIS reports.',color:'#dcfce7',iconColor:'#16a34a',wired:true,
      fields:[
         {id:'leadsquared_base_url',label:'Base URL',placeholder:'https://api.leadsquared.com',type:'text',global:true},
-        {id:'leadsquared_access_key',label:'Access Key',placeholder:'LeadSquared access key',type:'text',global:true},
+        {id:'leadsquared_access_key',label:'Access Key',placeholder:'LeadSquared access key',type:'password',global:true},
         {id:'leadsquared_secret_key',label:'Secret Key',placeholder:'Enter secret key',type:'password',global:true}
      ]},
     {id:'salesforce',name:'Salesforce',category:'CRM',icon:'☁️',desc:'Sync qualified leads, opportunities, and pipeline data.',color:'#dbeafe',iconColor:'#0369a1',wired:true,
@@ -239,7 +239,7 @@ function getStatusClass(i){
     if(!i.wired)return 'status-offline';
     if(i.id==='google-ads')return (selectedAccount&&selectedAccount.google_is_live)?'status-connected':'status-offline';
     if(i.id==='meta-ads')return (selectedAccount&&selectedAccount.meta_is_live)?'status-connected':'status-offline';
-    if(i.id==='leadsquared')return (globalConfig.leadsquared_access_key)?'status-pending':'status-offline';
+    if(i.id==='leadsquared')return (globalConfig.configured?.leadsquared_access_key)?'status-pending':'status-offline';
     if(i.id==='salesforce')return (globalConfig.salesforce_url)?'status-pending':'status-offline';
     return 'status-offline';
 }
@@ -248,7 +248,7 @@ function getStatusText(i){
     if(!i.wired)return '● Planned';
     if(i.id==='google-ads')return (selectedAccount&&selectedAccount.google_is_live)?'● Live':'● Not Connected';
     if(i.id==='meta-ads')return (selectedAccount&&selectedAccount.meta_is_live)?'● Live':'● Not Connected';
-    if(i.id==='leadsquared')return (globalConfig.leadsquared_access_key)?'● Configured':'● Not set';
+    if(i.id==='leadsquared')return (globalConfig.configured?.leadsquared_access_key)?'● Configured':'● Not set';
     if(i.id==='salesforce')return (globalConfig.salesforce_url)?'● Configured':'● Not set';
     return '● Not set';
 }
@@ -279,6 +279,7 @@ function openIntegration(id){
     $('formFields').innerHTML=metaNotice+activeIntegration.fields.map(f=>{
         if(systemTokenMode && f.hideWhenSystemToken) return '';
         const val=getFieldValue(f);
+        const placeholder = credentialConfigured(f) ? 'Configured. Leave blank to keep it.' : f.placeholder;
         const readonly = (systemTokenMode && f.system && metaStatus.meta_app_id) ? 'readonly style="background:var(--bg-base)"' : '';
         if(f.type==='textarea'){
             return `<div class="form-group ${f.id==='meta_access_token'?'full':''}"><label>${f.label}${f.required?' *':''}</label><textarea id="int_${f.id}" ${readonly}>${val}</textarea></div>`;
@@ -286,12 +287,19 @@ function openIntegration(id){
         if(f.type==='checkbox'){
             return `<div class="form-group"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer"><input type="checkbox" id="int_${f.id}" ${val?'checked':''}> ${f.label}</label></div>`;
         }
-        return `<div class="form-group ${f.id==='meta_access_token'?'full':''}"><label>${f.label}${f.required?' *':''}</label><input type="${f.type}" id="int_${f.id}" value="${val||''}" placeholder="${f.placeholder||''}" ${readonly}></div>`;
+        return `<div class="form-group ${f.id==='meta_access_token'?'full':''}"><label>${f.label}${f.required?' *':''}</label><input type="${f.type}" id="int_${f.id}" value="${val||''}" placeholder="${placeholder||''}" ${readonly}></div>`;
     }).join('');
     $('formPanel').scrollIntoView({behavior:'smooth'});
 }
 
+function credentialConfigured(f){
+    if(f.id==='google_refresh_token') return selectedAccount?.google_credentials_masked;
+    if(f.id==='meta_access_token') return selectedAccount?.meta_credentials_masked;
+    return Boolean(selectedAccount?.[f.id+'_configured'] || globalConfig.configured?.[f.id]);
+}
+
 function getFieldValue(f){
+    if(f.type==='password' || f.id==='google_developer_token') return '';
     if(!selectedAccount && f.account)return '';
     if(f.account){
         if(f.id==='google_external_id')return selectedAccount.google_external_id||'';
@@ -301,7 +309,6 @@ function getFieldValue(f){
     }
     // System-level Meta fields: pull from global config/meta-status
     if(f.system && f.id==='meta_app_id') return globalConfig.meta_app_id || metaStatus.meta_app_id || '';
-    if(f.system && f.id==='meta_app_secret') return globalConfig.meta_app_secret || '';
     const key=f.id.replace(/^(google_|meta_)/,'');
     return selectedAccount? (selectedAccount[f.id]||globalConfig[f.id]||globalConfig[key]||''): (globalConfig[f.id]||globalConfig[key]||'');
 }
@@ -318,6 +325,7 @@ async function saveIntegration(){
         activeIntegration.fields.forEach(f=>{
             const el=$('int_'+f.id);
             const val=f.type==='checkbox'?el.checked:(el?el.value:'');
+            if(!el || ((f.type==='password' || f.id==='google_developer_token') && !val.trim())) return;
             if(f.account) accountPayload[f.id]=val;
             else if(f.global) globalPayload[f.id]=val;
             else{
@@ -363,7 +371,7 @@ async function saveIntegration(){
         accounts=await api('GET','/accounts');
         globalConfig=await api('GET','/config');
         metaStatus=await api('GET','/config/meta-status');
-        selectedAccount=accounts.find(a=>a.id===selectedAccount.id)||null;
+        selectedAccount=accounts.find(a=>a.id===selectedAccount?.id)||null;
         onAccountChange();
         renderCards();
         toast(`${activeIntegration.name} credentials saved`);
@@ -414,6 +422,7 @@ async function fetchMetaTokenStatus(){
 async function init(){
     if(!token){window.location.href='/';return}
     try{currentUser=await api('GET','/auth/me')}catch(e){window.location.href='/';return}
+    if(!['admin','superadmin'].includes(currentUser.role)){window.location.href='/';return;}
     $('userInfo').textContent=currentUser.full_name||currentUser.email;
     accounts=await api('GET','/accounts');
     globalConfig=await api('GET','/config');

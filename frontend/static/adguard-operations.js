@@ -43,7 +43,10 @@ async function configureInstallation(id) {
         const install = await api('GET', '/workspaces/' + id + '/installation');
         const origins = prompt('Allowed website origins, separated by commas (e.g. https://example.com). Leave empty to allow any origin with this workspace’s public installation token.', install.allowed_origins.join(', '));
         if (origins === null) return;
-        await api('PUT', '/workspaces/' + id + '/installation', {allowed_origins: origins.split(',').map(x=>x.trim()).filter(Boolean)});
+        const settings = {allowed_origins: origins.split(',').map(x=>x.trim()).filter(Boolean)};
+        const rotate = confirm('Generate a new private webhook key? Existing webhook senders must switch to the new key. Cancel keeps the current key.');
+        if (rotate) settings.webhook_secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+        await api('PUT', '/workspaces/' + id + '/installation', settings);
         $('adminInstallationPanel').open = true;
         $('embedSubSelect').value = String(id);
         await updateAdminEmbedSnippet();
@@ -55,7 +58,8 @@ async function configureInstallation(id) {
         }
         panel.innerHTML = '<details open style="padding:12px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:12px;"><summary><b>Workspace #' + id + ' integration setup</b></summary><p>Google lead-form webhook URL:</p><input id="googleWebhookUrl" class="filter-input" readonly style="width:100%;"><p>Google webhook key / private CRM callback secret (server configuration only):</p><input id="workspaceWebhookSecret" class="filter-input" type="password" readonly style="width:100%;"><button class="btn btn-secondary btn-sm" onclick="copyWorkspaceWebhookSecret()">Copy private key</button><p>CRM callback: POST /api/v1/webhooks/crm with workspace_id ' + id + ' and the X-AdGuard-Webhook-Secret header. Keep the private key out of website tags.</p></details>';
         $('googleWebhookUrl').value = window.location.origin + '/api/adguard/webhook?workspace_id=' + id;
-        $('workspaceWebhookSecret').value = install.webhook_secret;
+        $('workspaceWebhookSecret').value = settings.webhook_secret || '';
+        $('workspaceWebhookSecret').placeholder = install.webhook_secret_configured ? 'Configured. Generate a new key to copy one.' : 'Generate a private key to connect senders.';
     } catch (e) { toast(e.message, 'error'); }
 }
 

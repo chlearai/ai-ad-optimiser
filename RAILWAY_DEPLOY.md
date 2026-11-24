@@ -56,3 +56,16 @@ They log in with their email and password and see only assigned accounts.
 - Do **not** expose `ADOPTIMA_JWT_SECRET` or backend credentials.
 - SQLite on Railway is fine for moderate usage; for heavy use, migrate to PostgreSQL later.
 - OAuth redirect URLs (Google/Meta) must be updated to use your Railway domain after connecting accounts.
+
+## API access and health
+
+Set a persistent, random ADOPTIMA_JWT_SECRET in Railway so login sessions and OAuth
+callbacks survive process restarts. API documentation is disabled unless
+ENABLE_API_DOCS=true. Machine callbacks are listed with their access requirements
+in backend/api_access.py. Configure the relevant Meta webhook verification and
+signature secrets before enabling lead delivery.
+
+Railway uses /health for process liveness. A Postgres connection failure is
+logged at startup and can fall back to SQLite. Keeping /health independent of
+database availability avoids restart loops during a database outage. Authenticated
+admins can check the selected database using /health/db.

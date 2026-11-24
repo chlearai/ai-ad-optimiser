@@ -65,10 +65,7 @@ def get_google_auth_url(account_id: int) -> str:
     client_id = _require(oauth_cfg, "google_client_id")
     base = _redirect_base(oauth_cfg)
     redirect_uri = f"{base}/api/oauth/google/callback"
-    state = secrets.token_urlsafe(16)
-    payload = {"account_id": account_id, "platform": "google", "token": state}
-    from base64 import urlsafe_b64encode
-    state_b64 = urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    state = build_state("google", account_id=account_id)
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -76,7 +73,7 @@ def get_google_auth_url(account_id: int) -> str:
         "scope": "https://www.googleapis.com/auth/adwords",
         "access_type": "offline",
         "prompt": "consent",
-        "state": state_b64,
+        "state": state,
     }
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
 
@@ -141,9 +138,7 @@ def get_meta_auth_url(account_id: int) -> str:
     app_id = _require(oauth_cfg, "meta_app_id")
     base = _redirect_base(oauth_cfg)
     redirect_uri = f"{base}/api/oauth/meta/callback"
-    state_json = json.dumps({"account_id": account_id, "platform": "meta", "token": secrets.token_urlsafe(16)})
-    from base64 import urlsafe_b64encode
-    state = urlsafe_b64encode(state_json.encode()).decode().rstrip("=")
+    state = build_state("meta", account_id=account_id)
     params = {
         "client_id": app_id,
         "redirect_uri": redirect_uri,
@@ -213,15 +208,26 @@ def build_meta_credentials(token_data: Dict[str, Any], account_id: int) -> Optio
 # State helpers
 # ---------------------------------------------------------------------------
 
-def parse_state(state_b64: str) -> Optional[Dict[str, Any]]:
-    from base64 import urlsafe_b64decode
+def build_state(platform: str, **claims) -> str:
+    from datetime import timedelta
+    from backend.routes.auth import create_access_token
+
+    return create_access_token(
+        {**claims, "platform": platform, "aud": "oauth-state", "jti": secrets.token_urlsafe(16)},
+        expires_delta=timedelta(minutes=10),
+    )
+
+
+def parse_state(token: Optional[str]) -> Optional[Dict[str, Any]]:
+    from jose import JWTError, jwt
+    from backend.routes.auth import ALGORITHM, SECRET_KEY
+
+    if not token:
+        return None
     try:
-        # Add padding back
-        pad = "=" * (-len(state_b64) % 4)
-        raw = urlsafe_b64decode(state_b64 + pad)
-        return json.loads(raw.decode())
-    except Exception as e:
-        logger.error(f"Failed to decode OAuth state: {e}")
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], audience="oauth-state",
+                          options={"require_aud": True, "require_exp": True})
+    except JWTError:
         return None
 
 
@@ -237,11 +243,7 @@ def get_adguard_auth_url(adguard_account_id: int, admin_initiated: bool = False)
     client_id = _require(cfg, "google_client_id")
     base = _redirect_base(cfg)
     redirect_uri = f"{base}/api/adguard/oauth/callback"
-    payload = {"adguard_account_id": adguard_account_id, "platform": "adguard_google", "token": secrets.token_urlsafe(16)}
-    if admin_initiated:
-        payload["admin_initiated"] = True
-    from base64 import urlsafe_b64encode
-    state_b64 = urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+    state = build_state("adguard_google", adguard_account_id=adguard_account_id, admin_initiated=admin_initiated)
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -249,7 +251,7 @@ def get_adguard_auth_url(adguard_account_id: int, admin_initiated: bool = False)
         "scope": "openid email https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.email",
         "access_type": "offline",
         "prompt": "consent select_account",
-        "state": state_b64,
+        "state": state,
     }
     return "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
 

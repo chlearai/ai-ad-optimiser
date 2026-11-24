@@ -3,6 +3,7 @@ OAuth connection routes for Google Ads and Meta Marketing API.
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
+from backend.routes.auth import require_admin_or_superadmin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
@@ -21,7 +22,7 @@ from backend.services.oauth import (
 router = APIRouter(prefix="/api/oauth", tags=["oauth"])
 
 
-@router.get("/google/{account_id}/connect")
+@router.get("/google/{account_id}/connect", dependencies=[Depends(require_admin_or_superadmin)])
 def connect_google(account_id: int, db: Session = Depends(get_db)):
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
@@ -63,7 +64,7 @@ def google_callback(request: Request, code: str, state: str, error: Optional[str
     return RedirectResponse(url=f"/?oauth_success=google&account_id={account_id}")
 
 
-@router.get("/meta/{account_id}/connect")
+@router.get("/meta/{account_id}/connect", dependencies=[Depends(require_admin_or_superadmin)])
 def connect_meta(account_id: int, db: Session = Depends(get_db)):
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:
@@ -105,7 +106,7 @@ def meta_callback(request: Request, code: str, state: str, error: Optional[str] 
     return RedirectResponse(url=f"/?oauth_success=meta&account_id={account_id}")
 
 
-@router.post("/{platform}/{account_id}/disconnect")
+@router.post("/{platform}/{account_id}/disconnect", dependencies=[Depends(require_admin_or_superadmin)])
 def disconnect_oauth(platform: str, account_id: int, db: Session = Depends(get_db)):
     account = db.query(Account).filter(Account.id == account_id).first()
     if not account:

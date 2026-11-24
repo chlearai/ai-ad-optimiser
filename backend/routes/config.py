@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
-from backend.services.config import load_config, save_config, get_config_for_client
+from pydantic import BaseModel, ConfigDict
+from backend.services.config import CONFIG_SECRET_FIELDS, get_config_for_client, load_config, save_config
 
 router = APIRouter(prefix="/api", tags=["config"])
 
@@ -30,8 +30,7 @@ class ConfigModel(BaseModel):
     leadsquared_secret_key: str = ""
     leadsquared_base_url: str = ""
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 @router.get("/config")
@@ -52,19 +51,11 @@ def get_meta_status():
 
 @router.post("/config")
 def update_config(new_config: ConfigModel):
-    current = load_config()
-    data = new_config.model_dump()
-
-    sensitive_keys = ["client_secret", "refresh_token", "gemini_api_key", "developer_token",
-                      "google_client_secret", "google_developer_token", "meta_app_secret",
-                      "salesforce_client_secret", "salesforce_refresh_token", "leadsquared_secret_key"]
-    for key in sensitive_keys:
-        if "●●●●" in (data.get(key) or ""):
-            data[key] = current.get(key, "")
-
-    # merge with current config so UI-only updates don't wipe other keys
-    full = current.copy()
-    full.update(data)
-    save_config(full)
-
+    updates = new_config.model_dump(exclude_unset=True)
+    for field in CONFIG_SECRET_FIELDS:
+        value = updates.get(field)
+        if not value or "●●●●" in str(value):
+            updates.pop(field, None)
+    if updates:
+        save_config(updates)
     return {"status": "success", "message": "Configuration updated successfully."}

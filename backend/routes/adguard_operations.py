@@ -42,13 +42,14 @@ def installation(workspace_id: int, request: Request, db: Session = Depends(get_
     ws = get_workspace(db, user, workspace_id)
     op = operations(db, ws)
     result = {'workspace_id': ws.id, 'installation_token': op.tag_token,
-              'webhook_secret': op.webhook_secret, 'allowed_origins': json.loads(op.allowed_origins or '[]')}
+              'webhook_secret_configured': bool(op.webhook_secret), 'allowed_origins': json.loads(op.allowed_origins or '[]')}
     db.commit()
     return result
 
 
 class InstallationSettings(BaseModel):
     allowed_origins: list[str] = Field(default_factory=list, max_length=20)
+    webhook_secret: str | None = Field(default=None, min_length=32, max_length=100, pattern=r'^[A-Za-z0-9_-]+$')
 
 
 @router.put('/workspaces/{workspace_id}/installation')
@@ -60,7 +61,10 @@ def configure_installation(workspace_id: int, req: InstallationSettings, db: Ses
         if parsed.scheme not in ('http','https') or not parsed.netloc or parsed.username or parsed.password or parsed.path not in ('','/') or parsed.query or parsed.fragment:
             raise HTTPException(400, 'Enter website origins only, for example https://example.com')
         origins.append(f'{parsed.scheme}://{parsed.netloc}'.rstrip('/'))
-    operations(db, ws).allowed_origins = json.dumps(sorted(set(origins)))
+    op = operations(db, ws)
+    op.allowed_origins = json.dumps(sorted(set(origins)))
+    if req.webhook_secret is not None:
+        op.webhook_secret = req.webhook_secret
     db.commit()
     record(db, user, 'Installation origins updated', ws.id, 'Updated website origins')
     return {'allowed_origins': sorted(set(origins))}

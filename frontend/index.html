@@ -447,7 +447,7 @@
                         <div class="card-header">
                             <h2 class="card-title">AI Audit Review</h2>
                             <div style="display:flex;gap:0.5rem;align-items:center;">
-                                <button class="btn btn-sm btn-secondary" onclick="openAuditSettings()" title="Audit thresholds">⚙️ Audit Settings</button>
+                                <button class="btn btn-sm btn-secondary" id="auditSettingsButton" onclick="openAuditSettings()" title="Audit thresholds">⚙️ Audit Settings</button>
                                 <button class="btn btn-sm btn-danger" onclick="clearAllPendingActions()" title="Remove all pending recommendations">🗑️ Clear All Pending</button>
                             </div>
                         </div>
@@ -1093,6 +1093,7 @@
         // Hide admin-only nav items for BM (role=user)
         const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
         const canAuditReview = isAdmin || (currentUser && currentUser.access_audit_review);
+        $('auditSettingsButton').style.display = isAdmin ? '' : 'none';
         document.querySelectorAll('.nav-item[data-nav="accounts"]').forEach(el => {
             el.style.display = isAdmin ? '' : 'none';
         });
@@ -1615,11 +1616,14 @@
         $('accGoogleExternalId').value = a.google_external_id || '';
         $('accMetaExternalId').value = a.meta_external_id || '';
         $('accGoogleClientId').value = a.google_client_id || '';
-        $('accGoogleClientSecret').value = a.google_client_secret ? '●●●●●●●●' + (a.google_client_secret || '').slice(-4) : '';
-        $('accGoogleDeveloperToken').value = a.google_developer_token ? '●●●●●●●●' + (a.google_developer_token || '').slice(-4) : '';
+        $('accGoogleClientSecret').value = '';
+        $('accGoogleClientSecret').placeholder = a.google_client_secret_configured ? 'Configured. Leave blank to keep it.' : '';
+        $('accGoogleDeveloperToken').value = '';
+        $('accGoogleDeveloperToken').placeholder = a.google_developer_token_configured ? 'Configured. Leave blank to keep it.' : '';
         $('accGoogleLoginCustomerId').value = a.google_login_customer_id || '';
         $('accMetaAppId').value = a.meta_app_id || '';
-        $('accMetaAppSecret').value = a.meta_app_secret ? '●●●●●●●●' + (a.meta_app_secret || '').slice(-4) : '';
+        $('accMetaAppSecret').value = '';
+        $('accMetaAppSecret').placeholder = a.meta_app_secret_configured ? 'Configured. Leave blank to keep it.' : '';
 
         // Load CRM type + creds
         const crmType = a.crm_type || 'none';
@@ -1627,9 +1631,10 @@
         let crmCreds = {};
         try { crmCreds = a.crm_credentials ? JSON.parse(a.crm_credentials) : {}; } catch(e) {}
         // Fallback to legacy LSQ fields if present
-        if (crmType === 'leadsquared' && !crmCreds.access_key && a.lsq_access_key) {
-            crmCreds = { access_key: a.lsq_access_key, secret_key: a.lsq_secret_key_masked ? '●●●●●●●●' : '', base_url: a.lsq_base_url || '' };
+        if (crmType === 'leadsquared' && a.lsq_base_url) {
+            crmCreds.base_url = a.lsq_base_url;
         }
+        $('crmLsqAccessKey').placeholder = (a.lsq_access_key_configured || a.crm_credentials_masked) ? 'Configured. Leave blank to keep it.' : '';
         setIf('crmLsqAccessKey', crmCreds.access_key);
         setIf('crmLsqSecretKey', crmCreds.secret_key_masked ? '●●●●●●●●' : crmCreds.secret_key);
         setIf('crmLsqBaseUrl', crmCreds.base_url);
