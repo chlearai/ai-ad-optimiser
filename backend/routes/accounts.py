@@ -6,6 +6,7 @@ import logging
 import urllib.parse
 import urllib.request
 from typing import Optional
+from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -487,10 +488,26 @@ def update_account(account_id: int, req: AccountUpdate, db: Session = Depends(ge
         except Exception as e:
             logger.warning(f"Failed to reschedule LSQ sync for account {account.id}: {e}")
 
+    previous_crm_type = account.crm_type
     if req.crm_type is not None:
         account.crm_type = req.crm_type or "none"
     if req.crm_credentials is not None:
-        account.crm_credentials = req.crm_credentials or None
+        try:
+            supplied = json.loads(req.crm_credentials or "{}")
+        except ValueError:
+            raise HTTPException(400, "CRM credentials must be a JSON object") from None
+        if not isinstance(supplied, dict):
+            raise HTTPException(400, "CRM credentials must be a JSON object")
+        updates = {key: value for key, value in supplied.items() if value not in ("", None)}
+        if updates or previous_crm_type != account.crm_type:
+            stored = account.crm_credentials if previous_crm_type == account.crm_type else None
+            encrypted = bool(stored and stored.startswith("gAAAA"))
+            try:
+                prior = json.loads(decrypt(stored) if encrypted else stored or "{}")
+            except (ValueError, InvalidToken):
+                raise HTTPException(400, "Could not read the existing CRM credentials") from None
+            merged = json.dumps({**(prior if isinstance(prior, dict) else {}), **updates})
+            account.crm_credentials = encrypt(merged) if encrypted else merged
     if req.target_cpa is not None:
         account.target_cpa = req.target_cpa or None
 

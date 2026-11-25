@@ -58,22 +58,14 @@ def _last_3_days() -> List[date]:
     return [today - timedelta(days=2), today - timedelta(days=1), today]
 
 
-def _mask(value: str) -> str:
-    if not value:
-        return ""
-    if len(value) > 4:
-        return "●●●●●●●●" + value[-4:]
-    return "●●●●●●●●"
-
-
 def _mantri_config() -> Dict[str, Any]:
     cfg = load_config()
     return {
         "meta_account_id": cfg.get("mantri_meta_account_id", ""),
         "salesforce_url": cfg.get("mantri_salesforce_url", ""),
         "salesforce_client_id": cfg.get("mantri_salesforce_client_id", ""),
-        "salesforce_client_secret": _mask(cfg.get("mantri_salesforce_client_secret", "")),
-        "salesforce_refresh_token": _mask(cfg.get("mantri_salesforce_refresh_token", "")),
+        "salesforce_client_secret_configured": bool(cfg.get("mantri_salesforce_client_secret")),
+        "salesforce_refresh_token_configured": bool(cfg.get("mantri_salesforce_refresh_token")),
         "configured": bool(
             cfg.get("mantri_meta_account_id")
             and cfg.get("mantri_salesforce_url")
@@ -258,7 +250,6 @@ def get_mantri_config(current_user=Depends(get_current_user)):
 
 @router.post("/mantri/config")
 def save_mantri_config(payload: MantriConfigModel, current_user=Depends(get_current_user)):
-    cfg = load_config()
     updates = {
         _CONFIG_KEYS["meta_account_id"]: payload.meta_account_id.strip(),
         _CONFIG_KEYS["salesforce_url"]: payload.salesforce_url.strip(),
@@ -269,14 +260,10 @@ def save_mantri_config(payload: MantriConfigModel, current_user=Depends(get_curr
     for ui_key in ("salesforce_client_secret", "salesforce_refresh_token"):
         val = getattr(payload, ui_key) or ""
         cfg_key = _CONFIG_KEYS[ui_key]
-        if "●●●●" in val:
-            updates[cfg_key] = cfg.get(cfg_key, "")
-        else:
+        if val.strip() and "●●●●" not in val:
             updates[cfg_key] = val.strip()
 
-    full = cfg.copy()
-    full.update(updates)
-    save_config(full)
+    save_config(updates)
     return {"status": "success", "config": _mantri_config()}
 
 

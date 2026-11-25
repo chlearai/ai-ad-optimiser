@@ -49,3 +49,7 @@ Thumbs.db
 # Node / Frontend
 node_modules/
 *.lock
+
+# Local integration configuration and temporary bearer token
+/config.json
+/.tmp_token.txt

@@ -20,7 +20,9 @@
 
 // âš ï¸ LONG-LIVE OAUTH TOKEN â€” expires 16 Nov 2026. (60-day token; swap with
 // the never-expiring system-user token when the 2-admin approval clears.)
-const META_TOKEN = "EAAehafTnUf4BSnfaX4Y0HkUOaP1AeDnHWFL1kyQLwpl4fuhYT1dEcOIL9OysRcJI9MfITDlyumwJrvqZBZCEuebZAZCHyLPZByeaSfZCckNAEpOGzdiOn3TkrvC3vCiSFquXGzrNPInJCwMCTl7qDtkexVDNOAR8ntJcLugENQTmKJD2XgZAICZAiS0PhYZBy";
+// Token lives in Script Properties (Project Settings > Script properties > META_ACCESS_TOKEN).
+// Never paste tokens into this file: it is committed to a public repository.
+const META_TOKEN = PropertiesService.getScriptProperties().getProperty("META_ACCESS_TOKEN");
 
 const AD_ACCOUNT_ID = "act_577546498668650";
 const API_VERSION   = "v18.0";

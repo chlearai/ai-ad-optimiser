@@ -178,13 +178,13 @@ class Account(Base):
             "google_credentials_masked": bool(self.google_credentials),
             "meta_credentials_masked": bool(self.meta_credentials),
             "google_client_id": self.google_client_id,
-            "google_client_secret": self.google_client_secret,
-            "google_developer_token": self.google_developer_token,
+            "google_client_secret_configured": bool(self.google_client_secret),
+            "google_developer_token_configured": bool(self.google_developer_token),
             "google_login_customer_id": self.google_login_customer_id,
             "meta_app_id": self.meta_app_id,
-            "meta_app_secret": self.meta_app_secret,
+            "meta_app_secret_configured": bool(self.meta_app_secret),
             "redirect_base_url": self.redirect_base_url,
-            "lsq_access_key": self.lsq_access_key,
+            "lsq_access_key_configured": bool(self.lsq_access_key),
             "lsq_secret_key_masked": bool(self.lsq_secret_key),
             "lsq_base_url": self.lsq_base_url,
             "lsq_sync_interval_minutes": self.lsq_sync_interval_minutes,
@@ -386,7 +386,7 @@ class NotificationSetting(Base):
             "channel": self.channel,
             "enabled": self.enabled,
             "provider": self.provider,
-            "config": self.config,
+            "config_configured": bool(self.config),
             "notify_on_audit_complete": self.notify_on_audit_complete,
             "notify_on_action_reviewed": self.notify_on_action_reviewed,
             "notify_on_sync_failure": self.notify_on_sync_failure,
@@ -418,8 +418,8 @@ class NotificationLog(Base):
             "subject": self.subject,
             "body": self.body,
             "status": self.status,
-            "provider_response": self.provider_response,
-            "error_message": self.error_message,
+            "provider_response": None,
+            "error_message": "Delivery failed" if self.error_message else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -765,6 +765,15 @@ class ActivityLog(Base):
     details_json = Column(Text, nullable=True)
 
     def to_dict(self):
+        details = self.details_json
+        if details:
+            try:
+                parsed = json.loads(details)
+                if isinstance(parsed, dict) and "setup_link" in parsed:
+                    parsed.pop("setup_link")
+                    details = json.dumps(parsed)
+            except ValueError:
+                pass
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
@@ -777,7 +786,7 @@ class ActivityLog(Base):
             "account_name": self.account_name,
             "entity_type": self.entity_type,
             "entity_id": self.entity_id,
-            "details": self.details_json,
+            "details": details,
         }
 
 

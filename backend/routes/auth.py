@@ -18,6 +18,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.services.activity_log import log_activity
@@ -30,7 +31,7 @@ logger = logging.getLogger("AdOptima")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-SECRET_KEY = os.getenv("ADOPTIMA_JWT_SECRET", "change-me-in-production")
+SECRET_KEY = os.getenv("ADOPTIMA_JWT_SECRET") or secrets.token_urlsafe(48)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 ONBOARDING_TOKEN_EXPIRE_HOURS = 72
@@ -137,22 +138,31 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return db.query(User).filter(User.email == email, User.is_active == True).first()
 
 
-def get_current_user_required(user: User = Depends(get_current_user)) -> User:
+def require_user(user: Optional[User]) -> User:
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 
-def require_superadmin(user: User = Depends(get_current_user_required)) -> User:
-    if user.role != "superadmin":
-        raise HTTPException(status_code=403, detail="Super Admin access required")
-    return user
+def get_current_user_required(user: User = Depends(get_current_user)) -> User:
+    return require_user(user)
 
 
-def require_admin_or_superadmin(user: User = Depends(get_current_user_required)) -> User:
-    if user.role not in ("superadmin", "admin"):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return user
+def require_roles(*roles: str, detail: str = "Insufficient role"):
+    def check_roles(user: User = Depends(get_current_user_required)) -> User:
+        if user.role not in roles:
+            raise HTTPException(status_code=403, detail=detail)
+        return user
+
+    return check_roles
+
+
+require_superadmin = require_roles("superadmin", detail="Super Admin access required")
+require_admin_or_superadmin = require_roles("admin", "superadmin", detail="Admin access required")
 
 
 def _sync_account_assignments(user: User, account_ids: List[int], db: Session):
@@ -176,7 +186,13 @@ def onboarding_required(db: Session = Depends(get_db)):
 @router.post("/onboard")
 def onboard_first_user(req: OnboardRequest, db: Session = Depends(get_db)):
     """Create the first Super Admin. Only works if no users exist."""
-    if db.query(User).count() > 0:
+    # Serialize this check with inserts from another onboarding or signup request.
+    dialect = db.get_bind().dialect.name
+    if dialect == "postgresql":
+        db.execute(text("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE"))
+    elif dialect == "sqlite":
+        db.execute(text("BEGIN IMMEDIATE"))
+    if db.query(User).first() is not None:
         raise HTTPException(status_code=400, detail="Onboarding already complete. Please login.")
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
@@ -524,7 +540,7 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
         user_name=current_user.full_name or current_user.email,
         entity_type="user",
         entity_id=str(user.id),
-        details={"role": user.role, "email": user.email, "setup_link": setup_link},
+        details={"role": user.role, "email": user.email},
         db=db,
     )
 
@@ -756,17 +772,24 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.role == "superadmin" and current_user.role != "superadmin":
+        raise HTTPException(status_code=403, detail="Only Super Admin can manage superadmin users")
     db.delete(user)
     db.commit()
     return {"status": "success"}
 
 
 @router.get("/gmail/callback")
-def gmail_callback(code: str, db: Session = Depends(get_db)):
+def gmail_callback(code: str, state: str, db: Session = Depends(get_db)):
     """OAuth callback from Google. Saves the refresh token in DB."""
-    result = exchange_code_for_token(code=code)
+    from backend.services.oauth import parse_state
+
+    claims = parse_state(state)
+    if not claims or claims.get("platform") != "gmail":
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
+    result = exchange_code_for_token(code=code, redirect_uri=claims["redirect_uri"])
     if result.get("error"):
-        raise HTTPException(status_code=400, detail=result["error"])
+        raise HTTPException(status_code=400, detail="Gmail authorization failed")
     refresh_token = result.get("refresh_token")
     if not refresh_token:
         raise HTTPException(status_code=400, detail="Google did not return a refresh token. Make sure you selected a Gmail account and approved the permission.")
@@ -785,7 +808,10 @@ def gmail_callback(code: str, db: Session = Depends(get_db)):
 def gmail_auth_url(request: Request, current_user: User = Depends(require_superadmin)):
     """Return the Google OAuth URL to authorize Gmail sending."""
     redirect_uri = os.getenv("GMAIL_REDIRECT_URI", str(request.base_url).rstrip("/") + "/api/auth/gmail/callback")
-    result = build_authorization_url(redirect_uri=redirect_uri)
+    from backend.services.oauth import build_state
+
+    state = build_state("gmail", redirect_uri=redirect_uri)
+    result = build_authorization_url(redirect_uri=redirect_uri, state=state)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     return {"authorization_url": result["url"]}
@@ -801,15 +827,3 @@ def accounts_for_assignment(current_user: User = Depends(require_admin_or_supera
 # ============================================================
 # EMERGENCY: reset first superadmin password (CLI only)
 # ============================================================
-@router.post("/reset-superadmin")
-def reset_superadmin(email: str, new_password: str, db: Session = Depends(get_db)):
-    """Reset a superadmin's password. Only works if called from localhost.
-    Use this if you lose access and need to reset the first admin."""
-    import socket
-    # Allow only if request originates from localhost
-    user = db.query(User).filter(User.email == email, User.role == "superadmin").first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Superadmin not found for this email")
-    user.hashed_password = get_password_hash(new_password)
-    db.commit()
-    return {"status": "success", "message": f"Password reset for {email}"}

@@ -174,7 +174,7 @@ if engine is None:
     engine = _create_sqlite_engine()
     active_db = "sqlite"
     if DATABASE_URL:
-        logger.warning("PostgreSQL unreachable, falling back to SQLite")
+        logger.warning("Configured PostgreSQL is unreachable. Serving SQLite while /health continues to report process liveness.")
     logger.info(f"Using SQLite database at {DB_PATH}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

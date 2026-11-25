@@ -107,7 +107,9 @@ def get_adguard_meta_auth_url(adguard_account_id: int, admin_initiated: bool = F
     cfg = _meta_oauth_cfg()
     app_id = _require(cfg, "meta_app_id")
     redirect_uri = f"{_redirect_base(cfg)}/api/adguard/oauth/meta/callback"
-    state_val = f"{adguard_account_id}_admin" if admin_initiated else str(adguard_account_id)
+    from backend.services.oauth import build_state
+
+    state_val = build_state("adguard_meta", adguard_account_id=adguard_account_id, admin_initiated=admin_initiated)
     params = {
         "client_id": app_id,
         "redirect_uri": redirect_uri,

@@ -788,7 +788,7 @@
 
             <div class="form-group" style="margin-bottom:14px;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:8px;padding:10px;">
                 <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;font-weight:600;">
-                    <input type="checkbox" id="esResetPw"> 🔑 Reset customer password (new password generated once)
+                    <input type="checkbox" id="esResetPw"> 🔑 Reset customer password (generated in this browser)
                 </label>
             </div>
 
@@ -1775,7 +1775,10 @@
                 payment_status: $('esPaymentStatus').value,
                 plan_expires_at: $('esExpiry').value || null,
             };
-            if ($('esResetPw').checked) body.reset_password = true;
+            if ($('esResetPw').checked) {
+                body.reset_password = true;
+                body.new_password = generateSubscriberPassword();
+            }
             const addCredits = parseInt($('esAddCallCredits').value, 10);
             if (!isNaN(addCredits) && addCredits !== 0) body.add_call_credits = addCredits;
 
@@ -1789,8 +1792,8 @@
                 const data = await res.json();
                 const box = $('editSubResult');
                 box.style.display = 'block';
-                if (data.new_password) {
-                    box.innerHTML = '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:8px;padding:10px;">Saved. New password: <b style="user-select:all;">' + escapeHtml(data.new_password) + '</b> (shown once)</div>';
+                if (data.password_reset) {
+                    box.innerHTML = '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:8px;padding:10px;">Saved. New password: <b style="user-select:all;">' + escapeHtml(body.new_password) + '</b> (shown once)</div>';
                 } else {
                     box.innerHTML = '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:8px;padding:10px;">✅ All subscriber details saved.</div>';
                     setTimeout(() => { $('editSubOverlay').style.display = 'none'; }, 700);
@@ -1882,6 +1885,7 @@
             const paymentRef = $('csPaymentRef').value.trim();
             const gstInvoiceNo = $('csGstInvoice').value.trim();
             const mode = (document.querySelector('input[name="csMode"]:checked') || {}).value || 'instant';
+            const password = mode === 'instant' ? generateSubscriberPassword() : null;
 
             if (!email || !email.includes('@')) { toast('Enter a valid email address', 'error'); return; }
             if (!fullName) { toast('Enter contact person full name', 'error'); return; }
@@ -1905,7 +1909,8 @@
                         payment_ref: paymentRef,
                         gst_invoice_no: gstInvoiceNo,
                         payment_status: amountPaid > 0 ? 'paid' : 'trial',
-                        mode
+                        mode,
+                        password
                     })
                 });
                 if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Failed'); }
@@ -1928,11 +1933,20 @@
                             '<div style="margin-top:8px;">Share this setup link with the client:<br><span style="user-select:all;font-size:11px;font-weight:700;word-break:break-all;background:rgba(0,0,0,0.05);padding:4px 6px;border-radius:4px;">' + escapeHtml(data.setup_link || '') + '</span></div></div>';
                     }
                 } else {
-                    const waMsg = data.whatsapp_message || '';
+                    const quota = data.lead_quota < 0 ? 'Unlimited' : data.lead_quota.toLocaleString();
+                    const waMsg = [
+                        'Welcome to LeadShield AI!',
+                        'Your account for ' + data.company_name + ' is active.',
+                        'Portal URL: ' + data.login_url,
+                        'Email: ' + data.login_email,
+                        'Temporary password: ' + password,
+                        'Plan: ' + data.plan.toUpperCase() + ' (' + quota + ' leads/month)',
+                        'Log in to connect Google Ads or Meta Ads.',
+                    ].join('\n');
                     box.innerHTML =
                         '<div style="background:var(--color-success-light);color:var(--color-success-text);border-radius:10px;padding:14px;">' +
                         '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">🎉 Account Created & Activated!</div>' +
-                        '<div style="font-size:12px;margin-bottom:8px;"><b>Username/Email:</b> ' + escapeHtml(data.login_email) + '<br><b>Temporary Password:</b> <span style="font-family:monospace;font-weight:700;background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px;user-select:all;">' + escapeHtml(data.login_password) + '</span></div>' +
+                        '<div style="font-size:12px;margin-bottom:8px;"><b>Username/Email:</b> ' + escapeHtml(data.login_email) + '<br><b>Temporary Password:</b> <span style="font-family:monospace;font-weight:700;background:rgba(0,0,0,0.08);padding:2px 6px;border-radius:4px;user-select:all;">' + escapeHtml(password) + '</span></div>' +
                         '<div style="margin-top:10px;display:flex;gap:8px;">' +
                             '<button class="btn btn-primary btn-sm" id="btnCopyWa">📋 Copy WhatsApp Welcome Card</button>' +
                         '</div></div>';
@@ -1946,6 +1960,10 @@
                 loadAdminSubscribers();
                 loadWorkspaces();
             } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function generateSubscriberPassword() {
+            return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
         }
 
         // ---------- OAuth Handlers ----------

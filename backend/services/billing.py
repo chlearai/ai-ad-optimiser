@@ -71,6 +71,38 @@ def _get_razorpay_credentials() -> Dict[str, str]:
     }
 
 
+SIMULATED_SECRET = "sandbox_secret_placeholder"
+
+
+def gateway_configured(creds: Optional[Dict[str, str]] = None) -> bool:
+    """True when a real Razorpay key secret is configured (test or live keys)."""
+    creds = creds or _get_razorpay_credentials()
+    secret = creds.get("key_secret") or ""
+    return bool(secret) and secret != SIMULATED_SECRET
+
+
+def simulated_billing_allowed(user: Optional[User]) -> bool:
+    """Simulated (no-gateway) upgrades are for admins, or when explicitly enabled.
+
+    Without this guard any self-registered subscriber could activate a paid plan
+    for free whenever Razorpay keys are missing.
+    """
+    if user is not None and getattr(user, "role", None) in ("admin", "superadmin"):
+        return True
+    return os.getenv("ALLOW_SIMULATED_BILLING", "").strip().lower() == "true"
+
+
+def _fetch_razorpay_order(order_id: str, creds: Dict[str, str]) -> Dict[str, Any]:
+    resp = requests.get(
+        f"https://api.razorpay.com/v1/orders/{order_id}",
+        auth=(creds["key_id"], creds["key_secret"]),
+        timeout=10,
+    )
+    if not resp.ok:
+        raise ValueError("Could not confirm the order with Razorpay. Please contact support.")
+    return resp.json()
+
+
 def get_billing_config() -> Dict[str, Any]:
     """Public billing configuration for frontend checkout initialization."""
     creds = _get_razorpay_credentials()
@@ -127,8 +159,14 @@ def create_razorpay_order(plan_code: str, workspace_id: int, user: User, db_sess
                 logger.warning(f"Razorpay API order error: {resp.status_code} {resp.text}")
         except Exception as e:
             logger.error(f"Failed contacting Razorpay API: {e}")
+        # Never fall back to a simulated order while real keys are configured:
+        # simulated orders skip payment verification.
+        raise ValueError("Payment gateway is unavailable. Please try again shortly.")
 
-    # Fallback to authentic sandbox order descriptor
+    if not simulated_billing_allowed(user):
+        raise ValueError("Online payments are not enabled yet. Please contact support to upgrade.")
+
+    # Simulated order descriptor (no gateway configured; admin or explicitly enabled only)
     sandbox_order_id = f"order_sbx_{plan_code}_{int(time.time())}"
     return {
         "id": sandbox_order_id,
@@ -170,12 +208,26 @@ def verify_payment_and_upgrade(
     creds = _get_razorpay_credentials()
     key_secret = creds["key_secret"]
 
-    # Signature verification for live/actual keys
-    if signature and key_secret and key_secret != "sandbox_secret_placeholder" and order_id and not order_id.startswith("order_sbx_"):
+    if gateway_configured(creds):
+        # Real gateway: signature is mandatory and the order must be paid for
+        # exactly this plan, workspace and amount.
+        if not (order_id and payment_id and signature) or order_id.startswith("order_sbx_"):
+            raise ValueError("Payment signature verification failed. Please contact support.")
         body = f"{order_id}|{payment_id}".encode("utf-8")
         expected_sig = hmac.new(key_secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected_sig, signature):
             raise ValueError("Payment signature verification failed. Please contact support.")
+        order = _fetch_razorpay_order(order_id, creds)
+        notes = order.get("notes") or {}
+        if (
+            order.get("status") != "paid"
+            or int(order.get("amount_paid") or 0) < plan_info["amount_paise"]
+            or str(notes.get("plan", "")).lower() != plan_code
+            or str(notes.get("workspace_id", "")) != str(workspace_id)
+        ):
+            raise ValueError("Payment does not match this plan and workspace. Please contact support.")
+    elif not simulated_billing_allowed(user):
+        raise ValueError("Online payments are not enabled yet. Please contact support to upgrade.")
 
     # Find and update workspace
     ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == workspace_id).first()
@@ -202,7 +254,7 @@ def verify_payment_and_upgrade(
         "workspace_id": ws.id,
         "plan": ws.plan,
         "lead_quota": ws.lead_quota,
-        "lead_count": ws.lead_count,
+        "lead_count": ws.leads_this_month,
         "payment_id": payment_id,
         "mode": creds["mode"],
     }

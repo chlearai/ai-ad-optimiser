@@ -39,7 +39,7 @@ def update_setting(channel: str, req: NotificationUpdate, db: Session = Depends(
     if req.provider is not None:
         setting.provider = req.provider
     if req.config is not None:
-        setting.config = req.config
+        setting.config = {**(setting.config or {}), **req.config}
     if req.notify_on_audit_complete is not None:
         setting.notify_on_audit_complete = req.notify_on_audit_complete
     if req.notify_on_action_reviewed is not None:
@@ -68,7 +68,7 @@ def test_notification(channel: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Unsupported channel")
 
     if result.get("status") != "sent":
-        raise HTTPException(status_code=400, detail=result.get("error_message") or "Dispatch failed")
+        raise HTTPException(status_code=400, detail="Dispatch failed")
     return result
 
 

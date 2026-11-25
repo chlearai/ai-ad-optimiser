@@ -3,6 +3,7 @@ Configuration management for AdOptima AI.
 Loads config.json and merges with environment variables from .env
 """
 import os
+from urllib.parse import urlsplit, urlunsplit
 import json
 import logging
 from typing import Dict, Any
@@ -76,12 +77,7 @@ def load_config() -> Dict[str, Any]:
     # First load .env so it takes precedence over config.json defaults
     env = load_env_file()
 
-    if os.path.exists(CONFIG_PATH):
-        try:
-            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-                config.update(json.load(f))
-        except Exception as e:
-            logger.error(f"Error reading config.json: {e}")
+    config.update(load_saved_config())
 
     # Map environment variables to config keys
     env_mappings = [
@@ -127,28 +123,57 @@ def load_config() -> Dict[str, Any]:
     return config
 
 
-def save_config(config: Dict[str, Any]) -> None:
+def load_saved_config() -> Dict[str, Any]:
     try:
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=4)
-    except Exception as e:
-        logger.error(f"Error saving config.json: {e}")
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Expected a JSON object")
+        return data
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        logger.error("Unable to read config.json")
+        return {}
+
+
+def save_config(updates: Dict[str, Any]) -> None:
+    # Merge only saved values and explicit updates. Environment secrets stay in the environment.
+    config = load_saved_config()
+    config.update(updates)
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4)
+
+
+CONFIG_SECRET_FIELDS = (
+    "client_secret", "refresh_token", "gemini_api_key", "developer_token",
+    "google_client_secret", "google_developer_token", "meta_app_secret",
+    "meta_system_user_token", "salesforce_client_secret", "salesforce_refresh_token",
+    "leadsquared_access_key", "leadsquared_secret_key", "mantri_salesforce_client_secret",
+    "mantri_salesforce_refresh_token",
+)
+
+INTEGRATIONS_FIELDS = (
+    "google_client_id", "meta_app_id", "salesforce_client_id",
+)
+INTEGRATION_URL_FIELDS = ("salesforce_url", "leadsquared_base_url")
+
+
+def _integration_url_for_client(value: str) -> str:
+    try:
+        parts = urlsplit(value or "")
+        if parts.scheme in ("https", "http") and parts.hostname:
+            host = parts.netloc.rsplit("@", 1)[-1]
+            return urlunsplit((parts.scheme, host, parts.path, "", ""))
+    except (TypeError, ValueError):
+        pass
+    return ""
 
 
 def get_config_for_client() -> Dict[str, Any]:
-    """Return a masked version of config safe to send to frontend."""
     config = load_config()
-    masked = config.copy()
-    for key in ["client_secret", "refresh_token", "gemini_api_key", "developer_token",
-                "google_client_secret", "google_developer_token", "meta_app_secret",
-                "meta_system_user_token",
-                "salesforce_client_secret", "salesforce_refresh_token", "leadsquared_secret_key",
-                "mantri_salesforce_client_secret", "mantri_salesforce_refresh_token"]:
-        val = masked.get(key, "")
-        if val and len(val) > 4:
-            masked[key] = "●●●●●●●●" + val[-4:]
-        elif val:
-            masked[key] = "●●●●●●●●"
-    # Expose whether a system token is configured (not the value)
-    masked["meta_system_user_token_configured"] = bool(masked.get("meta_system_user_token"))
-    return masked
+    return {
+        **{field: config.get(field, "") for field in INTEGRATIONS_FIELDS},
+        **{field: _integration_url_for_client(config.get(field, "")) for field in INTEGRATION_URL_FIELDS},
+        "configured": {field: bool(config.get(field)) for field in CONFIG_SECRET_FIELDS},
+    }

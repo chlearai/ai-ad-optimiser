@@ -80,25 +80,29 @@ def update_verified_funds(account_id: int, body: VerifiedFunds, db: Session = De
     db.commit()
     return {"saved":True}
 
+class ReportingScriptRequest(BaseModel):
+    token_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 @router.post("/{account_id}/centres/{centre_id}/reporting-script")
-def reporting_script(account_id: int, centre_id: int, db: Session = Depends(get_db), user=Depends(get_current_user_required)):
+def reporting_script(account_id: int, centre_id: int, body: ReportingScriptRequest,
+                     db: Session = Depends(get_db), user=Depends(get_current_user_required)):
     access(account_id, db, user, edit=True)
     centre = db.query(TlgCentre).filter_by(id=centre_id, account_id=account_id).first()
     if not centre or not centre.source_url:
         raise HTTPException(400, "Save the master sheet link first")
     sid, gid = sheet_ref(centre.source_url)
-    token = secrets.token_urlsafe(32)
     row = db.query(TlgSheetReport).filter_by(centre_id=centre_id).first()
     if not row:
         row = TlgSheetReport(centre_id=centre_id)
         db.add(row)
-    row.token_hash = hashlib.sha256(token.encode()).hexdigest()
+    row.token_hash = body.token_hash
     row.source_url = centre.source_url
     row.daily_counts = "{}"
     row.updated_at = None
     db.commit()
     template = (Path(__file__).parents[1] / "integrations/google_apps_script/tlg_report_counts.gs").read_text()
-    config = {"sheetId":sid, "gid":gid, "token":token, "url":f"https://ai-ad-optimiser-production-dd12.up.railway.app/api/tlg/{account_id}/centres/{centre_id}/sheet-counts"}
+    config = {"sheetId":sid, "gid":gid, "token":"__TLG_REPORTING_TOKEN__", "url":f"https://ai-ad-optimiser-production-dd12.up.railway.app/api/tlg/{account_id}/centres/{centre_id}/sheet-counts"}
     return {"script": template.replace("__TLG_REPORT_CONFIG__", json.dumps(config))}
 
 @router.post("/{account_id}/centres/{centre_id}/sheet-counts")

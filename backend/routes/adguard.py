@@ -32,6 +32,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from backend.db.adguard_ops import AdGuardWorkspaceOps
 from backend.db.database import get_db
 from backend.db.models import Account, AdGuardAccount, AdGuardLead, AppSetting, User
 from backend.routes.auth import get_current_user_required
@@ -40,7 +41,7 @@ from backend.services.activity_log import log_activity
 logger = logging.getLogger("AdOptima")
 router = APIRouter(prefix="/api/adguard", tags=["adguard"])
 
-WEBHOOK_VERIFY_TOKEN = os.getenv("ADGUARD_WEBHOOK_VERIFY_TOKEN", "adguard_verify")
+WEBHOOK_VERIFY_TOKEN = os.getenv("ADGUARD_WEBHOOK_VERIFY_TOKEN", "")
 
 
 def _require_adguard_access(user: User) -> None:
@@ -58,9 +59,7 @@ def _require_adguard_access(user: User) -> None:
 
 def _verify_token(token: str) -> bool:
     configured = WEBHOOK_VERIFY_TOKEN
-    if not configured:
-        return True  # not configured -> skip (acceptable locally)
-    return token == configured
+    return bool(configured) and hmac.compare_digest(token, configured)
 
 
 @router.post("/webhook")
@@ -88,10 +87,12 @@ async def webhook(
     XML; bridges send JSON. All are normalized downstream.
     """
     target_workspace = db.get(AdGuardAccount, workspace_id) if workspace_id is not None else None
-    if workspace_id is not None and not target_workspace:
-        raise HTTPException(404, 'Workspace not found')
-    workspace_secret = operations(db, target_workspace).webhook_secret if target_workspace else None
-    db.commit()
+    workspace_secret = None
+    if workspace_id is not None:
+        settings = db.get(AdGuardWorkspaceOps, workspace_id) if target_workspace else None
+        if not settings:
+            raise HTTPException(403, "Invalid workspace webhook")
+        workspace_secret = settings.webhook_secret
     raw = (await request.body()).decode("utf-8") or ""
     logger.info(
         f"[AdGuard] webhook hit: digest_hdr={'yes' if x_google_ledform_digest else 'no'} "
@@ -805,25 +806,19 @@ def oauth_meta_callback(code: Optional[str] = None, error: Optional[str] = None,
         get_meta_profile_info,
     )
 
+    from backend.services.oauth import parse_state
+
+    payload = parse_state(state)
+    if not payload or payload.get("platform") != "adguard_meta":
+        return RedirectResponse(url="/adguard?oauth_error=invalid_state")
+    ws = db.get(AdGuardAccount, payload.get("adguard_account_id"))
+    if not ws:
+        return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
+    meta_admin_initiated = payload.get("admin_initiated", False)
+
     token = exchange_adguard_meta_code(code)
     if not token:
         return RedirectResponse(url="/adguard?oauth_error=meta_token_exchange_failed")
-
-    # The OAuth `state` carries the workspace id that started the flow (SaaS-safe:
-    # each customer's token lands in their own workspace).
-    # Admin-initiated flows encode state as "<id>_admin".
-    ws = None
-    meta_admin_initiated = False
-    state_clean = state or ""
-    if state_clean.endswith("_admin"):
-        meta_admin_initiated = True
-        state_clean = state_clean[:-6]  # strip "_admin"
-    if state_clean and state_clean.isdigit():
-        ws = db.query(AdGuardAccount).filter(AdGuardAccount.id == int(state_clean)).first()
-    if ws is None:
-        ws = db.query(AdGuardAccount).order_by(AdGuardAccount.created_at.asc()).first()
-    if not ws:
-        return RedirectResponse(url="/adguard?oauth_error=workspace_not_found")
 
     # Identify which Meta (Facebook) login granted access
     profile_info = get_meta_profile_info(token)
@@ -1770,7 +1765,8 @@ class EditSubscriberRequest(BaseModel):
     payment_status: Optional[str] = None
     account_status: Optional[str] = None
     is_archived: Optional[bool] = None
-    reset_password: Optional[bool] = None  # generates a new password, returned once
+    reset_password: Optional[bool] = None
+    new_password: Optional[str] = None
     add_call_credits: Optional[int] = None  # manual UPI top-up: credits added to prepaid bucket (never expire)
 
 
@@ -1836,15 +1832,16 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
     if req.is_archived is not None:
         ws.is_archived = req.is_archived
 
-    new_password = None
     if req.reset_password:
-        import secrets as _secrets
         from backend.routes.auth import get_password_hash
-        new_password = _secrets.token_urlsafe(8)
-        if ws_user:
-            ws_user.hashed_password = get_password_hash(new_password)
-            ws_user.onboarding_completed = True
-            ws_user.is_active = True
+
+        if not req.new_password or len(req.new_password) < 12:
+            raise HTTPException(400, "A new password of at least 12 characters is required")
+        if not ws_user or ws_user.role in ("admin", "superadmin"):
+            raise HTTPException(403, "Only subscriber passwords can be changed here")
+        ws_user.hashed_password = get_password_hash(req.new_password)
+        ws_user.onboarding_completed = True
+        ws_user.is_active = True
 
     db.commit()
     log_activity(
@@ -1859,8 +1856,7 @@ def admin_edit_subscriber(sub_id: int, req: EditSubscriberRequest, db: Session =
     )
     return {
         **ws.to_dict(),
-        "new_password": new_password,
-        "message": "New password generated — share it securely (shown only once)." if new_password else None,
+        "password_reset": bool(req.reset_password),
     }
 
 
@@ -1963,8 +1959,8 @@ class CreateSubscriberRequest(BaseModel):
     amount_paid: Optional[float] = 0.0
     gst_invoice_no: Optional[str] = None
     payment_status: Optional[str] = "paid"
-    password: Optional[str] = None  # auto-generated if blank (instant mode)
-    mode: str = "instant"  # instant = show password now | invite = email setup link
+    password: Optional[str] = None  # required in instant mode
+    mode: str = "instant"  # instant = set supplied password | invite = email setup link
 
 
 @router.post("/admin/create-subscriber")
@@ -1972,7 +1968,7 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
     """Create a customer: user login + AdGuard workspace + commercial/payment ledger in one call. Admin/superadmin only.
 
     mode=invite: sends AdGuard-branded setup email; user sets own password via link.
-    mode=instant: returns a one-time password and ready-to-share WhatsApp card.
+    mode=instant: sets a password supplied by the admin client.
     """
     if user.role not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -1995,7 +1991,9 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
     import secrets as _secrets
 
     invite_mode = (req.mode or "instant").lower() == "invite"
-    password = req.password or _secrets.token_urlsafe(8)
+    if not invite_mode and (not req.password or len(req.password) < 12):
+        raise HTTPException(400, "Instant activation requires a password of at least 12 characters")
+    password = _secrets.token_urlsafe(32) if invite_mode else req.password
 
     if invite_mode:
         # User activates via emailed link (is_active until link used; onboarding token gates it)
@@ -2069,31 +2067,15 @@ def admin_create_subscriber(req: CreateSubscriberRequest, request: Request, db: 
     login_url = f"{base_url}/adguard-landing"
 
     if not invite_mode:
-        # Pre-format a friendly WhatsApp greeting message
-        company_label = req.company_name or req.full_name or "your team"
-        quota_display = "Unlimited" if assigned_quota < 0 else f"{assigned_quota:,} leads/month"
-        wa_text = (
-            f"🎉 Welcome to LeadShield AI!\n\n"
-            f"Your account for *{company_label}* is now active.\n\n"
-            f"🔑 *Login Credentials:*\n"
-            f"• Portal URL: {login_url}\n"
-            f"• Username/Email: {email}\n"
-            f"• Password: {password}\n"
-            f"• Plan: {req.plan.upper()} ({quota_display})\n\n"
-            f"👉 Step 1: Login and click 'Connect Google Ads' or 'Connect Meta Ads' to start protecting your campaigns.\n\n"
-            f"Need help? Reply directly to this message."
-        )
         return {
             "status": "ok",
             "workspace_id": ws.id,
             "login_email": email,
-            "login_password": password,
             "login_url": login_url,
             "company_name": req.company_name or req.full_name,
             "plan": req.plan,
             "lead_quota": ws.lead_quota,
-            "whatsapp_message": wa_text,
-            "message": "Subscriber created successfully. Copy credentials or the WhatsApp card below.",
+            "message": "Subscriber created successfully.",
         }
 
     # Invite mode: build setup link + send AdGuard-branded email in background
@@ -2495,7 +2477,7 @@ def meta_webhook_verify(
 ):
     """Meta webhook verification handshake (configured in the Meta App dashboard)."""
     expected = os.getenv("ADGUARD_META_VERIFY_TOKEN", WEBHOOK_VERIFY_TOKEN)
-    if hub_mode == "subscribe" and hub_verify_token == expected:
+    if expected and hub_mode == "subscribe" and hmac.compare_digest(hub_verify_token, expected):
         return int(hub_challenge) if hub_challenge.isdigit() else hub_challenge
     raise HTTPException(status_code=403, detail="Verification failed")
 
@@ -2515,12 +2497,11 @@ async def meta_webhook_receive(request: Request, db: Session = Depends(get_db), 
     del _webhook_hits[:-20]
 
     app_secret = os.getenv("ADGUARD_META_APP_SECRET", "") or os.getenv("META_APP_SECRET", "")
-    if app_secret:
-        if not x_hub_signature_256:
-            raise HTTPException(status_code=403, detail="Missing signature")
-        expected = "sha256=" + hmac.new(app_secret.encode(), raw, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, x_hub_signature_256):
-            raise HTTPException(status_code=403, detail="Invalid signature")
+    if not app_secret or not x_hub_signature_256:
+        raise HTTPException(status_code=403, detail="Missing webhook signature or configuration")
+    expected = "sha256=" + hmac.new(app_secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, x_hub_signature_256):
+        raise HTTPException(status_code=403, detail="Invalid signature")
 
     try:
         payload = json.loads(raw.decode("utf-8") or "{}")

@@ -24,7 +24,7 @@ const AD_ACCOUNT_ID = "act_577546498668650";
  */
 function saveToken() {
   // System User token for API_Google_Sheet (does not expire)
-  const token = "EAAPE279Orc0BSD1tpIHGSX11CZCWeEDjJu6942VX9lkSPOBLSDZAmdZAHlBhSdaqA5imZBR1iw5o6DUPoSNaCJeiXfs1AyPxzZBISzXIhlHKNrZBt0ZAtSTXkfx4UTaMKHx7Dvf34nBwaZAYKR8XVCPxBDmdQrv9EkSnvA0UysmIqPl3tUw14nTp0qzsDqfJkm8nmAZDZD";
+  const token = "PASTE_TOKEN_HERE_THEN_RUN_ONCE_AND_DELETE";  // never commit a real token
   PropertiesService.getScriptProperties().setProperty("META_ACCESS_TOKEN", token);
   Logger.log("Token saved.");
 }

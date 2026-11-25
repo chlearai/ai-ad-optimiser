@@ -4,10 +4,11 @@ FastAPI application entry point.
 """
 import os
 import logging
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from backend.api_access import authorize_api
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import traceback
 
 from backend.routes import config, campaigns, search_terms, negatives, optimizations, logs, chat, auth, reports, accounts, audits, notifications, oauth, crm, revenueops, dsu_report, dsi_report, mantri, voice, categories, activity_log, mis_mantri, salesforce_mantri
 from backend.routes import crashclub
@@ -23,7 +24,14 @@ from backend.services.scheduler import start_scheduler, stop_scheduler
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("AdOptima")
 
-app = FastAPI(title="AdOptima AI - Google Ads Optimization")
+api_docs_enabled = os.getenv("ENABLE_API_DOCS", "").lower() == "true"
+app = FastAPI(
+    title="AdOptima AI - Google Ads Optimization",
+    dependencies=[Depends(authorize_api)],
+    docs_url="/docs" if api_docs_enabled else None,
+    redoc_url="/redoc" if api_docs_enabled else None,
+    openapi_url="/openapi.json" if api_docs_enabled else None,
+)
 
 # Mount static files directory for AdGuard tag and assets
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "static")
@@ -31,15 +39,25 @@ if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    details = [{"loc": e["loc"], "type": e["type"], "msg": e["msg"]} for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": details})
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"UNHANDLED ERROR: {request.url}")
-    logger.error(traceback.format_exc())
-    print(f"UNHANDLED ERROR: {request.url}")
-    print(traceback.format_exc())
+    # Full traceback stays in server logs; the client only gets a generic message.
+    logger.error(
+        "Unhandled %s for %s %s",
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)}
+        content={"detail": "Internal server error"}
     )
 
 app.add_middleware(
@@ -133,7 +151,9 @@ def health_check():
 
 
 @app.get("/health/db")
-def health_db():
+def health_db(user=Depends(auth.get_current_user)):
+    if user is None or user.role not in ("admin", "superadmin"):
+        return {"status": "ok"}
     """Diagnostic: which DB is active and whether DSU/DSI credentials exist there."""
     from backend.db.database import get_active_db, engine, DB_PATH
     from sqlalchemy import text as _text
@@ -148,7 +168,7 @@ def health_db():
     try:
         import backend.db.database as _dbm
         info["pg_driver"] = _dbm._pg_driver_name
-        info["pg_driver_error"] = _dbm._pg_driver_error
+        info["pg_driver_error"] = bool(_dbm._pg_driver_error)
     except Exception:
         pass
     try:
@@ -168,7 +188,7 @@ def health_db():
                 for r in rows
             ]
     except Exception as e:
-        info["accounts_error"] = f"{type(e).__name__}: {e}"
+        info["accounts_error"] = type(e).__name__
     return info
 
 
