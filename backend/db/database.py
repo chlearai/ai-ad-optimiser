@@ -196,11 +196,14 @@ def get_db():
 
 def init_db():
     import backend.db.models  # noqa: F401
+    import backend.db.sakha_models  # noqa: F401
     import backend.db.adguard_ops  # noqa: F401
     import backend.db.revenueops_models  # noqa: F401
     import backend.services.crashclub_db  # noqa: F401  (registers crashclub_leads table)
     try:
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=engine, tables=[
+            table for table in Base.metadata.sorted_tables if not table.name.startswith("sakha_")
+        ])
         logger.info(f"Database initialized ({active_db})")
         # Run safe additive migrations for Phase 1 single-client master
         try:
@@ -273,6 +276,12 @@ def init_db():
             run_adguard_migration()
         except Exception as me:
             logger.warning(f"Additive AdGuard access migration skipped/failed: {me}")
+        # Keep the Sakha mirror scoped to the backend database connection.
+        try:
+            from backend.migrations.add_sakha_schema import run_migration as run_sakha_migration
+            run_sakha_migration(engine)
+        except Exception as me:
+            logger.warning("Additive Sakha migration skipped/failed (%s)", type(me).__name__)
         # Run safe additive migration for AdGuard lead workspace linkage
         try:
             from backend.migrations.add_adguard_lead_workspace_column import run_migration as run_adguard_ws_migration

@@ -5,7 +5,7 @@ Reads global and per-account audit intervals.
 import logging
 import os
 import time
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from typing import Dict, Any, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from backend.services.auditor import audit_account, audit_all_accounts
@@ -59,6 +59,9 @@ def start_scheduler():
     _scheduler.add_job(sync_all, "interval", minutes=1, id="tlg_lead_routing", replace_existing=True, max_instances=1, coalesce=True)
     from backend.services.adguard_support_ops import run_support_operations
     _scheduler.add_job(run_support_operations, "interval", minutes=1, id="adguard_support_operations", replace_existing=True, max_instances=1, coalesce=True)
+    from backend.services.sakha.sync import sync_all as sync_sakha
+    _scheduler.add_job(sync_sakha, "interval", minutes=15, id="sakha_reporting_sync", replace_existing=True,
+                       max_instances=1, coalesce=True, next_run_time=datetime.now(timezone.utc) + timedelta(seconds=1))
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 

@@ -82,6 +82,7 @@ class UserCreateRequest(BaseModel):
     access_revenueops: bool = False
     access_audit_review: bool = False
     access_adguard: bool = False
+    access_sakha: bool = False
 
 
 class UserUpdateRequest(BaseModel):
@@ -97,6 +98,7 @@ class UserUpdateRequest(BaseModel):
     access_revenueops: Optional[bool] = None
     access_audit_review: Optional[bool] = None
     access_adguard: Optional[bool] = None
+    access_sakha: Optional[bool] = None
 
 
 class SetPasswordRequest(BaseModel):
@@ -515,6 +517,7 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
         access_revenueops=req.access_revenueops,
         access_audit_review=req.access_audit_review,
         access_adguard=req.access_adguard,
+        access_sakha=req.access_sakha,
         onboarding_token=token,
         onboarding_token_expires_at=token_expires,
         onboarding_completed=False,
@@ -748,6 +751,8 @@ def update_user(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_
         user.access_audit_review = req.access_audit_review
     if req.access_adguard is not None:
         user.access_adguard = req.access_adguard
+    if req.access_sakha is not None:
+        user.access_sakha = req.access_sakha
 
     db.commit()
     db.refresh(user)

@@ -1,0 +1,52 @@
+{
+  "connectors": [
+    {
+      "id": "lc_1",
+      "name": "Mantri Webcity v2 landing page",
+      "type": "website_webhook",
+      "status": "paused",
+      "rejecting_new": true,
+      "captured_count": 90,
+      "last_captured_at": "2026-11-22T10:00:00Z",
+      "last_error": null
+    },
+    {
+      "id": "lc_2",
+      "name": "99acres",
+      "type": "property_portal",
+      "status": "draft",
+      "rejecting_new": false,
+      "captured_count": 0,
+      "last_captured_at": null,
+      "last_error": null
+    },
+    {
+      "id": "lc_3",
+      "name": "Magicbricks",
+      "type": "property_portal",
+      "status": "draft",
+      "rejecting_new": false,
+      "captured_count": 0,
+      "last_captured_at": null,
+      "last_error": null
+    },
+    {
+      "id": "lc_4",
+      "name": "Housing",
+      "type": "property_portal",
+      "status": "draft",
+      "rejecting_new": false,
+      "captured_count": 0,
+      "last_captured_at": null,
+      "last_error": null
+    }
+  ],
+  "integrations": [
+    {
+      "name": "Samvaad AI Voice",
+      "status": "needs_attention",
+      "last_sync_at": "2026-11-18T10:00:00Z",
+      "last_error": "Sample sync interruption"
+    }
+  ]
+}

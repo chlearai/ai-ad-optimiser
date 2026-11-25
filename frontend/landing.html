@@ -264,6 +264,8 @@
             position: relative;
             overflow: hidden;
         }
+        .module-card.sakha { text-align: left; font: inherit; }
+        .module-card.sakha .module-title, .module-card.sakha .module-desc { display: block; }
         .module-card:hover {
             border-color: var(--color-border-strong);
             box-shadow: var(--shadow-md);
@@ -667,6 +669,14 @@
                 <div class="module-desc">Lead Integrity Gatekeeper for Google Ads lead forms — scores, filters junk, and pushes verified leads to your CRM.</div>
             </div>
         </div>
+        <button type="button" class="module-card sakha disabled" id="cardSakha" onclick="openModule('/sakha')">
+            <span class="module-status status-locked" id="statusSakha">Locked</span>
+            <span class="module-icon" aria-hidden="true">&#9673;</span>
+            <span class="module-body">
+                <span class="module-title">Sakha</span>
+                <span class="module-desc">Lead-to-booking command centre</span>
+            </span>
+        </button>
     </div>
 
     <div id="authOverlay" class="overlay hidden" onclick="hideAuth(event)" style="z-index:100;">
@@ -714,6 +724,7 @@
                     <label class="um-check"><input type="checkbox" id="umAccessInsightDesk"> InsightDesk Access</label>
                     <label class="um-check"><input type="checkbox" id="umAccessRevenueOps"> RevenueOps Access</label>
                     <label class="um-check"><input type="checkbox" id="umAccessAdGuard"> AdGuard Access</label>
+                    <label class="um-check"><input type="checkbox" id="umAccessSakha"> Sakha Access</label>
                     <label class="um-check" id="umAccessAuditReviewLabel" style="opacity:0.5;" title="Requires AdPulse Access"><input type="checkbox" id="umAccessAuditReview" disabled> AI Audit Review Access</label>
                 </div>
                 <div class="um-section" id="umAssignSection">
@@ -1143,6 +1154,7 @@
                 setCardAccess('InsightDesk', isAdmin || user.access_insightdesk);
                 setCardAccess('RevenueOps', isAdmin || user.access_revenueops);
                 setCardAccess('AdGuard', isAdmin || user.access_adguard);
+                setCardAccess('Sakha', isAdmin || user.access_sakha);
             } else {
                 if ($('userInfo')) $('userInfo').textContent = 'Not logged in';
                 if ($('loginBtn')) $('loginBtn').classList.remove('hidden');
@@ -1156,6 +1168,7 @@
                 setCardAccess('InsightDesk', false);
                 setCardAccess('RevenueOps', false);
                 setCardAccess('AdGuard', 'public');
+                setCardAccess('Sakha', false);
             }
         }
 
@@ -1275,6 +1288,7 @@
             if (u.access_insightdesk) access.push('InsightDesk');
             if (u.access_revenueops) access.push('RevenueOps');
             if (u.access_adguard) access.push('AdGuard');
+            if (u.access_sakha) access.push('Sakha');
             if (u.access_audit_review) access.push('AI Audit Review');
             const status = u.onboarding_completed !== false ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-gray">Pending setup</span>';
             return `<tr>
@@ -1314,6 +1328,7 @@
         $('umAccessInsightDesk').checked = false;
         $('umAccessRevenueOps').checked = false;
         $('umAccessAdGuard').checked = false;
+        $('umAccessSakha').checked = false;
         $('umAccessAuditReview').checked = false;
         $('umLinkBox').classList.add('hidden');
         $('umSetupLink').textContent = '';
@@ -1333,6 +1348,7 @@
             $('umAccessInsightDesk').checked = u.access_insightdesk;
             $('umAccessRevenueOps').checked = u.access_revenueops;
             $('umAccessAdGuard').checked = u.access_adguard || false;
+            $('umAccessSakha').checked = u.access_sakha || false;
             $('umAccessAuditReview').checked = u.access_audit_review || false;
             toggleAuditReviewCheckbox();
             $('umLinkBox').classList.add('hidden');
@@ -1361,6 +1377,7 @@
                 access_insightdesk: $('umAccessInsightDesk').checked,
                 access_revenueops: $('umAccessRevenueOps').checked,
                 access_adguard: $('umAccessAdGuard').checked,
+                access_sakha: $('umAccessSakha').checked,
                 access_audit_review: $('umAccessAuditReview').checked,
                 assigned_account_ids: Array.from($('umAssignAccounts').querySelectorAll('input:checked')).map(cb => parseInt(cb.value))
             };

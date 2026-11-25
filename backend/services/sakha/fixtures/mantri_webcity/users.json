@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "id": "owner_1",
+      "name": "Reva Nalveren",
+      "role": "sales_rep",
+      "active": true,
+      "updated_at": "2026-11-13T10:00:00Z",
+      "deleted_at": null
+    },
+    {
+      "id": "owner_2",
+      "name": "Dhruv Velkani",
+      "role": "sales_rep",
+      "active": true,
+      "updated_at": "2026-11-13T10:00:00Z",
+      "deleted_at": null
+    },
+    {
+      "id": "owner_3",
+      "name": "Tiya Koralin",
+      "role": "sales_rep",
+      "active": true,
+      "updated_at": "2026-11-13T10:00:00Z",
+      "deleted_at": null
+    }
+  ],
+  "next_cursor": null,
+  "server_time": "2026-11-25T10:00:00Z"
+}

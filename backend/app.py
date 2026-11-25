@@ -14,6 +14,7 @@ from backend.routes import config, campaigns, search_terms, negatives, optimizat
 from backend.routes import crashclub
 from backend.routes import adguard
 from backend.routes import adguard_support
+from backend.routes import sakha
 from backend.routes import adguard_v1
 from backend.routes import billing
 from fastapi.staticfiles import StaticFiles
@@ -115,6 +116,7 @@ app.include_router(activity_log.router)
 app.include_router(crashclub.router)
 app.include_router(adguard.router)
 app.include_router(adguard_support.router)
+app.include_router(sakha.router)
 app.include_router(adguard_v1.router)
 app.include_router(billing.router)
 
@@ -249,6 +251,14 @@ def get_revenueops_ui(request: Request):
         with open(html_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>RevenueOps UI not found.</h1>")
+
+
+@app.get("/sakha", response_class=HTMLResponse)
+@app.get("/sakha/{slug}", response_class=HTMLResponse)
+def get_sakha_ui():
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    with open(os.path.join(frontend_dir, "sakha.html"), "r", encoding="utf-8") as page:
+        return HTMLResponse(content=page.read())
 
 
 @app.get("/adguard", response_class=HTMLResponse)

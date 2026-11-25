@@ -24,6 +24,7 @@ class User(Base):
     access_revenueops = Column(Boolean)
     access_audit_review = Column(Boolean)
     access_adguard = Column(Boolean)
+    access_sakha = Column(Boolean)
     role = Column(String)
     is_active = Column(Boolean)
     onboarding_completed = Column(Boolean)
@@ -70,7 +71,8 @@ class InvitationRecoveryTests(TestCase):
         namespace['log_activity'].side_effect = lambda **kw: kw['db'].rollback()
         req = SimpleNamespace(email='new@example.test', full_name='New', mobile='', role='user',
                               access_adpulse=True, access_insightdesk=False, access_revenueops=False,
-                              access_audit_review=False, access_adguard=False, assigned_account_ids=[])
+                              access_audit_review=False, access_adguard=False, access_sakha=True,
+                              assigned_account_ids=[])
         result = namespace['create_user'](req, self.request, self.db, self.admin)
         self.assertFalse(result['email_sent'])
         self.assertEqual(result['email_status'], 'failed')
@@ -80,6 +82,7 @@ class InvitationRecoveryTests(TestCase):
         saved = self.db.query(User).filter_by(email=req.email).one()
         self.assertFalse(saved.is_active)
         self.assertFalse(saved.onboarding_completed)
+        self.assertTrue(saved.access_sakha)
 
     def test_pending_invite_can_be_resent_without_activating_user(self):
         result = self.reset()
