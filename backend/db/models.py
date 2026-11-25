@@ -4,7 +4,7 @@ Database models for AdOptima AI.
 import json
 import base64
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date, UniqueConstraint, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey, Enum, JSON, Date, UniqueConstraint, LargeBinary, false
 from sqlalchemy.orm import relationship
 from backend.db.database import Base
 import enum
@@ -440,6 +440,7 @@ class User(Base):
     access_revenueops = Column(Boolean, default=False)
     access_audit_review = Column(Boolean, default=False)
     access_adguard = Column(Boolean, default=False)
+    access_sakha = Column(Boolean, nullable=False, default=False, server_default=false())
     onboarding_token = Column(String, nullable=True, unique=True, index=True)
     onboarding_token_expires_at = Column(DateTime, nullable=True)
     onboarding_completed = Column(Boolean, default=False)
@@ -468,6 +469,7 @@ class User(Base):
             "access_revenueops": self.access_revenueops,
             "access_audit_review": self.access_audit_review,
             "access_adguard": self.access_adguard,
+            "access_sakha": self.access_sakha,
             "onboarding_completed": self.onboarding_completed,
             "tos_accepted_version": self.tos_accepted_version,
             "tos_accepted_at": self.tos_accepted_at.isoformat() if self.tos_accepted_at else None,

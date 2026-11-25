@@ -1,0 +1,76 @@
+{
+  "data": [
+    {
+      "id": "pl_1",
+      "name": "Residential Real Estate Sales v1.1",
+      "stages": [
+        {
+          "id": "st_1",
+          "name": "Lead Qualified",
+          "order": 1,
+          "kind": "open"
+        },
+        {
+          "id": "st_2",
+          "name": "Site Visit Scheduled",
+          "order": 2,
+          "kind": "open"
+        },
+        {
+          "id": "st_3",
+          "name": "Site Visit Completed",
+          "order": 3,
+          "kind": "open"
+        },
+        {
+          "id": "st_4",
+          "name": "Unit Shortlisted",
+          "order": 4,
+          "kind": "open"
+        },
+        {
+          "id": "st_5",
+          "name": "Cost Sheet Shared",
+          "order": 5,
+          "kind": "open"
+        },
+        {
+          "id": "st_6",
+          "name": "Negotiation",
+          "order": 6,
+          "kind": "open"
+        },
+        {
+          "id": "st_7",
+          "name": "Booking Confirmed",
+          "order": 7,
+          "kind": "open"
+        },
+        {
+          "id": "st_8",
+          "name": "Documentation",
+          "order": 8,
+          "kind": "open"
+        },
+        {
+          "id": "st_9",
+          "name": "Agreement Done",
+          "order": 9,
+          "kind": "open"
+        },
+        {
+          "id": "st_10",
+          "name": "Won",
+          "order": 10,
+          "kind": "won"
+        },
+        {
+          "id": "st_11",
+          "name": "Lost",
+          "order": 11,
+          "kind": "lost"
+        }
+      ]
+    }
+  ]
+}

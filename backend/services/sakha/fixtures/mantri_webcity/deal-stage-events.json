@@ -1,0 +1,918 @@
+{
+  "data": [
+    {
+      "id": "event_44_1",
+      "deal_id": "deal_44",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-17T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_44_2",
+      "deal_id": "deal_44",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_11",
+      "changed_at": "2026-11-17T07:38:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_43_1",
+      "deal_id": "deal_43",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-17T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_43_2",
+      "deal_id": "deal_43",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_11",
+      "changed_at": "2026-11-17T08:19:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_42_1",
+      "deal_id": "deal_42",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-17T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_42_2",
+      "deal_id": "deal_42",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_11",
+      "changed_at": "2026-11-17T09:00:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_41_1",
+      "deal_id": "deal_41",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-17T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_41_2",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-17T09:41:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_3",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-17T09:52:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_4",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-17T10:03:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_5",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-17T10:14:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_6",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_5",
+      "to_stage_id": "st_6",
+      "changed_at": "2026-11-17T10:25:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_7",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_6",
+      "to_stage_id": "st_7",
+      "changed_at": "2026-11-17T10:36:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_8",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_7",
+      "to_stage_id": "st_8",
+      "changed_at": "2026-11-17T10:47:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_41_9",
+      "deal_id": "deal_41",
+      "from_stage_id": "st_8",
+      "to_stage_id": "st_9",
+      "changed_at": "2026-11-17T10:58:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_40_1",
+      "deal_id": "deal_40",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-18T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_40_2",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-18T06:57:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_40_3",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-18T07:08:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_40_4",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-18T07:19:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_39_1",
+      "deal_id": "deal_39",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-18T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_40_5",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-18T07:30:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_39_2",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-18T07:38:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_40_6",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_5",
+      "to_stage_id": "st_6",
+      "changed_at": "2026-11-18T07:41:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_39_3",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-18T07:49:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_40_7",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_6",
+      "to_stage_id": "st_7",
+      "changed_at": "2026-11-18T07:52:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_39_4",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-18T08:00:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_40_8",
+      "deal_id": "deal_40",
+      "from_stage_id": "st_7",
+      "to_stage_id": "st_8",
+      "changed_at": "2026-11-18T08:03:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_38_1",
+      "deal_id": "deal_38",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-18T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_39_5",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-18T08:11:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_38_2",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-18T08:19:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_39_6",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_5",
+      "to_stage_id": "st_6",
+      "changed_at": "2026-11-18T08:22:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_38_3",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-18T08:30:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_39_7",
+      "deal_id": "deal_39",
+      "from_stage_id": "st_6",
+      "to_stage_id": "st_7",
+      "changed_at": "2026-11-18T08:33:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_38_4",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-18T08:41:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_37_1",
+      "deal_id": "deal_37",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-18T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_38_5",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-18T08:52:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_37_2",
+      "deal_id": "deal_37",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-18T09:00:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_38_6",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_5",
+      "to_stage_id": "st_6",
+      "changed_at": "2026-11-18T09:03:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_37_3",
+      "deal_id": "deal_37",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-18T09:11:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_38_7",
+      "deal_id": "deal_38",
+      "from_stage_id": "st_6",
+      "to_stage_id": "st_7",
+      "changed_at": "2026-11-18T09:14:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_37_4",
+      "deal_id": "deal_37",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-18T09:22:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_36_1",
+      "deal_id": "deal_36",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-18T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_37_5",
+      "deal_id": "deal_37",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-18T09:33:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_36_2",
+      "deal_id": "deal_36",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-18T09:41:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_37_6",
+      "deal_id": "deal_37",
+      "from_stage_id": "st_5",
+      "to_stage_id": "st_6",
+      "changed_at": "2026-11-18T09:44:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_36_3",
+      "deal_id": "deal_36",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-18T09:52:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_36_4",
+      "deal_id": "deal_36",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-18T10:03:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_36_5",
+      "deal_id": "deal_36",
+      "from_stage_id": "st_4",
+      "to_stage_id": "st_5",
+      "changed_at": "2026-11-18T10:14:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_35_1",
+      "deal_id": "deal_35",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-19T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_35_2",
+      "deal_id": "deal_35",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-19T06:57:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_35_3",
+      "deal_id": "deal_35",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-19T07:08:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_35_4",
+      "deal_id": "deal_35",
+      "from_stage_id": "st_3",
+      "to_stage_id": "st_4",
+      "changed_at": "2026-11-19T07:19:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_34_1",
+      "deal_id": "deal_34",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-19T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_34_2",
+      "deal_id": "deal_34",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-19T07:38:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_34_3",
+      "deal_id": "deal_34",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-19T07:49:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_33_1",
+      "deal_id": "deal_33",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-19T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_33_2",
+      "deal_id": "deal_33",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-19T08:19:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_33_3",
+      "deal_id": "deal_33",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-19T08:30:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_32_1",
+      "deal_id": "deal_32",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-19T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_32_2",
+      "deal_id": "deal_32",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-19T09:00:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_32_3",
+      "deal_id": "deal_32",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-19T09:11:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_31_1",
+      "deal_id": "deal_31",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-19T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_31_2",
+      "deal_id": "deal_31",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-19T09:41:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_31_3",
+      "deal_id": "deal_31",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-19T09:52:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_30_1",
+      "deal_id": "deal_30",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-20T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_30_2",
+      "deal_id": "deal_30",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-20T06:57:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_30_3",
+      "deal_id": "deal_30",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-20T07:08:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_29_1",
+      "deal_id": "deal_29",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-20T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_29_2",
+      "deal_id": "deal_29",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-20T07:38:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_29_3",
+      "deal_id": "deal_29",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-20T07:49:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_28_1",
+      "deal_id": "deal_28",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-20T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_28_2",
+      "deal_id": "deal_28",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-20T08:19:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_28_3",
+      "deal_id": "deal_28",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-20T08:30:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_27_1",
+      "deal_id": "deal_27",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-20T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_27_2",
+      "deal_id": "deal_27",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-20T09:00:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_27_3",
+      "deal_id": "deal_27",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-20T09:11:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_26_1",
+      "deal_id": "deal_26",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-20T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_26_2",
+      "deal_id": "deal_26",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-20T09:41:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_26_3",
+      "deal_id": "deal_26",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-20T09:52:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_25_1",
+      "deal_id": "deal_25",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-21T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_25_2",
+      "deal_id": "deal_25",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-21T06:57:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_25_3",
+      "deal_id": "deal_25",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-21T07:08:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_24_1",
+      "deal_id": "deal_24",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-21T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_24_2",
+      "deal_id": "deal_24",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-21T07:38:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_24_3",
+      "deal_id": "deal_24",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-21T07:49:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_23_1",
+      "deal_id": "deal_23",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-21T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_23_2",
+      "deal_id": "deal_23",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-21T08:19:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_23_3",
+      "deal_id": "deal_23",
+      "from_stage_id": "st_2",
+      "to_stage_id": "st_3",
+      "changed_at": "2026-11-21T08:30:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_22_1",
+      "deal_id": "deal_22",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-21T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_22_2",
+      "deal_id": "deal_22",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-21T09:00:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_21_1",
+      "deal_id": "deal_21",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-21T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_21_2",
+      "deal_id": "deal_21",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-21T09:41:00Z",
+      "changed_by_user_id": "owner_3"
+    },
+    {
+      "id": "event_20_1",
+      "deal_id": "deal_20",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-22T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_20_2",
+      "deal_id": "deal_20",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-22T06:57:00Z",
+      "changed_by_user_id": "owner_2"
+    },
+    {
+      "id": "event_19_1",
+      "deal_id": "deal_19",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-22T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_19_2",
+      "deal_id": "deal_19",
+      "from_stage_id": "st_1",
+      "to_stage_id": "st_2",
+      "changed_at": "2026-11-22T07:38:00Z",
+      "changed_by_user_id": "owner_1"
+    },
+    {
+      "id": "event_18_1",
+      "deal_id": "deal_18",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-22T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_17_1",
+      "deal_id": "deal_17",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-22T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_16_1",
+      "deal_id": "deal_16",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-22T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_15_1",
+      "deal_id": "deal_15",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-23T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_14_1",
+      "deal_id": "deal_14",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-23T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_13_1",
+      "deal_id": "deal_13",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-23T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_12_1",
+      "deal_id": "deal_12",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-23T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_11_1",
+      "deal_id": "deal_11",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-23T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_10_1",
+      "deal_id": "deal_10",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-24T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_9_1",
+      "deal_id": "deal_9",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-24T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_8_1",
+      "deal_id": "deal_8",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-24T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_7_1",
+      "deal_id": "deal_7",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-24T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_6_1",
+      "deal_id": "deal_6",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-24T09:30:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_5_1",
+      "deal_id": "deal_5",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-25T06:46:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_4_1",
+      "deal_id": "deal_4",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-25T07:27:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_3_1",
+      "deal_id": "deal_3",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-25T08:08:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_2_1",
+      "deal_id": "deal_2",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-25T08:49:00Z",
+      "changed_by_user_id": null
+    },
+    {
+      "id": "event_1_1",
+      "deal_id": "deal_1",
+      "from_stage_id": null,
+      "to_stage_id": "st_1",
+      "changed_at": "2026-11-25T09:30:00Z",
+      "changed_by_user_id": null
+    }
+  ],
+  "next_cursor": null,
+  "server_time": "2026-11-25T10:00:00Z"
+}
