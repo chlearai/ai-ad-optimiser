@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from backend.db import database, models
-from backend.db.mini_robos_models import RoboAgent, RoboAgentVersion, RoboIncident, RoboRun
+from backend.db.mini_robos_models import RoboAgent, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun
 from backend.services import mini_robos
 
 
@@ -32,7 +32,10 @@ class SchedulerTests(unittest.TestCase):
         self.scheduler.add_job(lambda: None, "interval", id="tlg_lead_routing", minutes=12)
         self.scheduler.add_job(lambda: None, "cron", id="daily_mantri_mis_refresh", hour=6, minute=30)
         with self.sessions() as db:
-            db.add(models.Account(name="The Little Gym (TLG)", account_type=models.AccountType.META, external_id="fixture"))
+            db.add_all([
+                models.Account(name="The Little Gym (TLG)", account_type=models.AccountType.META, external_id="fixture"),
+                models.Account(name="Bhago Mobility", account_type=models.AccountType.META, external_id="bhago-fixture"),
+            ])
             db.commit()
             mini_robos.seed_agents(db, self.scheduler)
 
@@ -47,6 +50,62 @@ class SchedulerTests(unittest.TestCase):
             branches = db.query(RoboAgent).filter_by(runs_on="apps_script").all()
             self.assertEqual(len(branches), 4)
             self.assertTrue(all(row.schedule is None and row.account_id is not None for row in branches))
+
+    def test_bhago_calling_seeds_are_idempotent(self):
+        expected = {
+            "bhago-calling": ("Bhago payment-reminder calls", "Run payment-reminder calls for the Bhago calling campaign."),
+            "bhago-lead-calls": ("Bhago Lead-Calls", "Run AI calls to new Bhago leads through the Samvaad Lead-Calls campaign."),
+            "bhago-i-ride-calls": ("Bhago I-Ride-Calls", "Run AI calls for the Bhago I-Ride campaign through Samvaad."),
+        }
+        with self.sessions() as db:
+            mini_robos.seed_agents(db, self.scheduler)
+            account = db.query(models.Account).filter_by(name="Bhago Mobility").one()
+            agents = db.query(RoboAgent).filter_by(account_id=account.id).all()
+            self.assertCountEqual([agent.slug for agent in agents], expected.keys())
+            for agent in agents:
+                name, rule = expected[agent.slug]
+                self.assertEqual((agent.name, agent.type, agent.runs_on), (name, "calling", "samvaad"))
+                self.assertIsNone(agent.schedule)
+                self.assertIsNone(agent.job_ref)
+                version = db.query(RoboAgentVersion).filter_by(agent_id=agent.id).one()
+                self.assertEqual((version.version, version.status, version.rules), (1, "published", [rule]))
+
+    def test_seed_removes_adguard_agents_and_history_but_leaves_jobs_running(self):
+        removed = {
+            "adguard-meta-poll": "adguard_meta_leads_poll",
+            "adguard-conversion-dispatcher": "adguard_conversion_dispatcher",
+        }
+        jobs = {ref: self.scheduler.add_job(lambda: None, "interval", id=ref, minutes=1)
+                for ref in removed.values()}
+        children = (RoboAgentVersion, RoboRun, RoboIncident, RoboAgentKey, RoboAudit)
+        with self.sessions() as db:
+            self.assertEqual(db.scalar(text("PRAGMA foreign_keys")), 0)
+            for index, (slug, job_ref) in enumerate(removed.items()):
+                agent = RoboAgent(slug=slug, name=slug, type="data_sync", runs_on="ops_app_job", job_ref=job_ref)
+                db.add(agent)
+                db.flush()
+                agent_id = agent.id
+                db.add_all([
+                    RoboAgentVersion(agent_id=agent_id, version=1, status="published", author="system"),
+                    RoboRun(id=slug, agent_id=agent_id, started_at=NOW, status="failed"),
+                    RoboIncident(agent_id=agent_id, kind="failed"),
+                    RoboAgentKey(agent_id=agent_id, key_hash=str(index) * 64),
+                    RoboAudit(agent_id=agent_id, who="system", action="run_now"),
+                ])
+            db.commit()
+            agent_ids = db.query(RoboAgent.id).filter(RoboAgent.slug.in_(removed)).all()
+            mini_robos.seed_agents(db, self.scheduler)
+            mini_robos.seed_agents(db, self.scheduler)
+            self.assertEqual(db.query(RoboAgent).filter(RoboAgent.slug.in_(removed)).count(), 0)
+            self.assertEqual(db.query(RoboAgentVersion).count(), 12)
+            for model in children:
+                self.assertEqual(db.query(model).filter(model.agent_id.in_([row.id for row in agent_ids])).count(), 0)
+
+        for job_ref, job in jobs.items():
+            self.assertIs(self.scheduler.get_job(job_ref), job)
+            mini_robos.record_event((job_ref, EVENT_JOB_EXECUTED, (NOW,), 2, NOW))
+        with self.sessions() as db:
+            self.assertEqual(db.query(RoboRun).count(), 0)
 
     def test_listener_never_calls_a_slow_or_failing_database(self):
         blocked = Event()

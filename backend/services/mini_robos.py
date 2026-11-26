@@ -12,7 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 
 from backend.db.database import SessionLocal
-from backend.db.mini_robos_models import RoboAgent, RoboAgentVersion, RoboIncident, RoboRun, utcnow
+from backend.db.mini_robos_models import RoboAgent, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
 from backend.db.models import Account
 
 
@@ -25,6 +25,7 @@ STATUSES = ("failing", "missed", "late", "no_signal", "paused", "on_track")
 DAY = timedelta(days=1)
 SIGNAL_WINDOW = 7 * DAY
 MISSED_ERROR = "Scheduler missed this job execution."
+REMOVED_SLUGS = ("adguard-meta-poll", "adguard-conversion-dispatcher")
 SEEDS = (
     ("saburi-ply-mis", "Saburi Ply MIS (WhatsApp)", "whatsapp_report", "whatsapp_cloud", "Saburi Plywood", None,
      "Send the Saburi Ply MIS to WhatsApp at 09:15, 13:15 and 17:15 IST."),
@@ -34,14 +35,14 @@ SEEDS = (
      "Route new rows from enabled centre intake sheets to the configured lead sheets."),
     ("crashclub-meta-sync", "Crash.club Meta lead sync", "data_sync", "ops_app_job", "Crash Club", "crashclub_meta_leads_sync",
      "Poll Meta lead forms, deduplicate leads in the ledger and append new leads to Google Sheets."),
-    ("adguard-meta-poll", "AdGuard Meta lead poll", "data_sync", "ops_app_job", None, "adguard_meta_leads_poll",
-     "Poll connected AdGuard Meta pages for recent lead-form submissions."),
-    ("adguard-conversion-dispatcher", "AdGuard conversion dispatcher", "data_sync", "ops_app_job", None, "adguard_conversion_dispatcher",
-     "Dispatch pending conversion signals to the configured Meta or Google destination."),
     ("sakha-reporting-sync", "Sakha reporting sync", "data_sync", "ops_app_job", None, "sakha_reporting_sync",
      "Refresh each Sakha company’s reporting mirror in its configured sample or live mode."),
     ("bhago-calling", "Bhago payment-reminder calls", "calling", "samvaad", "Bhago Mobility", None,
      "Run payment-reminder calls for the Bhago calling campaign."),
+    ("bhago-lead-calls", "Bhago Lead-Calls", "calling", "samvaad", "Bhago Mobility", None,
+     "Run AI calls to new Bhago leads through the Samvaad Lead-Calls campaign."),
+    ("bhago-i-ride-calls", "Bhago I-Ride-Calls", "calling", "samvaad", "Bhago Mobility", None,
+     "Run AI calls for the Bhago I-Ride campaign through Samvaad."),
 ) + tuple(
     (f"tlg-{slug}-script", f"TLG {name} Apps Script", "lead_routing", "apps_script", "The Little Gym (TLG)", None,
      f"Route incoming leads for the {name} centre through its branch Apps Script.")
@@ -84,6 +85,13 @@ def trigger_schedule(trigger):
 
 
 def seed_agents(db, scheduler):
+    removed_ids = db.scalars(select(RoboAgent.id).where(RoboAgent.slug.in_(REMOVED_SLUGS))).all()
+    if removed_ids:
+        # SQLite can run with foreign key enforcement disabled.
+        for model in (RoboAgentVersion, RoboRun, RoboIncident, RoboAgentKey, RoboAudit):
+            db.query(model).filter(model.agent_id.in_(removed_ids)).delete()
+        db.query(RoboAgent).filter(RoboAgent.id.in_(removed_ids)).delete()
+
     jobs = {job.id: job for job in scheduler.get_jobs()}
     for slug, name, kind, source, account_name, ref, description in SEEDS:
         agent = db.query(RoboAgent).filter_by(slug=slug).first()
