@@ -25,6 +25,8 @@ class User(Base):
     access_audit_review = Column(Boolean)
     access_adguard = Column(Boolean)
     access_sakha = Column(Boolean)
+    access_mini_robos = Column(Boolean)
+    edit_mini_robos = Column(Boolean)
     role = Column(String)
     is_active = Column(Boolean)
     onboarding_completed = Column(Boolean)
@@ -72,7 +74,7 @@ class InvitationRecoveryTests(TestCase):
         req = SimpleNamespace(email='new@example.test', full_name='New', mobile='', role='user',
                               access_adpulse=True, access_insightdesk=False, access_revenueops=False,
                               access_audit_review=False, access_adguard=False, access_sakha=True,
-                              assigned_account_ids=[])
+                              access_mini_robos=False, edit_mini_robos=False, assigned_account_ids=[])
         result = namespace['create_user'](req, self.request, self.db, self.admin)
         self.assertFalse(result['email_sent'])
         self.assertEqual(result['email_status'], 'failed')

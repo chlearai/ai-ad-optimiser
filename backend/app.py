@@ -15,6 +15,7 @@ from backend.routes import crashclub
 from backend.routes import adguard
 from backend.routes import adguard_support
 from backend.routes import sakha
+from backend.routes import mini_robos
 from backend.routes import adguard_v1
 from backend.routes import billing
 from fastapi.staticfiles import StaticFiles
@@ -117,6 +118,7 @@ app.include_router(crashclub.router)
 app.include_router(adguard.router)
 app.include_router(adguard_support.router)
 app.include_router(sakha.router)
+app.include_router(mini_robos.router)
 app.include_router(adguard_v1.router)
 app.include_router(billing.router)
 
@@ -258,6 +260,14 @@ def get_revenueops_ui(request: Request):
 def get_sakha_ui():
     frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
     with open(os.path.join(frontend_dir, "sakha.html"), "r", encoding="utf-8") as page:
+        return HTMLResponse(content=page.read())
+
+
+@app.get("/mini-robos", response_class=HTMLResponse)
+@app.get("/mini-robos/{slug}", response_class=HTMLResponse)
+def get_mini_robos_ui():
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    with open(os.path.join(frontend_dir, "mini_robos.html"), encoding="utf-8") as page:
         return HTMLResponse(content=page.read())
 
 

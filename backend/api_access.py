@@ -33,6 +33,7 @@ PUBLIC_ROUTES = {
     ("POST", "/api/v1/tag/otp"): "Site-tag OTP",
     ("POST", "/api/v1/webhooks/crm"): "CRM stage callback using a workspace secret",
     ("POST", "/api/v1/webhooks/botcaller"): "BotCaller callback using a workspace secret",
+    ("POST", "/api/mini-robos/heartbeat"): "Mini Robos reporter key",
     ("POST", "/api/tlg/{account_id}/centres/{centre_id}/sheet-counts"): "Apps Script using a centre-scoped reporting token",
 }
 
@@ -69,6 +70,8 @@ def authorize_api(request: Request, user=Depends(get_current_user)):
     method = request.method
     if (method, path) in PUBLIC_ROUTES:
         return
+    if (method, path) == ("GET", "/api/mini-robos/agents/{slug}/config"):
+        return  # The private config handler requires a key scoped to the requested agent.
     require_user(user)
     if (path in ADMIN_ROUTES or _within(path, ADMIN_PREFIXES)
             or (method in WRITE_METHODS and _within(path, ADMIN_WRITE_PREFIXES))):

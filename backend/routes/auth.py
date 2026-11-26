@@ -83,6 +83,8 @@ class UserCreateRequest(BaseModel):
     access_audit_review: bool = False
     access_adguard: bool = False
     access_sakha: bool = False
+    access_mini_robos: bool = False
+    edit_mini_robos: bool = False
 
 
 class UserUpdateRequest(BaseModel):
@@ -99,6 +101,8 @@ class UserUpdateRequest(BaseModel):
     access_audit_review: Optional[bool] = None
     access_adguard: Optional[bool] = None
     access_sakha: Optional[bool] = None
+    access_mini_robos: Optional[bool] = None
+    edit_mini_robos: Optional[bool] = None
 
 
 class SetPasswordRequest(BaseModel):
@@ -518,6 +522,8 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
         access_audit_review=req.access_audit_review,
         access_adguard=req.access_adguard,
         access_sakha=req.access_sakha,
+        access_mini_robos=req.access_mini_robos,
+        edit_mini_robos=req.edit_mini_robos,
         onboarding_token=token,
         onboarding_token_expires_at=token_expires,
         onboarding_completed=False,
@@ -753,6 +759,10 @@ def update_user(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_
         user.access_adguard = req.access_adguard
     if req.access_sakha is not None:
         user.access_sakha = req.access_sakha
+    if req.access_mini_robos is not None:
+        user.access_mini_robos = req.access_mini_robos
+    if req.edit_mini_robos is not None:
+        user.edit_mini_robos = req.edit_mini_robos
 
     db.commit()
     db.refresh(user)
