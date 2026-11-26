@@ -62,7 +62,7 @@ class SheetTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_links_persist_and_save_independently(self):
-        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment', 'lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report']
+        sources = ['swiggy', 'zomato', 'qwqer', 'payment_reminder', 'dialed', 'test', 'test_lead', 'test_payment', 'lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report', 'client_lead_calling_report_new', 'client_payment_reminder_report_new']
         self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'], dict.fromkeys(sources, ''))
         for source in sources:
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=0'
@@ -74,10 +74,10 @@ class SheetTests(unittest.TestCase):
         for source in sources[1:]:
             self.assertEqual(saved[source], reloaded[source])
         with self.Session() as db:
-            self.assertEqual(db.query(AppSetting).count(), 12)
+            self.assertEqual(db.query(AppSetting).count(), 14)
 
     def test_report_links_are_independent_and_cannot_queue_calls(self):
-        for source in ('lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report'):
+        for source in ('lead_calling_report', 'payment_calling_report', 'client_lead_calling_report', 'client_payment_reminder_report', 'client_lead_calling_report_new', 'client_payment_reminder_report_new'):
             url = 'https://docs.google.com/spreadsheets/d/' + source + '/edit#gid=123'
             self.assertEqual(self.client.put('/api/bhago/1/sheets/' + source, json={'url': url}).status_code, 200)
             self.assertEqual(self.client.get('/api/bhago/1/sheets').json()['sheets'][source], url)
@@ -88,6 +88,21 @@ class SheetTests(unittest.TestCase):
         self.assertIn('payment_calling_report', saved['payment_calling_report'])
         with self.Session() as db:
             self.assertIsNone(db.query(AppSetting).filter_by(key='bhago:1:run:current').first())
+
+    def test_new_client_links_do_not_replace_existing_links(self):
+        sources = ('client_lead_calling_report', 'client_payment_reminder_report')
+        for source in sources:
+            for key in (source, source + '_new'):
+                url = 'https://docs.google.com/spreadsheets/d/' + key + '/edit'
+                self.assertEqual(self.client.put('/api/bhago/1/sheets/' + key, json={'url': url}).status_code, 200)
+        before = self.client.get('/api/bhago/1/sheets').json()['sheets']
+        changed = sources[0] + '_new'
+        for url in ('https://docs.google.com/spreadsheets/d/replacement/edit', ''):
+            self.assertEqual(self.client.put('/api/bhago/1/sheets/' + changed, json={'url': url}).status_code, 200)
+            after = self.client.get('/api/bhago/1/sheets').json()['sheets']
+            self.assertEqual(after[changed], url)
+            for key in (sources[0], sources[1], sources[1] + '_new'):
+                self.assertEqual(after[key], before[key])
 
     def test_invalid_urls_and_sources_do_not_save(self):
         for url in ['javascript:alert(1)', 'https://docs.google.com.evil.test/spreadsheets/d/abc',

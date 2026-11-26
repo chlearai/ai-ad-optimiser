@@ -2938,6 +2938,20 @@
         };
         return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[kind] || paths.phone}</svg>`;
     }
+    const bhagoClientReportSources = ['client_lead_calling_report', 'client_payment_reminder_report'];
+    function bhagoSheetFields(key) {
+        return bhagoClientReportSources.includes(key) ? [key, key + '_new'] : [key];
+    }
+    function renderBhagoSheetField(key, label) {
+        return `<div class="bhago-source-body">
+            <label class="bhago-field-label" for="bhagoUrl_${key}">${label}</label>
+            <div class="bhago-link-row">
+                <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
+                <button type="button" id="bhagoSave_${key}" class="btn bhago-save" disabled onclick="saveBhagoSheet('${key}')">Save</button>
+            </div>
+            <div class="bhago-link-meta"><p class="bhago-sheet-status" role="status" id="bhagoStatus_${key}">Loading saved link…</p><a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
+        </div>`;
+    }
     let bhagoRenderVersion = 0;
 
     async function renderBhagoEmptyState() {
@@ -2965,14 +2979,7 @@
                     <div class="bhago-source-title"><span class="bhago-source-icon ${key}">${key.startsWith('test_') || key.endsWith('_report') || key === 'payment_reminder' ? bhagoIcon(bhagoSourceDetails[key][0]) : bhagoSourceDetails[key][0]}</span><div><h3 id="bhagoHeading_${key}">${label}</h3><p class="bhago-source-description">${bhagoSourceDetails[key][1]}</p></div></div>
                     <span class="bhago-mode">${bhagoSourceDetails[key][2]}</span>
                 </div>
-                <div class="bhago-source-body">
-                    <label class="bhago-field-label" for="bhagoUrl_${key}">Google Sheet link</label>
-                    <div class="bhago-link-row">
-                        <input type="url" id="bhagoUrl_${key}" placeholder="https://docs.google.com/spreadsheets/d/..." maxlength="2048" disabled oninput="document.getElementById('bhagoStatus_${key}').textContent='Unsaved changes'">
-                        <button type="button" id="bhagoSave_${key}" class="btn bhago-save" disabled onclick="saveBhagoSheet('${key}')">Save</button>
-                    </div>
-                    <div class="bhago-link-meta"><p class="bhago-sheet-status" role="status" id="bhagoStatus_${key}">Loading saved link…</p><a id="bhagoOpen_${key}" target="_blank" rel="noopener noreferrer" hidden>Open sheet &#8599;</a></div>
-                </div>
+                ${bhagoSheetFields(key).map((field, index) => renderBhagoSheetField(field, bhagoClientReportSources.includes(key) ? 'Google Sheet link - ' + (index === 0 ? 'Old' : 'New') : 'Google Sheet link')).join('')}
                 ${key.endsWith('_report') ? '' : `<div class="bhago-source-footer">
                     ${['swiggy','zomato','qwqer'].includes(key) ? `<div class="bhago-range"><label>Lead dates from<input type="date" id="bhagoFrom_${key}" value="${bhagoPreviousDay()}" oninput="this.dataset.userEdited='true'"></label><label>to<input type="date" id="bhagoTo_${key}" value="${bhagoPreviousDay()}" oninput="this.dataset.userEdited='true'"></label></div>` : `<span class="bhago-footer-note">${key.startsWith('test_') ? 'Read the latest data from this test sheet' : 'Name, mobile number, vehicle &amp; outstanding amount'}</span>`}
                     <button type="button" class="btn bhago-run" id="bhagoRun_${key}" aria-label="RUN" onclick="startBhagoRun('${key}','${key === 'payment_reminder' || key === 'test_payment' ? 'payment' : 'lead'}')">${bhagoIcon('play')}RUN</button>
@@ -2983,7 +2990,7 @@
         try {
             const data = await api('GET', `/bhago/${accountId}/sheets`);
             if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
-            bhagoSources.forEach(([key]) => {
+            bhagoSources.flatMap(([key]) => bhagoSheetFields(key)).forEach(key => {
                 const url = data.sheets[key] || '';
                 $('bhagoUrl_' + key).value = url;
                 $('bhagoUrl_' + key).disabled = false;
@@ -2994,7 +3001,7 @@
             pollBhagoRun(accountId, version);
         } catch (e) {
             if (accountId !== selectedAccountId || version !== bhagoRenderVersion || !$('bhagoSheetsWorkspace')) return;
-            bhagoSources.forEach(([key]) => { $('bhagoStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
+            bhagoSources.flatMap(([key]) => bhagoSheetFields(key)).forEach(key => { $('bhagoStatus_' + key).textContent = 'Could not load saved link: ' + e.message; });
             $('bhagoRetryLoad').hidden = false;
         }
     }
