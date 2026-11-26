@@ -7,6 +7,7 @@ import os
 import time
 from datetime import datetime, timedelta, date, timezone
 from typing import Dict, Any, Optional
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED, EVENT_JOB_SUBMITTED
 from apscheduler.schedulers.background import BackgroundScheduler
 from backend.services.auditor import audit_account, audit_all_accounts
 from backend.services.keyword_auditor import run_keyword_audit
@@ -62,6 +63,15 @@ def start_scheduler():
     from backend.services.sakha.sync import sync_all as sync_sakha
     _scheduler.add_job(sync_sakha, "interval", minutes=15, id="sakha_reporting_sync", replace_existing=True,
                        max_instances=1, coalesce=True, next_run_time=datetime.now(timezone.utc) + timedelta(seconds=1))
+    from backend.services import mini_robos
+    try:
+        with SessionLocal() as db:
+            mini_robos.seed_agents(db, _scheduler)
+    except Exception:
+        logger.warning("Mini Robos agent seeding failed")
+    mini_robos.start_event_worker()
+    _scheduler.add_listener(mini_robos.listen, EVENT_JOB_SUBMITTED | EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
+    _scheduler.add_job(mini_robos.watchdog, "interval", minutes=5, id="mini_robos_watchdog", max_instances=1, coalesce=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 
