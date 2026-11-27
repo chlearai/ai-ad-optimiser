@@ -656,12 +656,16 @@ def main():
                 time.sleep(5)
                 continue
             if ready and not first:
+                scheduler_busy = False
                 if os.environ.get('BHAGO_BACKLOG_ENABLED') == 'true':
                     from backlog import tick as backlog_tick
-                    backlog_tick()
+                    scheduler_busy = bool(backlog_tick())
                 else:
                     schedule_tick()
                 if dispatch_pending(ready):
+                    time.sleep(5)
+                    continue
+                if scheduler_busy:
                     time.sleep(5)
                     continue
             if not first:

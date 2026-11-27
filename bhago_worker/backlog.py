@@ -143,9 +143,9 @@ def tick(moment=None):
     if not config.get('enabled'):return
     if config.get('start_date') and moment.date().isoformat()<config['start_date']:return
     full_payment=config.get('payment_policy',{}).get('mode')=='full_sheet_daily'
-    if full_payment and payment_daily_tick(moment,config):return
+    if full_payment and payment_daily_tick(moment,config):return True
     if _control:
-        control(None,None,None);return
+        control(None,None,None);return True
     inflights=load_states(['bhago:18:inflight:lead','bhago:18:inflight:payment'])
     # Closing has priority over a stalled/failed creation request. It never creates a call.
     for kind in (('lead',) if full_payment else ('lead','payment')):
@@ -187,10 +187,11 @@ def tick(moment=None):
             cur.execute('SELECT value FROM app_settings WHERE key=%s FOR UPDATE',(KEY,));old=cur.fetchone()
             if old and json.loads(old[0]).get('state') in ('queued_preview','reading','ready','queued_launch','launching'):return
             cur.execute('INSERT INTO app_settings(key,value,created_at,updated_at) VALUES(%s,%s,NOW(),NOW()) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()', (KEY,json.dumps(run)))
-        return
+        return True
     if inspections:
         kind,inflight=min(inspections,key=lambda item:item[1].get('last_checked_at',''))
         control(kind,inflight,'inspect')
+        return True
 
 
 def select_planned(run, live_rows):
