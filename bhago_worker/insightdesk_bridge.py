@@ -669,14 +669,16 @@ def main():
                     time.sleep(5)
                     continue
             if not first:
-                from client_reports import tick as client_report_tick
-                client_report_tick()
-            if ready and not first:
-                from report_snapshot import tick as report_tick
-                report_tick()
-                if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
-                    from result_sync import tick as sync_tick
-                    sync_tick()
+                from google_access import background_tasks
+                with background_tasks():
+                    from client_reports import tick as client_report_tick
+                    client_report_tick()
+                    if ready:
+                        from report_snapshot import tick as report_tick
+                        report_tick()
+                        if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
+                            from result_sync import tick as sync_tick
+                            sync_tick()
             raw = get_value(KEY)
             run = json.loads(raw) if raw else None
             if not first and (not run or run.get('state') not in ('queued_preview','reading','ready','queued_launch','launching')):

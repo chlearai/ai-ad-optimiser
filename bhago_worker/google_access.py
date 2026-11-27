@@ -4,6 +4,35 @@ from urllib.parse import quote
 import time
 
 _last_sheet_request=0.0
+_background_tasks=False
+_last_queue_check=0.0
+
+
+class CampaignWaiting(RuntimeError):
+    pass
+
+
+@contextmanager
+def background_tasks():
+    """Let idempotent report work yield at API boundaries to an approved campaign."""
+    global _background_tasks
+    previous=_background_tasks
+    _background_tasks=True
+    try:yield
+    finally:_background_tasks=previous
+
+
+def yield_to_campaign():
+    global _last_queue_check
+    if not _background_tasks:return
+    moment=time.monotonic()
+    if moment-_last_queue_check<3:return
+    from insightdesk_bridge import get_value, KEY
+    import json
+    run=json.loads(get_value(KEY) or '{}')
+    if run.get('state') in ('queued_preview','queued_launch'):
+        raise CampaignWaiting('Report work deferred for a waiting Bhago campaign')
+    _last_queue_check=moment
 
 WRITE_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
 META_SCOPE = 'https://www.googleapis.com/auth/drive.metadata.readonly'
@@ -12,6 +41,7 @@ SCOPES = [WRITE_SCOPE, META_SCOPE, 'openid', 'https://www.googleapis.com/auth/us
 
 @contextmanager
 def google_session(write=False):
+    yield_to_campaign()
     from credential_store import read_secret
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import AuthorizedSession
@@ -42,12 +72,14 @@ class SheetsWriter:
                 if match:self.allowed.add(match[1])
 
     def request(self, method, spreadsheet_id, suffix='', **kwargs):
+        yield_to_campaign()
         if spreadsheet_id not in self.allowed:
             raise ValueError('This spreadsheet is not an approved saved Bhago source.')
         url = 'https://sheets.googleapis.com/v4/spreadsheets/' + spreadsheet_id + suffix
         global _last_sheet_request
         # Stay below the per-user Sheets request rate, including result polling.
         for attempt in range(4):
+            yield_to_campaign()
             time.sleep(max(0,1.2-(time.monotonic()-_last_sheet_request)))
             _last_sheet_request=time.monotonic()
             response = self.session.request(method, url, timeout=45, **kwargs)
@@ -59,6 +91,7 @@ class SheetsWriter:
         return response.json()
 
     def can_edit(self, spreadsheet_id):
+        yield_to_campaign()
         if spreadsheet_id not in self.allowed:return False
         response = self.session.get('https://www.googleapis.com/drive/v3/files/' + spreadsheet_id,
                                     params={'fields':'id,capabilities(canEdit)', 'supportsAllDrives':'true'}, timeout=30)
