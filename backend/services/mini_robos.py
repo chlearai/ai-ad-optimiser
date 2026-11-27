@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED, EVENT_JOB_SUBMITTED
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from backend.db.database import SessionLocal
 from backend.db.mini_robos_models import RoboAgent, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
@@ -26,6 +26,13 @@ DAY = timedelta(days=1)
 SIGNAL_WINDOW = 7 * DAY
 MISSED_ERROR = "Scheduler missed this job execution."
 REMOVED_SLUGS = ("adguard-meta-poll", "adguard-conversion-dispatcher")
+EDUINFRA_OUTBOUND_RULES = (
+    "Calling window 10:00 AM–6:00 PM IST",
+    "Exotel number ending 0800, one shared channel, one call at a time, 4-second dial delay",
+    "One attempt per number; automatic retries off",
+    "Speaks first: 'Hello, am I speaking with {{CONTACT_NAME}}?' then waits for a reply",
+    "Data: EduInfra Expand CRM leads, deduplicated, excluding do-not-call, opt-outs and previous batches",
+)
 SEEDS = (
     ("saburi-ply-mis", "Saburi Ply MIS (WhatsApp)", "whatsapp_report", "whatsapp_cloud", "Saburi Plywood", None,
      "Send the Saburi Ply MIS to WhatsApp at 09:15, 13:15 and 17:15 IST."),
@@ -43,6 +50,16 @@ SEEDS = (
      "Run AI calls to new Bhago leads through the Samvaad Lead-Calls campaign."),
     ("bhago-i-ride-calls", "Bhago I-Ride-Calls", "calling", "samvaad", "Bhago Mobility", None,
      "Run AI calls for the Bhago I-Ride campaign through Samvaad."),
+    ("eduinfra-specifiers", "EduInfra Nisha — Specifiers", "calling", "samvaad", "EduInfra", None,
+     "Outreach to architects, designers, engineers, consultants, and campus planning or design specialists. "
+     "Confirm practice and project experience, discuss curated meetings and partner participation, and route follow-up to the curation team."),
+    ("eduinfra-demand-creators", "EduInfra Nisha — Demand Creators", "calling", "samvaad", "EduInfra", None,
+     "Outreach to school, college, and university owners, promoters, leaders, and campus-project decision-makers. "
+     "Qualify projects and decision roles, explain delegate participation, and record follow-up."),
+    ("eduinfra-commercial", "EduInfra Nisha — Commercial Participants", "calling", "samvaad", "EduInfra", None,
+     "Outreach to commercial solution partners, infrastructure vendors, suppliers, and technology providers. "
+     "Qualify offerings, discuss category exclusivity, pricing, showcases, and buyer meetings."),
+    ("eduinfra-inbound", "EduInfra inbound agent", "calling", "samvaad", "EduInfra", None, "Incoming calls."),
 ) + tuple(
     (f"tlg-{slug}-script", f"TLG {name} Apps Script", "lead_routing", "apps_script", "The Little Gym (TLG)", None,
      f"Route incoming leads for the {name} centre through its branch Apps Script.")
@@ -92,27 +109,42 @@ def seed_agents(db, scheduler):
             db.query(model).filter(model.agent_id.in_(removed_ids)).delete()
         db.query(RoboAgent).filter(RoboAgent.id.in_(removed_ids)).delete()
 
+    eduinfra_ids = db.scalars(select(Account.id).where(
+        func.lower(func.replace(Account.name, " ", "")).contains("eduinfra")
+    ).limit(2)).all()
+    eduinfra_id = eduinfra_ids[0] if len(eduinfra_ids) == 1 else None
     jobs = {job.id: job for job in scheduler.get_jobs()}
     for slug, name, kind, source, account_name, ref, description in SEEDS:
         agent = db.query(RoboAgent).filter_by(slug=slug).first()
-        account = None
-        if account_name:
+        is_eduinfra = account_name == "EduInfra"
+        account = eduinfra_id if is_eduinfra else None
+        if account_name and not is_eduinfra:
             matches = db.query(Account).filter(Account.name.ilike(account_name)).limit(2).all()
             if len(matches) == 1:
                 account = matches[0].id
         schedule = trigger_schedule(jobs[ref].trigger) if ref in jobs else None
         if not agent:
+            source_url = None
+            rules = [description]
+            if is_eduinfra:
+                source_url = "https://samvaad.sakhaa.ai/dashboard"
+                if slug == "eduinfra-inbound":
+                    rules.append("Handles incoming calls; script not yet recorded")
+                else:
+                    rules.extend(EDUINFRA_OUTBOUND_RULES)
+            elif ref:
+                source_url = "https://github.com/chlearai/ai-ad-optimiser/blob/main/backend/services/scheduler.py"
             agent = RoboAgent(slug=slug, name=name, account_id=account, type=kind,
                               runs_on=source, job_ref=ref,
-                              source_url="https://github.com/chlearai/ai-ad-optimiser/blob/main/backend/services/scheduler.py" if ref else None,
+                              source_url=source_url,
                               schedule=SABURI_SCHEDULE if slug == "saburi-ply-mis" else schedule,
                               expects_output=slug == "saburi-ply-mis")
             db.add(agent)
             db.flush()
-            db.add(RoboAgentVersion(agent_id=agent.id, version=1, rules=[description],
+            db.add(RoboAgentVersion(agent_id=agent.id, version=1, rules=rules,
                                     status="published", author="system", published_at=utcnow()))
         else:
-            if agent.account_id is None and account is not None:
+            if is_eduinfra or (agent.account_id is None and account is not None):
                 agent.account_id = account
             if ref:
                 agent.schedule = schedule

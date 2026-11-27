@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import re
 import tempfile
 from pathlib import Path
 from queue import Queue
@@ -42,14 +43,54 @@ class SchedulerTests(unittest.TestCase):
     def test_seed_is_idempotent_and_uses_actual_triggers(self):
         with self.sessions() as db:
             mini_robos.seed_agents(db, self.scheduler)
-            self.assertEqual(db.query(RoboAgent).count(), 12)
-            self.assertEqual(db.query(RoboAgentVersion).count(), 12)
+            self.assertEqual(db.query(RoboAgent).count(), 16)
+            self.assertEqual(db.query(RoboAgentVersion).count(), 16)
             self.assertEqual(db.query(RoboAgent).filter_by(slug="tlg-lead-routing").one().schedule,
                              {"kind": "interval", "minutes": 12})
             self.assertEqual(db.query(RoboAgent).filter_by(slug="mantri-mis-refresh").one().schedule["times"], ["06:30"])
             branches = db.query(RoboAgent).filter_by(runs_on="apps_script").all()
             self.assertEqual(len(branches), 4)
             self.assertTrue(all(row.schedule is None and row.account_id is not None for row in branches))
+
+    def test_eduinfra_seeds_use_only_a_unique_existing_account(self):
+        names = {
+            "eduinfra-specifiers": "EduInfra Nisha \u2014 Specifiers",
+            "eduinfra-demand-creators": "EduInfra Nisha \u2014 Demand Creators",
+            "eduinfra-commercial": "EduInfra Nisha \u2014 Commercial Participants",
+            "eduinfra-inbound": "EduInfra inbound agent",
+        }
+        with self.sessions() as db:
+            agents = db.query(RoboAgent).filter(RoboAgent.slug.in_(names))
+            self.assertEqual({agent.slug: agent.name for agent in agents}, names)
+            self.assertTrue(all(agent.account_id is None for agent in agents))
+            self.assertEqual(db.query(models.Account).count(), 2)
+            account = models.Account(name="CHLEAR EDU Infra Expand", account_type=models.AccountType.META, external_id="edu-fixture")
+            db.add(account)
+            db.commit()
+            mini_robos.seed_agents(db, self.scheduler)
+            mini_robos.seed_agents(db, self.scheduler)
+            self.assertEqual(agents.count(), 4)
+            for agent in agents:
+                self.assertEqual(agent.account_id, account.id)
+                self.assertEqual((agent.type, agent.runs_on, agent.status), ("calling", "samvaad", "no_signal"))
+                self.assertEqual(agent.source_url, "https://samvaad.sakhaa.ai/dashboard")
+                self.assertIsNone(agent.job_ref)
+                self.assertIsNone(agent.schedule)
+                version = db.query(RoboAgentVersion).filter_by(agent_id=agent.id).one()
+                self.assertEqual((version.version, version.status, version.author, version.prompt), (1, "published", "system", ""))
+                if agent.slug == "eduinfra-inbound":
+                    self.assertEqual(version.rules[-1], "Handles incoming calls; script not yet recorded")
+                    self.assertEqual(len(version.rules), 2)
+                    self.assertFalse(re.search(r"\d{4,}", " ".join(version.rules)))
+                else:
+                    self.assertEqual(len(version.rules), 6)
+                    self.assertEqual(re.findall(r"\d{4,}", " ".join(version.rules)), ["0800"])
+
+            db.add(models.Account(name="Second eduinfra account", account_type=models.AccountType.META, external_id="ambiguous"))
+            db.commit()
+            mini_robos.seed_agents(db, self.scheduler)
+            self.assertTrue(all(agent.account_id is None for agent in agents))
+            self.assertEqual(db.query(models.Account).count(), 4)
 
     def test_bhago_calling_seeds_are_idempotent(self):
         expected = {
@@ -97,7 +138,7 @@ class SchedulerTests(unittest.TestCase):
             mini_robos.seed_agents(db, self.scheduler)
             mini_robos.seed_agents(db, self.scheduler)
             self.assertEqual(db.query(RoboAgent).filter(RoboAgent.slug.in_(removed)).count(), 0)
-            self.assertEqual(db.query(RoboAgentVersion).count(), 12)
+            self.assertEqual(db.query(RoboAgentVersion).count(), 16)
             for model in children:
                 self.assertEqual(db.query(model).filter(model.agent_id.in_([row.id for row in agent_ids])).count(), 0)
 
