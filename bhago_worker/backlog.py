@@ -230,6 +230,8 @@ def control(kind, campaign, action):
         verified=now()
         inflight=dict(task['campaign'],state='awaiting_reconciliation' if result['state']=='complete' else 'stopped',
                       stopped_at=verified,verified_complete=result['state']=='complete')
+        if result.get('csvPath') and result['state']=='complete':
+            inflight.update(completed_export=result['csvPath'],exported_at=result['exported_at'])
         save_state('bhago:18:inflight:'+task['kind'],inflight)
         stopped=load_state('bhago:18:stopped:'+task['kind']) or []
         stopped=[p for p in stopped if p['run_id']!=inflight['run_id']]

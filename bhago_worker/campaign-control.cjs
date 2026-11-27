@@ -14,7 +14,17 @@ exports.run=async function({page,PRIVATE,assertWorkspace},request){
   if(await card.count()!==1)throw new Error('Managed campaign is missing or ambiguous');
   for(const [label,state] of [['Completed','complete'],['Stopped','stopped']]){
    if(await card.locator('span').filter({hasText:new RegExp('^'+label+'$')}).count()===1){
-    fs.writeFileSync(resultFile,JSON.stringify({state}));return;
+    if(state==='complete'&&task.action==='inspect') {
+     await card.getByRole('button',{name:'View Details',exact:true}).click();
+     await page.getByRole('heading',{name:task.campaign,exact:true}).waitFor({timeout:20000});
+     await page.getByRole('combobox',{name:'Date range',exact:true}).selectOption({label:'All time'});
+     const download=page.waitForEvent('download',{timeout:30000});
+     await page.getByRole('button',{name:'Export',exact:true}).click();
+     const csvPath=base+'.completed.csv';
+     await (await download).saveAs(csvPath);
+     fs.writeFileSync(resultFile,JSON.stringify({state,csvPath,exported_at:new Date().toISOString()}));
+    } else fs.writeFileSync(resultFile,JSON.stringify({state}));
+    return;
    }
   }
   if(task.action==='inspect'){fs.writeFileSync(resultFile,JSON.stringify({state:'pending'}));return;}

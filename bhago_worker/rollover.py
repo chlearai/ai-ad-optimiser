@@ -1,6 +1,7 @@
 """Close old campaigns permanently; carry only remaining attempts into NEW campaigns."""
 import datetime as dt
 import json
+from pathlib import Path
 from outcomes import (load_state, save_state, state_key, signature, parse_export,
                       merge_calls, calls_complete, TERMINAL, write_attempts)
 from google_access import google_session, SheetsWriter
@@ -27,20 +28,28 @@ def settle(kind, moment):
     stopped=load_state('bhago:18:stopped:'+kind) or []
     if not stopped:return True
     sync=json.loads(get_value('bhago:18:result_sync') or '{}')
-    if sync.get('state')!='ready' or not sync.get('exported_at'):return False
-    exported_at=dt.datetime.fromisoformat(sync['exported_at'].replace('Z','+00:00'))
     remaining=[]
     for closed in stopped:
+        own_export=closed.get('completed_export') if closed.get('verified_complete') else None
+        stamp=closed.get('exported_at') if own_export else sync.get('exported_at')
+        if not stamp or (not own_export and sync.get('state')!='ready'):
+            remaining.append(closed);continue
+        exported_at=dt.datetime.fromisoformat(stamp.replace('Z','+00:00'))
         stopped_at=dt.datetime.fromisoformat(closed['stopped_at'])
         # Do not requeue on the same day; allow final in-flight outcomes to settle overnight.
         if ((not closed.get('verified_complete') and moment.date().isoformat()<=closed['day']) or
                 exported_at.astimezone(IST).date()!=moment.date() or
-                exported_at<=stopped_at+dt.timedelta(seconds=0 if closed.get('verified_complete') else 60)):
+                (not own_export and exported_at<=stopped_at+dt.timedelta(seconds=0 if closed.get('verified_complete') else 60))):
             remaining.append(closed);continue
         job=load_state('bhago:18:manifest:'+closed['run_id'])
         if not job:
             remaining.append(closed);continue
-        exported=parse_export((PRIVATE/'latest-outcomes.csv').read_text(encoding='utf-8-sig'))
+        exported=completion_export(closed,PRIVATE) if own_export else parse_export((PRIVATE/'latest-outcomes.csv').read_text(encoding='utf-8-sig'))
+        if own_export:
+            expected={r['phone'] for r in job['recipients']}
+            actual={'+91'+''.join(filter(str.isdigit,c.get('To Number','')))[-10:] for c in exported}
+            if actual!=expected or any(c.get('Status','').casefold() not in TERMINAL for c in exported):
+                remaining.append(closed);continue
         held=False
         with google_session(write=True) as session:
             writer=SheetsWriter(session)
@@ -79,3 +88,14 @@ def settle(kind, moment):
                 save_state('bhago:18:inflight:'+kind,dict(active,state='complete'))
     save_state('bhago:18:stopped:'+kind,remaining)
     return not remaining
+
+
+def completion_export(closed,private):
+    """Use only the registered campaign's complete UI export in the private jobs directory."""
+    path=Path(closed['completed_export']).resolve()
+    if not path.is_relative_to((private/'jobs').resolve()) or path.suffix!='.csv':
+        raise ValueError('Completed campaign export is outside the private jobs directory.')
+    rows=parse_export(path.read_text(encoding='utf-8-sig'))
+    if not rows or any(r.get('Campaign Name')!=closed['campaign'] for r in rows):
+        raise ValueError('Completed campaign export has missing or mismatched campaign records.')
+    return rows
