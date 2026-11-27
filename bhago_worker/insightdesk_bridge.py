@@ -586,6 +586,24 @@ def launch(run):
         update_run(run["id"], ["launching"], state="uncertain" if dispatched else "failed", message=safe_error(exc))
 
 
+def dispatch_pending(ready, first=False):
+    """Run durable campaign work before potentially slow report reconciliation."""
+    raw = get_value(KEY)
+    run = json.loads(raw) if raw else None
+    if first and run and run['state'] in ('reading', 'launching'):
+        update_run(run['id'], [run['state']], state='uncertain' if run['state']=='launching' else 'failed',
+                   message='Worker restarted. Review Samvaad before another campaign; no automatic retry was made.')
+        return True
+    if run and ready and calling_enabled():
+        if run['state']=='queued_preview':
+            preview(run)
+            return True
+        if run['state']=='queued_launch':
+            launch(run)
+            return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-source", choices=["swiggy", "zomato", "qwqer", "payment_reminder", "test", "test_lead", "test_payment"])
@@ -633,6 +651,19 @@ def main():
                 command({"action": "campaign_step", "stage": "insightdesk_ping"})
                 last_ping = time.monotonic()
             ready = heartbeat()
+            if dispatch_pending(ready, first):
+                first=False
+                time.sleep(5)
+                continue
+            if ready and not first:
+                if os.environ.get('BHAGO_BACKLOG_ENABLED') == 'true':
+                    from backlog import tick as backlog_tick
+                    backlog_tick()
+                else:
+                    schedule_tick()
+                if dispatch_pending(ready):
+                    time.sleep(5)
+                    continue
             if not first:
                 from client_reports import tick as client_report_tick
                 client_report_tick()
@@ -642,21 +673,8 @@ def main():
                 if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
                     from result_sync import tick as sync_tick
                     sync_tick()
-                if os.environ.get('BHAGO_BACKLOG_ENABLED') == 'true':
-                    from backlog import tick as backlog_tick
-                    backlog_tick()
-                else:
-                    schedule_tick()
             raw = get_value(KEY)
             run = json.loads(raw) if raw else None
-            if first and run and run["state"] in ("reading", "launching"):
-                update_run(run["id"], [run["state"]], state="uncertain" if run["state"] == "launching" else "failed",
-                           message="Local worker restarted. Review Samvaad before starting another campaign; no automatic retry was made.")
-            elif run and ready and calling_enabled():
-                if run["state"] == "queued_preview":
-                    preview(run)
-                elif run["state"] == "queued_launch":
-                    launch(run)
             if not first and (not run or run.get('state') not in ('queued_preview','reading','ready','queued_launch','launching')):
                 from whatsapp_sync import tick as whatsapp_tick
                 whatsapp_tick(ready)
