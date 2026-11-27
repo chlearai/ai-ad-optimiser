@@ -1,5 +1,6 @@
 """Supervise the Bhago cloud browser and queue worker; never prints credentials."""
 import json
+import base64
 import datetime as dt
 import os
 from pathlib import Path
@@ -10,6 +11,27 @@ import time
 
 ROOT = Path(__file__).resolve().parent
 PRIVATE = Path(os.environ.get('BHAGO_PRIVATE_DIR', '/data/private'))
+
+
+class SessionExpired(ValueError):
+    pass
+
+
+def session_expiry(state):
+    """Read expiry metadata only; Samvaad still validates the token itself."""
+    for origin in state.get('origins', []):
+        if origin.get('origin') != 'https://samvaad.sakhaa.ai':
+            continue
+        for item in origin.get('localStorage', []):
+            if item.get('name') != 'token':
+                continue
+            try:
+                payload = item['value'].split('.')[1]
+                claims = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+                return dt.datetime.fromtimestamp(float(claims['exp']), dt.timezone.utc)
+            except (KeyError, IndexError, ValueError, TypeError, OverflowError):
+                return None
+    return None
 
 
 def unresponsive(private, started, moment=None, limit=480):
@@ -30,7 +52,12 @@ def seed_session():
         raise ValueError('Bhago Samvaad cloud session authorization is missing')
     version = PRIVATE / 'session-seed-version.txt'
     state_file = PRIVATE / 'samvaad-state.json'
-    if not state_file.exists() or not version.exists() or version.read_text() != session['version']:
+    reseed = not state_file.exists() or not version.exists() or version.read_text() != session['version']
+    candidate = session['state'] if reseed else json.loads(state_file.read_text())
+    expires = session_expiry(candidate)
+    if expires and expires <= dt.datetime.now(dt.timezone.utc):
+        raise SessionExpired('Samvaad cloud sign-in expired; renew the Bhago session. No campaign was submitted.')
+    if reseed:
         temporary = PRIVATE / 'samvaad-state.tmp'
         temporary.write_text(json.dumps(session['state']), encoding='utf-8')
         temporary.chmod(0o600)
@@ -108,6 +135,16 @@ def main():
             for label, child in zip(('browser', 'bridge'), children):
                 if child.poll() is not None:
                     print(f'Bhago {label} exited with code {child.returncode}; restarting safely.', flush=True)
+        except SessionExpired as error:
+            stamp=dt.datetime.now(dt.timezone.utc).isoformat()
+            (PRIVATE/'bridge-browser.json').write_text(json.dumps({'ready':False,'updatedAt':stamp}))
+            (PRIVATE/'status.json').write_text(json.dumps({'state':'samvaad_login_required','updatedAt':stamp,'message':str(error)}))
+            try:
+                from insightdesk_bridge import heartbeat
+                heartbeat()
+            except Exception:
+                pass
+            print(str(error), flush=True)
         except Exception:
             print('Bhago cloud authorization or connection needs attention; no automatic campaign retry.', flush=True)
         finally:
