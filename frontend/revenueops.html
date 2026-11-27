@@ -1656,7 +1656,7 @@ async function openUserModal(userId=null){
             <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrAdguard" ${u.access_adguard?'checked':''}> AdGuard Access</label></div>
             <div class="form-group"><label style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" id="usrSakha" ${u.access_sakha?'checked':''}> Sakha Access</label></div>
             <div class="form-group"><label><input type="checkbox" id="usrAccessMiniRobos" ${u.access_mini_robos?'checked':''}> Mini Robos Access</label></div>
-            <div class="form-group"><label><input type="checkbox" id="usrEditMiniRobos" ${u.edit_mini_robos?'checked':''}> Mini Robos Edit</label></div>
+            <div class="form-group"><label><input type="checkbox" id="usrEditMiniRobos" ${u.edit_mini_robos?'checked':''} ${currentUser?.role==='superadmin'?'':'disabled'}> Mini Robos Edit</label></div>
         </div>
         <div id="usrAccountSection" style="${u.role==='user'?'':'display:none'}">
             <label style="font-size:.76rem;font-weight:600;color:var(--text-muted);margin-bottom:.22rem;display:block">Assigned Client/Brand (BM only)</label>
@@ -1699,7 +1699,8 @@ async function saveUserModal(){
         const edit_mini_robos=$('usrEditMiniRobos').checked;
         if(!full_name||!email){toast('Name and Email are required','error');return}
         if(!editingUserId&&!password){toast('Password is required','error');return}
-        const payload={full_name,email,mobile,role,assigned_account_ids,access_adpulse,access_insightdesk,access_revenueops,access_adguard,access_sakha,access_mini_robos,edit_mini_robos};
+        const payload={full_name,email,mobile,role,assigned_account_ids,access_adpulse,access_insightdesk,access_revenueops,access_adguard,access_sakha,access_mini_robos};
+        if(currentUser?.role==='superadmin')payload.edit_mini_robos=edit_mini_robos;
         if(password)payload.password=password;
         if(editingUserId){
             await fetch(AUTH+`/users/${editingUserId}`,{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(payload)});

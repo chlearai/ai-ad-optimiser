@@ -1,4 +1,5 @@
 import os
+from hashlib import sha256
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +26,7 @@ class MiniRobosApiTests(unittest.TestCase):
         from backend.db import database
         from backend.db.mini_robos_models import RoboAgent, RoboAgentVersion, RoboAgentKey, RoboAudit, RoboRun
         from backend.db.models import Account, AccountType, User, UserAccountAssignment
+        cls.User = User
         from backend.routes.auth import create_access_token
 
         if Path(database.DB_PATH) != database_path or database.get_active_db() != "sqlite":
@@ -42,7 +44,7 @@ class MiniRobosApiTests(unittest.TestCase):
             db.add(account)
             db.flush()
             cls.account_id = account.id
-            roles = (("admin", "admin", False, False, False), ("view", "user", True, False, True),
+            roles = (("owner", "superadmin", False, False, False), ("admin", "admin", False, False, False), ("view", "user", True, False, True),
                      ("edit", "newuser", True, True, True), ("outside", "user", True, True, False),
                      ("edit_only", "user", False, True, True))
             for name, role, access, edit, linked in roles:
@@ -64,11 +66,11 @@ class MiniRobosApiTests(unittest.TestCase):
                 db.add(self.Version(agent_id=agent.id, version=1, status="published", author="system", rules=["Observe the slot."]))
             db.commit()
 
-    def auth(self, user="admin"):
+    def auth(self, user="owner"):
         return {"Authorization": "Bearer " + self.create_token({"sub": f"{user}@example.test"})}
 
     def key(self, path=AGENT):
-        response = self.client.post(path + "/keys", headers=self.auth("edit" if path == AGENT else "admin"))
+        response = self.client.post(path + "/keys", headers=self.auth("edit" if path == AGENT else "owner"))
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.headers["cache-control"], "no-store")
         row = response.json()
@@ -86,6 +88,65 @@ class MiniRobosApiTests(unittest.TestCase):
         self.assertEqual({row["slug"] for row in rows}, {"managed", "internal"})
         rows = self.client.get(ROOT + "/agents", headers=self.auth("view")).json()["agents"]
         self.assertEqual([row["slug"] for row in rows], ["managed"])
+
+    def test_admin_cannot_edit_robos_or_grant_the_tick(self):
+        headers = self.auth("admin")
+        self.assertEqual(self.client.get(AGENT, headers=headers).status_code, 200)
+        for method, path, body in (
+            ("PUT", "/profile", {"name": "Name"}), ("PUT", "/draft", {}),
+            ("POST", "/publish", {}), ("POST", "/versions/1/rollback", {}),
+            ("POST", "/pause", {"reason": "test"}), ("POST", "/resume", {"reason": "test"}),
+            ("POST", "/run-now", None), ("POST", "/keys", None), ("DELETE", "/keys/1", None),
+            ("PUT", "/alerts", {"alert_recipients": []}),
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.request(method, AGENT + path, headers=headers, json=body).status_code, 403)
+        self.assertEqual(self.client.put(AGENT + "/draft", headers=self.auth(), json={}).status_code, 200)
+
+        with self.sessions() as db:
+            view_id = db.query(self.User).filter_by(email="view@example.test").one().id
+        route = "/api/auth/users/" + str(view_id)
+        with patch("backend.routes.auth.send_onboarding_email") as send:
+            self.assertEqual(self.client.post("/api/auth/users", headers=headers, json={
+                "email": "new-fixture@example.test", "full_name": "Fixture", "edit_mini_robos": True,
+            }).status_code, 403)
+            send.assert_not_called()
+        for tick in (True, False):
+            self.assertEqual(self.client.put(route, headers=headers, json={"edit_mini_robos": tick}).status_code, 403)
+        self.assertEqual(self.client.put(route, headers=self.auth(), json={"edit_mini_robos": False}).status_code, 200)
+
+    def test_alert_recipients_and_sender_retry_limit(self):
+        from backend.db.mini_robos_models import RoboAlert
+
+        self.assertEqual(self.client.put(AGENT + "/alerts", headers=self.auth("edit"),
+                                        json={"alert_recipients": ["invalid"]}).status_code, 422)
+        self.assertEqual(self.client.put(AGENT + "/alerts", headers=self.auth("edit"),
+                                        json={"alert_recipients": ["15550100000", "10002@g.us"]}).status_code, 200)
+        with self.sessions() as db:
+            agent = db.query(self.Agent).filter_by(slug="managed").one()
+            row = RoboAlert(agent_id=agent.id, kind="opened", text="Fixture alert", recipients=agent.alert_recipients)
+            db.add(row)
+            db.commit()
+            alert_id = row.id
+        path = ROOT + "/alerts"
+        with patch.dict(os.environ, {"MINI_ROBOS_SENDER_KEY_HASH": ""}):
+            self.assertEqual(self.client.get(path + "/pending").status_code, 503)
+        fixture = "synthetic-reporter-input"
+        with patch.dict(os.environ, {"MINI_ROBOS_SENDER_KEY_HASH": sha256(fixture.encode()).hexdigest()}):
+            self.assertEqual(self.client.get(path + "/pending").status_code, 401)
+            self.assertEqual(self.client.get(path + "/pending", headers={"X-Robo-Sender-Key": "wrong"}).status_code, 401)
+            headers = {"X-Robo-Sender-Key": fixture}
+            result = path + f"/{alert_id}/result"
+            self.assertEqual(self.client.post(result, json={"status": "sent"}).status_code, 401)
+            self.assertEqual(self.client.get(path + "/pending", headers=headers).json()["alerts"][0]["id"], alert_id)
+            for attempt in range(1, 4):
+                response = self.client.post(result, headers=headers, json={"status": "failed", "error": "Bridge timeout"})
+                self.assertEqual(response.json(), {"status": "failed" if attempt == 3 else "pending", "attempts": attempt})
+            self.assertEqual(self.client.get(path + "/pending", headers=headers).json()["alerts"], [])
+            self.assertEqual(self.client.post(result, headers=headers, json={"status": "sent"}).json()["attempts"], 3)
+        with self.sessions() as db:
+            db.query(RoboAlert).delete()
+            db.commit()
 
     def test_heartbeat_key_revocation_size_and_idempotent_finish(self):
         endpoint = ROOT + "/heartbeat"

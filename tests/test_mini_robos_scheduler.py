@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -253,6 +254,57 @@ class SchedulerTests(unittest.TestCase):
         mini_robos.watchdog()
         with self.sessions() as db:
             self.assertIsNotNone(db.query(RoboIncident).filter_by(kind="stale").one().closed_at)
+
+    def test_watchdog_alerts_once_and_summary_requires_recipients(self):
+        from backend.db.mini_robos_models import RoboAlert
+
+        with self.sessions() as db:
+            agent = db.query(RoboAgent).filter_by(slug="tlg-lead-routing").one()
+            agent.alert_recipients = ["15550100000"]
+            db.add(RoboRun(id="stale-alert", agent_id=agent.id, status="succeeded",
+                           started_at=NOW - timedelta(minutes=40), finished_at=NOW - timedelta(minutes=39)))
+            db.commit()
+            agent_id = agent.id
+        mini_robos.watchdog()
+        mini_robos.watchdog()
+        with self.sessions() as db:
+            rows = db.query(RoboAlert).all()
+            self.assertEqual([row.kind for row in rows], ["opened"])
+            self.assertIn("TLG lead routing", rows[0].text)
+            db.add(RoboRun(id="good-alert", agent_id=agent_id, status="succeeded", started_at=NOW, finished_at=NOW))
+            db.commit()
+        mini_robos.watchdog()
+        mini_robos.watchdog()
+        with patch.dict(os.environ, {"MINI_ROBOS_SUMMARY_TO": ""}):
+            mini_robos.queue_daily_summary()
+        with self.sessions() as db:
+            self.assertEqual([row.kind for row in db.query(RoboAlert).order_by(RoboAlert.id)], ["opened", "recovered"])
+        with patch.dict(os.environ, {"MINI_ROBOS_SUMMARY_TO": "15550100000"}):
+            mini_robos.queue_daily_summary()
+            mini_robos.queue_daily_summary()
+        with self.sessions() as db:
+            self.assertEqual(db.query(RoboAlert).filter_by(kind="summary").count(), 1)
+            agent = db.get(RoboAgent, agent_id)
+            agent.alert_recipients = []
+            db.query(RoboRun).filter_by(id="good-alert").delete()
+            db.commit()
+        mini_robos.watchdog()
+        with self.sessions() as db:
+            self.assertEqual(db.query(RoboAlert).count(), 3)
+
+    def test_alert_migration_upgrades_existing_robo_agents(self):
+        from sqlalchemy import inspect
+        from backend.db.mini_robos_models import RoboAlert
+        from backend.migrations.add_mini_robos_schema import run_migration
+
+        RoboAlert.__table__.drop(self.engine)
+        with self.engine.begin() as connection:
+            connection.execute(text("ALTER TABLE robo_agents DROP COLUMN alert_recipients"))
+        run_migration(self.engine)
+        run_migration(self.engine)
+        self.assertTrue(inspect(self.engine).has_table("robo_alerts"))
+        with self.sessions() as db:
+            self.assertIsNone(db.query(RoboAgent).filter_by(slug="tlg-lead-routing").one().alert_recipients)
 
     def test_reporting_migration_failure_preserves_user_queries(self):
         def begin(connection):

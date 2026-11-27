@@ -158,7 +158,11 @@
         th, td { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
         dialog { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-page); color: var(--color-text-primary); width: min(44rem, 100% - 2rem); }
         dialog::backdrop { background: var(--overlay-bg); }
-        #notice:empty { display: none; }
+        [role="status"]:empty { display: none; }
+        #prompt-panel {
+            position: fixed; inset: 0 0 0 auto; margin: 0; height: 100dvh; max-height: none;
+            width: min(42rem, 100%); max-width: 100%; padding: 1.25rem;
+        }
         @media (max-width: 64rem) { .agent-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 36rem) { .agent-row { grid-template-columns: minmax(0, 1fr); } }
     </style>
@@ -170,6 +174,13 @@
         <p id="notice" role="status">Loading Mini Robos…</p>
         <section class="stack" id="content" aria-label="Mini Robos"></section>
     </main>
+    <dialog id="prompt-panel" aria-labelledby="prompt-title">
+        <div class="stack">
+            <div class="row"><h2 id="prompt-title">Agent prompt</h2><form method="dialog"><button autofocus>Close</button></form></div>
+            <p id="prompt-notice" role="status"></p>
+            <div id="prompt-content"></div>
+        </div>
+    </dialog>
     <dialog id="confirm-recipients" aria-labelledby="confirm-title">
         <form method="dialog" class="stack">
             <h2 id="confirm-title">Confirm recipient changes</h2>
@@ -188,8 +199,8 @@
         const pretty = value => JSON.stringify(value, null, 2);
         const slug = location.pathname.split('/').filter(Boolean)[1];
         const agentUrl = slug ? '/agents/' + encodeURIComponent(slug) : null;
-        const tabNames = ['Overview', 'Rules & prompt', 'Runs', 'Audit'];
-        let selected = 'Overview';
+        const tabNames = ['Overview', 'Rules & prompt', 'Runs', 'Alerts', 'Audit'];
+        let selected = location.hash === '#rules' ? 'Rules & prompt' : 'Overview';
         let requestVersion = 0;
         let agent;
         let agents = [];
@@ -216,7 +227,7 @@
             button.addEventListener('click', async () => {
                 button.disabled = true;
                 try { await handler(); }
-                catch (error) { notice.textContent = error.message; }
+                catch (error) { (button.closest('dialog')?.querySelector('[role="status"]') || notice).textContent = error.message; }
                 finally { button.disabled = false; }
             });
             return button;
@@ -337,7 +348,8 @@
                 title.append(link('/mini-robos/' + encodeURIComponent(row.slug), row.name));
                 const last = row.last_run ? time(row.last_run.started_at) + ' · ' + words(row.last_run.status) : 'No run reported';
                 return group('agent-row',
-                    group('stack compact', title, statusNode(row.status), el('p', row.client || 'Unassigned', 'muted')),
+                    group('stack compact', title, group('row', statusNode(row.status), button('Prompt', () => openPrompt(row))),
+                        el('p', row.client || 'Unassigned', 'muted')),
                     group('stack compact', el('p', words(row.type) + ' · ' + words(row.runs_on)), el('p', schedule(row.schedule), 'muted')),
                     group('stack compact', group('', el('span', 'Last run', 'label'), el('span', last)),
                         group('', el('span', 'Next run', 'label'), el('span', time(row.next_run)))),
@@ -452,8 +464,55 @@
             return true;
         }
 
-        async function rules(panel) {
-            const { versions } = await api(agentUrl + '/versions');
+        function promptHeading(robo, title) {
+            const mode = el('span', robo.live_sync ? 'Live sync' : 'Copy only — edit at source', 'badge');
+            const source = sourceLink(robo.source_url);
+            return group('row', el('h2', title), mode, ...(source ? [source] : []));
+        }
+
+        async function openPrompt(row) {
+            const path = '/agents/' + encodeURIComponent(row.slug);
+            const [robo, { versions }] = await Promise.all([api(path), api(path + '/versions')]);
+            const published = versions.find(version => version.status === 'published');
+            const panel = group('stack');
+            const dialog = byId('prompt-panel');
+            byId('prompt-title').textContent = robo.name;
+            byId('prompt-notice').textContent = '';
+            byId('prompt-content').replaceChildren(panel);
+            panel.append(promptHeading(robo, 'Published prompt'),
+                published?.prompt ? el('pre', published.prompt) : el('p', 'No prompt yet'),
+                el('h3', 'Rules'));
+            const list = el('ul');
+            for (const rule of published?.rules || []) list.append(el('li', rule));
+            if (list.childElementCount) panel.append(list);
+            else panel.append(el('p', 'No rules yet.', 'muted'));
+            if (robo.can_edit) panel.append(button('Edit', () => rules(panel, robo, path, true)));
+            panel.append(link('/mini-robos/' + encodeURIComponent(robo.slug) + '#rules', 'Version history'));
+            dialog.addEventListener('close', () => byId('prompt-content').replaceChildren(), { once: true });
+            dialog.showModal();
+        }
+
+        async function alerts(panel) {
+            panel.replaceChildren(el('h2', 'WhatsApp alerts'));
+            if (!agent.can_edit) {
+                panel.append(el('p', 'Mini Robos edit access is required to manage alert recipients.'));
+                return;
+            }
+            const field = textarea(agent.alert_recipients.join('\n'));
+            panel.append(label('Alert recipients (one number or group JID per line)', field),
+                button('Save alert recipients', async () => {
+                    const result = await api(agentUrl + '/alerts', 'PUT', {
+                        alert_recipients: field.value.split(/[\s,]+/).filter(Boolean),
+                    });
+                    agent.alert_recipients = result.alert_recipients;
+                    field.value = agent.alert_recipients.join('\n');
+                    notice.textContent = 'Alert recipients saved.';
+                }, 'primary'));
+        }
+
+        async function rules(panel, robo = agent, path = agentUrl, compact = false) {
+            const { versions } = await api(path + '/versions');
+            const message = compact ? byId('prompt-notice') : notice;
             const latest = versions.find(row => row.status === 'published');
             const draft = versions.find(row => row.status === 'draft');
             const current = draft || latest || { prompt: '', rules: [], input_source: {}, recipients: [], note: '' };
@@ -463,24 +522,32 @@
                 ['recipients', 'Recipients (JSON array)'], ['note', 'Version note']]) {
                 const field = textarea(key === 'rules' ? current.rules.join('\n') :
                     ['recipients', 'input_source'].includes(key) ? pretty(current[key]) : current[key]);
-                field.readOnly = !agent.can_edit;
+                field.readOnly = !robo.can_edit;
                 inputs[key] = field;
                 editor.append(label(title, field));
             }
             async function save() {
                 const body = { prompt: inputs.prompt.value, rules: inputs.rules.value.split('\n').map(s => s.trim()).filter(Boolean),
                     input_source: JSON.parse(inputs.input_source.value), recipients: JSON.parse(inputs.recipients.value), note: inputs.note.value };
-                return api(agentUrl + '/draft', 'PUT', body);
+                return api(path + '/draft', 'PUT', body);
             }
-            const mode = el('span', agent.live_sync ? 'Live sync' : 'Copy only — edit at source', 'badge');
-            const source = sourceLink(agent.source_url);
-            panel.replaceChildren(group('row', el('h2', 'Rules & prompt'), mode, ...(source ? [source] : [])), editor);
-            if (agent.can_edit) {
-                panel.append(group('actions', button('Save draft', async () => { await save(); await rules(panel); notice.textContent = 'Draft saved.'; }),
-                    button('Publish', async () => {
-                        await save();
-                        if (await publishOrRollback(agentUrl + '/publish')) { await rules(panel); notice.textContent = 'Version published.'; }
-                    }, 'primary')));
+            panel.replaceChildren(promptHeading(robo, 'Rules & prompt'), editor);
+            if (robo.can_edit) {
+                panel.append(group('actions', button('Save draft', async () => {
+                    await save();
+                    await rules(panel, robo, path, compact);
+                    message.textContent = 'Draft saved.';
+                }), button('Publish', async () => {
+                    await save();
+                    if (await publishOrRollback(path + '/publish')) {
+                        await rules(panel, robo, path, compact);
+                        message.textContent = 'Version published.';
+                    }
+                }, 'primary')));
+            }
+            if (compact) {
+                panel.append(link('/mini-robos/' + encodeURIComponent(robo.slug) + '#rules', 'Version history'));
+                return;
             }
             const diff = group('diff');
             panel.append(el('h2', 'Version history'), diff);
@@ -620,6 +687,7 @@
                 if (selected === 'Rules & prompt') await rules(panel);
                 if (selected === 'Runs') await history(panel, 'runs');
                 if (selected === 'Audit') await history(panel, 'audit');
+                if (selected === 'Alerts') await alerts(panel);
                 notice.textContent = '';
             } catch (error) {
                 if (request !== requestVersion) return;

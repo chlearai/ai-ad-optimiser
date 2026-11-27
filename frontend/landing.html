@@ -1344,6 +1344,7 @@
         $('umAccessSakha').checked = false;
         $('umAccessMiniRobos').checked = false;
         $('umEditMiniRobos').checked = false;
+        $('umEditMiniRobos').disabled = currentUser?.role !== 'superadmin';
         $('umAccessAuditReview').checked = false;
         $('umLinkBox').classList.add('hidden');
         $('umSetupLink').textContent = '';
@@ -1366,6 +1367,7 @@
             $('umAccessSakha').checked = u.access_sakha || false;
             $('umAccessMiniRobos').checked = u.access_mini_robos || false;
             $('umEditMiniRobos').checked = u.edit_mini_robos || false;
+            $('umEditMiniRobos').disabled = currentUser?.role !== 'superadmin';
             $('umAccessAuditReview').checked = u.access_audit_review || false;
             toggleAuditReviewCheckbox();
             $('umLinkBox').classList.add('hidden');
@@ -1396,7 +1398,7 @@
                 access_adguard: $('umAccessAdGuard').checked,
                 access_sakha: $('umAccessSakha').checked,
                 access_mini_robos: $('umAccessMiniRobos').checked,
-                edit_mini_robos: $('umEditMiniRobos').checked,
+                ...(currentUser?.role === 'superadmin' ? {edit_mini_robos: $('umEditMiniRobos').checked} : {}),
                 access_audit_review: $('umAccessAuditReview').checked,
                 assigned_account_ids: Array.from($('umAssignAccounts').querySelectorAll('input:checked')).map(cb => parseInt(cb.value))
             };

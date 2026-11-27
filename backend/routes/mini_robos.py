@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from hashlib import sha256
 from hmac import compare_digest
+import os
 import re
 from secrets import token_urlsafe
 from typing import Annotated, Literal
@@ -16,7 +17,7 @@ from sqlalchemy import case, func, or_, update
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_db
-from backend.db.mini_robos_models import RoboAgent, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
+from backend.db.mini_robos_models import RoboAgent, RoboAlert, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
 from backend.db.models import Account
 from backend.routes.auth import get_current_user_required
 from backend.services import mini_robos as service
@@ -118,7 +119,7 @@ class Profile(BaseModel):
 
 
 def can_edit(user):
-    return user.role in ADMINS or user.edit_mini_robos
+    return user.role == "superadmin" or user.edit_mini_robos
 
 
 def viewer(user=Depends(get_current_user_required)):
@@ -314,9 +315,67 @@ def agent_detail(agent=Depends(viewed_agent), db: Session = Depends(get_db), use
     return summary(db, agent, account.name if account else None, utcnow()) | expose(
         agent, "owner source_url grace_minutes expects_output pause_reason paused_by paused_at job_ref"
     ) | {
-        "can_edit": can_edit(user), "latest_error": (failed.error or failed.message or "The last failed run did not include details.") if failed else None,
+        "can_edit": can_edit(user), "alert_recipients": (agent.alert_recipients or []) if can_edit(user) else [],
+        "latest_error": (failed.error or failed.message or "The last failed run did not include details.") if failed else None,
         "incidents": [expose(row, "kind slot opened_at") for row in incidents],
     }
+
+
+class AlertRecipients(BaseModel):
+    alert_recipients: list[str] = Field(max_length=100)
+
+    @field_validator("alert_recipients")
+    @classmethod
+    def validate_recipients(cls, values):
+        return service.alert_recipients(values)
+
+
+class AlertResult(BaseModel):
+    status: Literal["sent", "failed"]
+    error: str | None = Field(None, max_length=2000)
+
+
+def sender_key(request: Request):
+    expected = os.getenv("MINI_ROBOS_SENDER_KEY_HASH", "").strip().lower()
+    if not re.fullmatch(r"[a-f0-9]{64}", expected):
+        raise HTTPException(503, "Mini Robos sender is not configured")
+    raw = request.headers.get("X-Robo-Sender-Key", "")
+    if not raw or not compare_digest(sha256(raw.encode()).hexdigest(), expected):
+        raise HTTPException(401, "Invalid Mini Robos sender key")
+    return raw
+
+
+@router.get("/alerts/pending")
+def pending_alerts(response: Response, limit: int = Query(20, ge=1, le=100),
+                   db: Session = Depends(get_db), _=Depends(sender_key)):
+    response.headers["cache-control"] = "no-store"
+    rows = db.query(RoboAlert).filter_by(status="pending").order_by(RoboAlert.created_at, RoboAlert.id).limit(limit)
+    return {"alerts": [expose(row, "id text recipients") for row in rows]}
+
+
+@router.post("/alerts/{id}/result")
+def alert_result(id: int, body: AlertResult, db: Session = Depends(get_db), raw=Depends(sender_key)):
+    values = {"attempts": RoboAlert.attempts + 1}
+    if body.status == "sent":
+        values.update(status="sent", sent_at=utcnow(), last_error=None)
+    else:
+        values.update(status=case((RoboAlert.attempts >= 2, "failed"), else_="pending"),
+                      last_error=body.error.replace(raw, "[redacted]")[:2000] if body.error else None)
+    db.execute(update(RoboAlert).where(RoboAlert.id == id, RoboAlert.status == "pending").values(**values))
+    row = db.get(RoboAlert, id)
+    if not row:
+        raise HTTPException(404, "Alert not found")
+    result = {"status": row.status, "attempts": row.attempts}
+    db.commit()
+    return result
+
+
+@router.put("/agents/{slug}/alerts")
+def set_alert_recipients(body: AlertRecipients, agent=Depends(edited_agent),
+                         db: Session = Depends(get_db), user=Depends(editor)):
+    agent.alert_recipients = body.alert_recipients
+    audit(db, user, agent, "edit_profile", fields=["alert_recipients"])
+    return {"alert_recipients": agent.alert_recipients}
 
 
 @router.put("/agents/{slug}/profile")

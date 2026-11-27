@@ -297,9 +297,10 @@ class PhaseZeroSecurityTests(unittest.TestCase):
         # boundary, rather than at the dashboard JWT policy.
         for method, template in PUBLIC_ROUTES:
             path = (template.replace("{token}", "invalid")
-                    .replace("{account_id}", "1").replace("{centre_id}", "1"))
+                    .replace("{account_id}", "1").replace("{centre_id}", "1").replace("{id}", "1"))
             with self.subTest(method=method, path=path):
-                response = self.client.request(method, path)
+                with patch.dict(os.environ, {"MINI_ROBOS_SENDER_KEY_HASH": "0" * 64}):
+                    response = self.client.request(method, path)
                 self.assertLess(response.status_code, 500, path)
                 if response.status_code == 401:
                     self.assertNotEqual(response.headers.get("www-authenticate"), "Bearer", path)

@@ -507,6 +507,9 @@ def create_user(req: UserCreateRequest, request: Request, db: Session = Depends(
     if req.role == "superadmin" and current_user.role != "superadmin":
         raise HTTPException(status_code=403, detail="Only Super Admin can create superadmin users")
 
+    if req.edit_mini_robos and current_user.role != "superadmin":
+        raise HTTPException(403, "Only Super Admin can grant Mini Robos edit access")
+
     token = secrets.token_urlsafe(32)
     token_expires = datetime.utcnow() + timedelta(hours=ONBOARDING_TOKEN_EXPIRE_HOURS)
 
@@ -731,6 +734,8 @@ def update_user(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_
     # Only superadmin can create/modify superadmin users
     if current_user.role != "superadmin" and (req.role == "superadmin" or user.role == "superadmin"):
         raise HTTPException(status_code=403, detail="Only Super Admin can manage superadmin users")
+    if req.edit_mini_robos is not None and current_user.role != "superadmin":
+        raise HTTPException(403, "Only Super Admin can change Mini Robos edit access")
     if req.full_name is not None:
         user.full_name = req.full_name
     if req.email is not None:

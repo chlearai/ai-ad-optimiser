@@ -72,6 +72,8 @@ def start_scheduler():
     mini_robos.start_event_worker()
     _scheduler.add_listener(mini_robos.listen, EVENT_JOB_SUBMITTED | EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
     _scheduler.add_job(mini_robos.watchdog, "interval", minutes=5, id="mini_robos_watchdog", max_instances=1, coalesce=True)
+    _scheduler.add_job(mini_robos.queue_daily_summary, "cron", hour=9, minute=0, timezone=mini_robos.IST,
+                       id="mini_robos_daily_summary", max_instances=1, coalesce=True, replace_existing=True)
     _scheduler.start()
     logger.info("Background scheduler started (daily smart audit disabled, daily Mantri MIS refresh enabled)")
 

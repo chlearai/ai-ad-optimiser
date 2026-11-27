@@ -1,6 +1,8 @@
 """Mini Robos schedule, telemetry and watchdog."""
 from datetime import datetime, timedelta, timezone
 import logging
+import os
+import re
 from queue import Full, Queue
 from threading import Event, Lock, Thread
 from uuid import NAMESPACE_URL, uuid5
@@ -10,9 +12,10 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MI
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from backend.db.database import SessionLocal
-from backend.db.mini_robos_models import RoboAgent, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
+from backend.db.mini_robos_models import RoboAgent, RoboAlert, RoboAgentKey, RoboAgentVersion, RoboAudit, RoboIncident, RoboRun, utcnow
 from backend.db.models import Account
 
 
@@ -24,6 +27,8 @@ _worker = None
 STATUSES = ("failing", "missed", "late", "no_signal", "paused", "on_track")
 DAY = timedelta(days=1)
 SIGNAL_WINDOW = 7 * DAY
+IST = ZoneInfo("Asia/Kolkata")
+RECIPIENT = re.compile(r"(?:[0-9]{8,15}|[0-9]{1,30}@g\.us)\Z")
 MISSED_ERROR = "Scheduler missed this job execution."
 REMOVED_SLUGS = ("adguard-meta-poll", "adguard-conversion-dispatcher")
 EDUINFRA_OUTBOUND_RULES = (
@@ -105,7 +110,7 @@ def seed_agents(db, scheduler):
     removed_ids = db.scalars(select(RoboAgent.id).where(RoboAgent.slug.in_(REMOVED_SLUGS))).all()
     if removed_ids:
         # SQLite can run with foreign key enforcement disabled.
-        for model in (RoboAgentVersion, RoboRun, RoboIncident, RoboAgentKey, RoboAudit):
+        for model in (RoboAlert, RoboAgentVersion, RoboRun, RoboIncident, RoboAgentKey, RoboAudit):
             db.query(model).filter(model.agent_id.in_(removed_ids)).delete()
         db.query(RoboAgent).filter(RoboAgent.id.in_(removed_ids)).delete()
 
@@ -273,6 +278,61 @@ def next_external(agent, runs, now):
     return None
 
 
+def alert_recipients(values):
+    if len(values) > 100 or any(not RECIPIENT.fullmatch(value) for value in values):
+        raise ValueError("Enter up to 100 phone numbers or numeric group JIDs")
+    return list(dict.fromkeys(values))
+
+
+def queue_incident_alert(db, agent, incident, kind, runs, status, now):
+    if not agent.alert_recipients:
+        return
+    if kind == "recovered":
+        outcome = "is back on track." if status == "on_track" else f"incident closed. Current status: {status.replace('_', ' ')}."
+    else:
+        if incident.kind == "missed":
+            outcome = f"missed the {incident.slot.astimezone(IST):%H:%M} IST run."
+        elif incident.kind == "failed":
+            outcome = "reported a failed run or zero output."
+        else:
+            outcome = "has not reported a run within its expected interval."
+        good = next((run for run in runs if run.status == "succeeded" and not bad_run(agent, run)), None)
+        if good:
+            outcome += f" Last good run {utc(good.started_at).astimezone(IST):%H:%M} IST."
+    db.add(RoboAlert(agent_id=agent.id, incident_id=incident.id, kind=kind, text=f"Mini Robos: {agent.name} {outcome}",
+                     recipients=agent.alert_recipients, created_at=now))
+
+
+def queue_daily_summary():
+    raw = os.getenv("MINI_ROBOS_SUMMARY_TO", "")
+    if not raw.strip():
+        return
+    try:
+        recipients = alert_recipients([value.strip() for value in raw.split(",") if value.strip()])
+        if not recipients:
+            return
+        now = utcnow()
+        day = now.astimezone(IST).date()
+        with SessionLocal.begin() as db:
+            if db.query(RoboAlert.id).filter_by(summary_date=day).first():
+                return
+            agents = db.query(RoboAgent).order_by(RoboAgent.name).all()
+            parts = []
+            for status in ("on_track", "late", "missed", "failing", "paused", "no_signal"):
+                names = [agent.name for agent in agents if agent.status == status]
+                if names:
+                    detail = f" ({', '.join(names)})" if status in {"late", "missed", "failing"} else ""
+                    parts.append(f"{len(names)} {status.replace('_', ' ')}{detail}")
+            text = f"Mini Robos {day.day} {day:%b}: {len(agents)} agents"
+            if parts:
+                text += " \u2014 " + ", ".join(parts)
+            db.add(RoboAlert(kind="summary", summary_date=day, text=text + ".", recipients=recipients, created_at=now))
+    except IntegrityError:
+        logger.info("Mini Robos daily summary already queued")
+    except Exception:
+        logger.warning("Mini Robos could not queue its daily summary")
+
+
 def watchdog():
     try:
         now = utcnow()
@@ -285,7 +345,8 @@ def watchdog():
                 agent = db.get(RoboAgent, agent_id, with_for_update=True)
                 if agent is None:
                     continue
-                status, desired = assess(agent, recent_runs(db, agent, now), now)
+                runs = recent_runs(db, agent, now)
+                status, desired = assess(agent, runs, now)
                 agent.status = status
                 existing = set()
                 for incident in db.query(RoboIncident).filter_by(agent_id=agent.id, closed_at=None):
@@ -294,8 +355,13 @@ def watchdog():
                         existing.add(key)
                     else:
                         incident.closed_at = now
+                        queue_incident_alert(db, agent, incident, "recovered", runs, status, now)
                 for kind, slot in desired - existing:
-                    db.add(RoboIncident(agent_id=agent.id, kind=kind, slot=slot, opened_at=now))
+                    incident = RoboIncident(agent_id=agent.id, kind=kind, slot=slot, opened_at=now)
+                    db.add(incident)
+                    if agent.alert_recipients:
+                        db.flush()
+                        queue_incident_alert(db, agent, incident, "opened", runs, status, now)
     except Exception:
         logger.warning("Mini Robos could not complete its watchdog cycle")
 

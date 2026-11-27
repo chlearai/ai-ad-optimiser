@@ -1,7 +1,7 @@
 """Mini Robos profiles, reporter keys and operational history."""
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, false, text
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, false, text
 
 from backend.db.database import Base
 
@@ -35,6 +35,7 @@ class RoboAgent(Base):
     live_sync = Column(Boolean, nullable=False, default=False, server_default=false())
     job_ref = Column(String, unique=True)
     status = Column(String, nullable=False, default="no_signal")
+    alert_recipients = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
@@ -86,6 +87,27 @@ class RoboIncident(Base):
     slot = Column(DateTime(timezone=True))
     opened_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     closed_at = Column(DateTime(timezone=True))
+
+
+class RoboAlert(Base):
+    __tablename__ = "robo_alerts"
+    __table_args__ = (
+        UniqueConstraint("incident_id", "kind"),
+        Index("ix_robo_alert_pending", "status", "created_at", "id"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    agent_id = Column(Integer, ForeignKey("robo_agents.id", ondelete="CASCADE"))
+    incident_id = Column(Integer, ForeignKey("robo_incidents.id", ondelete="CASCADE"))
+    summary_date = Column(Date, unique=True)
+    kind = Column(String, nullable=False)
+    text = Column(Text, nullable=False)
+    recipients = Column(JSON, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    attempts = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    sent_at = Column(DateTime(timezone=True))
+    last_error = Column(Text)
 
 
 class RoboAgentKey(Base):

@@ -34,6 +34,8 @@ PUBLIC_ROUTES = {
     ("POST", "/api/v1/webhooks/crm"): "CRM stage callback using a workspace secret",
     ("POST", "/api/v1/webhooks/botcaller"): "BotCaller callback using a workspace secret",
     ("POST", "/api/mini-robos/heartbeat"): "Mini Robos reporter key",
+    ("GET", "/api/mini-robos/alerts/pending"): "Mini Robos sender key",
+    ("POST", "/api/mini-robos/alerts/{id}/result"): "Mini Robos sender key",
     ("POST", "/api/tlg/{account_id}/centres/{centre_id}/sheet-counts"): "Apps Script using a centre-scoped reporting token",
 }
 
