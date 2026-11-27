@@ -162,7 +162,9 @@ def tick(moment=None):
     for kind in (('lead',) if full_payment else ('lead','payment')):
         inflight=inflights.get('bhago:18:inflight:'+kind)
         if inflight and inflight.get('state')=='uncertain':continue
-        if inflight and inflight.get('state') in ('submitted','paused'):
+        needs_export=bool(inflight and inflight.get('state')=='awaiting_reconciliation' and
+                          inflight.get('verified_complete') and not inflight.get('completed_export'))
+        if inflight and (inflight.get('state') in ('submitted','paused') or needs_export):
             if not config.get('resume_previous_campaign') and (moment.hour>=18 or inflight.get('day',moment.date().isoformat())<moment.date().isoformat()):
                 control(kind,inflight,'stop');return
             checked=inflight.get('last_checked_at')
