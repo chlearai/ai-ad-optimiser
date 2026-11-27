@@ -192,7 +192,9 @@ async function main() {
   if(command==='cloud' || command==='cloud-verify') {
     const state=path.join(PRIVATE,'samvaad-state.json');
     if(!fs.existsSync(state)) throw new Error('Authorize the Bhago Samvaad cloud session before starting this worker');
-    const browser=await chromium.launch({headless:true,args:['--disable-dev-shm-usage']});
+    // Use the installed full Chromium headless mode, rather than the separate
+    // headless-shell binary. Container init reaps descendants after crashes.
+    const browser=await chromium.launch({channel:'chromium',headless:true,args:['--disable-dev-shm-usage'],timeout:45000});
     try {
       const cloudContext=await browser.newContext({storageState:state,viewport:{width:1440,height:1000},acceptDownloads:true});
       const cloudPage=await cloudContext.newPage();

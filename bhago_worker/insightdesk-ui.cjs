@@ -144,11 +144,13 @@ exports.run=async function(ctx,request) {
     // Durable intent BEFORE clicking. Never retry an uncertain submission.
     assertCallingWindow(new Date(),startHour);
     fs.writeFileSync(journal,JSON.stringify(receipt,null,2),{flag:'wx'});
-    await submit.click();
-    const row=page.getByRole('row').filter({hasText:job.campaignName});
-    await row.waitFor({timeout:30000});
+    const handleDialog=async dialog=>{ await dialog.dismiss(); };
+    page.on('dialog',handleDialog);
+    try {
+      await submit.click();
+      Object.assign(receipt,await require('./campaign-receipt.cjs').verifyCreated(page,job,settings));
+    } finally { page.off('dialog',handleDialog); }
     receipt.state='campaign_created';
-    receipt.campaignRow=await row.innerText();
     receipt.verifiedAt=new Date().toISOString();
     fs.writeFileSync(journal,JSON.stringify(receipt,null,2));
     fs.writeFileSync(csvPath.replace(/\.csv$/,'.result.json'),JSON.stringify(receipt,null,2));

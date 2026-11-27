@@ -63,6 +63,13 @@ def verify_connections():
 
 
 def main():
+    # Railway's custom Start Command replaces the image ENTRYPOINT. Ensure the
+    # browser still has an init/reaper when Railway starts Python as PID 1.
+    if sys.platform == 'linux' and os.getpid() == 1:
+        init = Path('/usr/bin/tini')
+        if not init.is_file():
+            raise SystemExit('Bhago container init is missing; rebuild the worker image')
+        os.execv(str(init), [str(init), '-g', '--', sys.executable, '-u', str(Path(__file__).resolve())])
     if os.environ.get('BHAGO_RUNTIME') != 'cloud':
         raise SystemExit('Cloud runtime must be explicitly enabled')
     PRIVATE.mkdir(parents=True, exist_ok=True)
@@ -98,6 +105,9 @@ def main():
                 if unresponsive(PRIVATE,started):
                     print('Bhago workflow heartbeat stalled; restarting its children. Uncertain launches remain held.',flush=True)
                     break
+            for label, child in zip(('browser', 'bridge'), children):
+                if child.poll() is not None:
+                    print(f'Bhago {label} exited with code {child.returncode}; restarting safely.', flush=True)
         except Exception:
             print('Bhago cloud authorization or connection needs attention; no automatic campaign retry.', flush=True)
         finally:
