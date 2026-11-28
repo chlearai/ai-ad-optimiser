@@ -489,6 +489,32 @@ def schedule_tick(moment=None):
             return
 
 
+def campaign_attempt_budget(run, rows, today=None):
+    """Keep normal limits; allow only today's explicitly approved 100 third attempts."""
+    if run.get('approved_extra_attempt_date'):
+        from outcomes import result_values
+        today=today or dt.datetime.now(IST).date()
+        counts=collections.Counter(len(r.get('prior_calls',[])) for r in rows)
+        if (run.get('calling_type')!='lead' or run['approved_extra_attempt_date']!=today.isoformat()
+                or run.get('approved_extra_attempt_count')!=100 or len(rows)!=103
+                or counts!={2:100,1:2,0:1}):
+            raise ValueError('Approved extra-attempt campaign scope or date changed')
+        for row in rows:
+            calls=row.get('prior_calls',[])
+            if len(calls)==2:
+                if row.get('approved_attempt_limit')!=3 or any(
+                        c.get('Status','').casefold() not in ('failed','busy','no-answer','no_answer','unanswered','not_connected','not connected')
+                        or result_values(c,'lead')['Duration (seconds)'] not in (0,'') for c in calls):
+                    raise ValueError('Third attempt is approved only for twice-unconnected leads')
+        return 1
+    if run.get('requested_by')=='daily_backlog':
+        budgets={2-len(row.get('prior_calls',[])) for row in rows}
+        if len(budgets)!=1 or not budgets.issubset({1,2}):
+            raise ValueError('Pending attempt budgets need separate campaigns.')
+        return budgets.pop()
+    return 2
+
+
 def preview(run):
     if not update_run(run["id"], ["queued_preview"], state="reading", message="Reading the latest saved sheet. No calls started."):
         return
@@ -512,11 +538,7 @@ def preview(run):
         name += ("_TEST" if run["source"] in TEST_SOURCES else "") + "_" + run["id"][:8]
         job = {"runId": run["id"], "source": run["source"], "type": run["calling_type"], "test": run["source"] in TEST_SOURCES,
                "campaignName": name, "recipients": rows, "sourceSnapshot": snapshot}
-        job['totalAttempts']=2
-        if run.get('requested_by')=='daily_backlog':
-            budgets={2-len(row.get('prior_calls',[])) for row in rows}
-            if len(budgets)!=1 or not budgets.issubset({1,2}):raise ValueError('Pending attempt budgets need separate campaigns.')
-            job['totalAttempts']=budgets.pop()
+        job['totalAttempts']=campaign_attempt_budget(run,rows)
         if os.environ.get('BHAGO_RESULTS_ENABLED') == 'true':
             register_manifest(job)
         atomic_json(JOBS / (run["id"] + ".json"), job)

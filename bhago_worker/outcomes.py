@@ -101,14 +101,16 @@ def result_values(row, kind):
     return values
 
 
-def columns(kind):
-    return ['Bhago Row ID'] + [f'Attempt {i} - {field}' for i in (1,2) for field in COMMON+EXTRA[kind]] + ['Bhago Last Synced At']
+def columns(kind, attempt_limit=2):
+    if attempt_limit not in (2,3) or (attempt_limit==3 and kind!='lead'):
+        raise ValueError('Unsupported result attempt limit')
+    return ['Bhago Row ID'] + [f'Attempt {i} - {field}' for i in range(1,attempt_limit+1) for field in COMMON+EXTRA[kind]] + ['Bhago Last Synced At']
 
 
-def schema(writer, ref, kind):
+def schema(writer, ref, kind, attempt_limit=2):
     sid = ref['spreadsheet_id']
     cache=getattr(writer,'_bhago_schemas',{})
-    cache_key=(sid,ref['sheet_id'],kind)
+    cache_key=(sid,ref['sheet_id'],kind,attempt_limit)
     if cache_key in cache:return cache[cache_key]
     if not writer.can_edit(sid):
         raise ValueError('This source has no Editor access; no campaign will be started.')
@@ -121,8 +123,8 @@ def schema(writer, ref, kind):
     headers = list(headers[0]) if headers else []
     if len(set(h for h in headers if h)) != len([h for h in headers if h]):
         raise ValueError('Duplicate source column names need review before result updates.')
-    missing = [c for c in columns(kind) if c not in headers]
-    targets=[i for i,h in enumerate(headers) if h in columns(kind)]+list(range(width,width+len(missing)))
+    missing = [c for c in columns(kind,attempt_limit) if c not in headers]
+    targets=[i for i,h in enumerate(headers) if h in columns(kind,attempt_limit)]+list(range(width,width+len(missing)))
     for protection in sheet.get('protectedRanges', []):
         area=protection.get('range',{})
         if protection.get('requestingUserCanEdit') is False and any(area.get('startColumnIndex',0)<=i<area.get('endColumnIndex',width+len(missing)) for i in targets):
@@ -255,9 +257,10 @@ def pending_manifests():
 def write_attempts(writer, recipient, kind, calls):
     from insightdesk_bridge import field_indices, now
     ordered=sorted({c['Session ID']:c for c in calls}.values(),key=lambda c:(c['Time'],c['Session ID']))
-    if len(ordered)>2:
+    limit=3 if kind=='lead' and recipient.get('approved_attempt_limit')==3 else 2
+    if len(ordered)>limit:
         raise ValueError('More than two attempts found for this campaign/recipient; results held for review.')
-    ref=recipient['source_ref'];title,mapping=schema(writer,ref,kind);width=max(mapping.values())+1
+    ref=recipient['source_ref'];title,mapping=schema(writer,ref,kind,limit);width=max(mapping.values())+1
     metadata=writer.metadata(ref['spreadsheet_id']);props=next(s['properties'] for s in metadata['sheets'] if s['properties']['sheetId']==ref['sheet_id'])
     idcol=get_column_letter(mapping['Bhago Row ID']+1)
     ids=writer.values(ref['spreadsheet_id'],[a1(title,f'{idcol}2:{idcol}{props["gridProperties"]["rowCount"]}')])[0]
@@ -267,7 +270,7 @@ def write_attempts(writer, recipient, kind, calls):
     number=matches[0]
     current=writer.values(ref['spreadsheet_id'],[a1(title,f'A{number}:{get_column_letter(width)}{number}'),a1(title,f'A1:{get_column_letter(width)}1')])
     row=current[0][0] if current[0] else [];headers=current[1][0]
-    if any(col>=len(headers) or headers[col]!=label for label,col in mapping.items() if label in columns(kind)):
+    if any(col>=len(headers) or headers[col]!=label for label,col in mapping.items() if label in columns(kind,limit)):
         raise ValueError('Result columns moved during sync; updates held for a fresh source read.')
     indices=field_indices(headers,{'source':ref['source'],'calling_type':kind})
     if not identity_matches(row,recipient,indices):
@@ -277,7 +280,7 @@ def write_attempts(writer, recipient, kind, calls):
         if str(row[vehicle_column(headers)] or '').strip()!=recipient.get('value2',''):
             raise ValueError('Vehicle changed on the matched payment row; results held for review.')
     ordered=sorted({c['Session ID']:c for c in calls}.values(),key=lambda c:(c['Time'],c['Session ID']))
-    if len(ordered)>2:
+    if len(ordered)>limit:
         raise ValueError('More than two attempts found for this campaign/recipient; results held for review.')
     updates=[]
     first_campaign_col=mapping['Attempt 1 - Campaign Name']

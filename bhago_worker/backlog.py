@@ -206,6 +206,7 @@ def select_planned(run, live_rows):
         if not live or signature(live)!=signature(old):raise ValueError('Planned backlog row changed; no campaign was started.')
         live['source_ref']['row_id']=ref['row_id']
         if 'prior_calls' in old:live['prior_calls']=old['prior_calls']
+        if old.get('approved_attempt_limit')==3:live['approved_attempt_limit']=3
         result.append(live)
     return result
 

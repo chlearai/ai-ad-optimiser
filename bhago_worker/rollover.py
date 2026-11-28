@@ -17,7 +17,8 @@ def pending_after_stop(recipient, kind, exported):
         except ValueError:matches=False
         if matches:current.append(call)
     calls=merge_calls(recipient.get('prior_calls',[]),current)
-    if len(calls)>2 or any(c.get('Status','').casefold() not in TERMINAL for c in calls):
+    limit=3 if kind=='lead' and recipient.get('approved_attempt_limit')==3 else 2
+    if len(calls)>limit or any(c.get('Status','').casefold() not in TERMINAL for c in calls):
         raise ValueError('Closed campaign has unresolved or excessive attempts; pending row held for review.')
     return calls, 'complete' if calls_complete(calls,kind) else 'pending'
 
@@ -61,7 +62,8 @@ def settle(kind, moment):
                          ''.join(filter(str.isdigit,str(c.get('To Number',''))))[-10:]==
                          ''.join(filter(str.isdigit,row['phone']))[-10:]]
                 all_calls=merge_calls(row.get('prior_calls',[]),current)
-                if len(all_calls)>2 and all(c.get('Status','').casefold() in TERMINAL for c in all_calls):
+                limit=3 if kind=='lead' and row.get('approved_attempt_limit')==3 else 2
+                if len(all_calls)>limit and all(c.get('Status','').casefold() in TERMINAL for c in all_calls):
                     save_state(key,{'state':'held_review','closed_campaign':True,'signature':signature(row),
                         'run_id':job['runId'],'source':row['source_ref']['source'],'campaign':job['campaignName'],
                         'attempts':[c['Session ID'] for c in all_calls],'calls':all_calls,
