@@ -494,10 +494,11 @@ def campaign_attempt_budget(run, rows, today=None):
     if run.get('approved_extra_attempt_date'):
         from outcomes import result_values
         today=today or dt.datetime.now(IST).date()
+        extra=run.get('approved_extra_attempt_count')
         counts=collections.Counter(len(r.get('prior_calls',[])) for r in rows)
         if (run.get('calling_type')!='lead' or run['approved_extra_attempt_date']!=today.isoformat()
-                or run.get('approved_extra_attempt_count')!=100 or len(rows)!=103
-                or counts!={2:100,1:2,0:1}):
+                or not isinstance(extra,int) or isinstance(extra,bool) or not 1<=extra<=100
+                or len(rows)!=extra+3 or counts!={2:extra,1:2,0:1}):
             raise ValueError('Approved extra-attempt campaign scope or date changed')
         for row in rows:
             calls=row.get('prior_calls',[])

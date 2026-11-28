@@ -6,7 +6,7 @@ from outcomes import bind_rows, load_state, load_states, save_state, signature, 
 from google_access import google_session, SheetsWriter
 
 
-def eligible(recipients, today, states, moment=None, lead_callbacks=False):
+def eligible(recipients, today, states, moment=None, lead_callbacks=False, phone_history=None):
     yesterday=today-dt.timedelta(days=1)
     result=[]
     for recipient in recipients:
@@ -29,14 +29,37 @@ def eligible(recipients, today, states, moment=None, lead_callbacks=False):
             if prior.get('state') in ('submitted','complete','uncertain','awaiting_second_attempt','held_review') and not callback:
                 continue
         row=dict(recipient)
+        if phone_history is not None:
+            from outcomes import merge_calls, calls_complete
+            known=merge_calls(phone_history.get(recipient['phone'],[]),(prior or {}).get('calls',[]))
+            if not callback and (len(known)>=2 or calls_complete(known,'lead')):continue
+            if known:row['prior_calls']=known
         if callback:row['_callback_due']=callback['due_at']
         row['_carryover']=bool(prior and prior.get('closed_campaign') and prior.get('state')=='pending')
         if prior and prior.get('calls'):
             from outcomes import merge_calls
-            row['prior_calls']=merge_calls(prior.get('calls',[]),[])
+            row['prior_calls']=merge_calls(row.get('prior_calls',[]),prior.get('calls',[]))
             if len(row['prior_calls'])>=2:continue
         result.append(row)
     return sorted(result,key=lambda r:(not bool(r.get('_callback_due')),r.get('_callback_due',''),r['sourceDate']!=yesterday.isoformat(),not r.get('_carryover',False),r['sourceDate'],r['source_ref']['source'],r['source_ref']['row']))
+
+
+def known_lead_phone_history():
+    """Row UUID changes must never make a previously called phone look fresh."""
+    from outcomes import pending_manifests, merge_calls
+    jobs=[j for _,j in pending_manifests() if j.get('type')=='lead' and
+          j.get('source') not in ('test','test_lead','test_payment','qwqer')]
+    stored=load_states({state_key(r['source_ref']['row_id']) for j in jobs for r in j['recipients']
+                        if r.get('source_ref',{}).get('row_id')})
+    history={}
+    for job in jobs:
+        for row in job['recipients']:
+            if row.get('source_ref',{}).get('source') not in ('swiggy','zomato'):continue
+            prior=stored.get(state_key(row['source_ref'].get('row_id',''))) or {}
+            calls=row.get('prior_calls',[])
+            if prior.get('signature')==signature(row):calls=merge_calls(calls,prior.get('calls',[]))
+            history[row['phone']]=merge_calls(history.get(row['phone'],[]),calls)
+    return history
 
 
 def plan(kind, today, moment=None):
@@ -68,7 +91,8 @@ def plan(kind, today, moment=None):
         return payment_daily_rows(recipients),skipped
     stored=load_states([state_key(r['source_ref']['row_id']) for r in recipients])
     states={r['source_ref']['row_id']:stored.get(state_key(r['source_ref']['row_id'])) for r in recipients}
-    queue=eligible(recipients,today,states,moment,lead_callbacks=kind=='lead')
+    queue=eligible(recipients,today,states,moment,lead_callbacks=kind=='lead',
+                   phone_history=known_lead_phone_history() if kind=='lead' else None)
     yesterday=(today-dt.timedelta(days=1)).isoformat()
     fresh=[r for r in queue if r['sourceDate']==yesterday]
     callbacks=[r for r in queue if r.get('_callback_due')]
